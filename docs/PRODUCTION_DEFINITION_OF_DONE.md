@@ -85,7 +85,7 @@ Completion of the table also requires a single release record containing:
 - emergency shutdown, rollback and key-compromise procedures.
 
 The native macOS alpha at Nomad-browser commit
-`2b44ed4a9edc453e43c3eda66f84df655618c76b` provides concrete partial evidence
+`60801f8c141229330e81ec6a5db6c1ab0e4db0be` provides concrete partial evidence
 for PROD-22, PROD-23 and PROD-26: a search-only SwiftUI client, effective App
 Sandbox entitlement without network client/server entitlement, source and
 binary egress gates, a universal DMG, integrity checksum and passing macOS CI.
