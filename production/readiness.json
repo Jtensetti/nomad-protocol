@@ -91,7 +91,10 @@
         "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
         "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
         "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817"
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "independent runtime process-boundary assessment on every supported platform"
@@ -172,7 +175,10 @@
         "https://github.com/Jtensetti/nomad-local-reconstruction/commit/032f6f1ad3984e86d5812bd6ae07143d7a806a24",
         "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
         "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "cross-platform parser differential tests",
@@ -236,7 +242,10 @@
         "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
         "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
         "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "Apple-provisioned App Group or independently reviewed production IPC boundary",
@@ -249,7 +258,10 @@
       "evidence": [
         "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
         "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
-        "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa"
+        "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "release-binary packet and DNS capture matrix on every supported platform"
@@ -271,7 +283,10 @@
       "evidence": [
         "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30",
         "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c"
+        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "two independent matching builds",
@@ -284,7 +299,10 @@
       "status": "PARTIAL",
       "evidence": [
         "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817"
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
       ],
       "blockers": [
         "Developer ID signing and Apple notarization",
