@@ -62,10 +62,10 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-20 | Sybil, eclipse, amplification, resource-exhaustion and abusive-peer risks are bounded by a documented admission and rate-control model. | Economic/operational analysis plus red-team saturation and eclipse tests. | NOT_MET |
 | PROD-21 | The transport works across IPv4, IPv6, NAT, churn, partitions and multiple operators/regions while preserving the traffic-class contract. | At least three independent operators and regions, WAN chaos tests and recovery evidence. | NOT_MET |
 | PROD-22 | At least one supported browser/client build routes every Nomad resource through verified local data and has no ordinary-network fallback in the Nomad security context. | Engine-level implementation, source review and release-binary integration tests. | PARTIAL |
-| PROD-23 | DNS, TCP, UDP, QUIC, WebSocket, WebRTC, preconnect, speculative fetch, reports, service workers, extensions, updates, telemetry, crash upload and reputation services cannot egress from the Nomad context. | Packet/DNS capture of negative tests for every path on every supported platform. | NOT_MET |
+| PROD-23 | DNS, TCP, UDP, QUIC, WebSocket, WebRTC, preconnect, speculative fetch, reports, service workers, extensions, updates, telemetry, crash upload and reputation services cannot egress from the Nomad context. | Packet/DNS capture of negative tests for every path on every supported platform. | PARTIAL |
 | PROD-24 | Query embedding and semantic selection run in a sandboxed local service with authenticated IPC, no network capability, bounded inputs and reproducible model identity. | Sandbox/capability tests, model hash attestation and attempted-egress capture. | PARTIAL |
 | PROD-25 | Release builds are reproducible, signed, SBOM-attested, dependency-pinned and continuously checked for vulnerable or malicious dependencies. | Two independent builders produce matching artifacts; provenance, SBOM and vulnerability gate pass. | PARTIAL |
-| PROD-26 | Installation, secure update, rollback prevention, key storage, local-data deletion and uninstall are supported and tested on every supported platform. | Signed update/rollback tests, OS-keystore tests and clean-removal verification. | NOT_MET |
+| PROD-26 | Installation, secure update, rollback prevention, key storage, local-data deletion and uninstall are supported and tested on every supported platform. | Signed update/rollback tests, OS-keystore tests and clean-removal verification. | PARTIAL |
 | PROD-27 | Operational metrics, logs and crash data are data-minimized and cannot contain queries, basins, object choices, plaintext, stable cross-epoch identifiers or secret keys. | Schema allowlist, log-scraping tests, retention controls and privacy review. | NOT_MET |
 | PROD-28 | Reliability and capacity targets are met under sustained load, node loss and regional failure; runbooks, on-call, backup and incident response are exercised. | Published SLOs, 30-day soak, disaster-recovery exercise and incident drill. | NOT_MET |
 | PROD-29 | Independent cryptographic, systems, browser and privacy assessments have no unresolved severity-1 or severity-2 findings. | Publicly identifiable final reports, fixes and auditor verification of remediation. | BLOCKED |
@@ -83,6 +83,14 @@ Completion of the table also requires a single release record containing:
 - all conformance, capture, chaos, fuzz, soak, audit and red-team reports;
 - all known limitations and residual risks;
 - emergency shutdown, rollback and key-compromise procedures.
+
+The native macOS alpha at Nomad-browser commit
+`2b44ed4a9edc453e43c3eda66f84df655618c76b` provides concrete partial evidence
+for PROD-22, PROD-23 and PROD-26: a search-only SwiftUI client, effective App
+Sandbox entitlement without network client/server entitlement, source and
+binary egress gates, a universal DMG, integrity checksum and passing macOS CI.
+It does not replace live-fabric integration, packet-capture verification,
+Developer ID notarization, secure update/rollback work or independent review.
 
 ## Claim discipline
 
