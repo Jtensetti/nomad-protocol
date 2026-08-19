@@ -23,7 +23,7 @@ Last reviewed: 2026-08-19.
 | Selection dependency boundary | nomad-testnet and Nomad-browser | implemented structural and process gate | CI inspects dependency graphs; the materializer has no socket imports or network namespace and the browser build has no network entitlement |
 | Reader packet-trace comparison | nomad-testnet | implemented live-testnet experiment | a strict dedicated-bridge capture verifies exact 1200-byte cells, public cadence and signed ring destinations; WAN failures and blind supported-platform two-world captures remain |
 | Distributed raw cache | nomad-testnet | implemented live-testnet baseline | each operator maintains a bounded immutable ciphertext cache with atomic writes and equivocation detection; multi-region durability, repair and partition behavior remain unproven |
-| Browser verified-resource core | Nomad-browser | implemented native alpha | signed bundles, immutable verified cache, periodic query-independent disk reload, local-only adapter and deny-all egress contract |
+| Browser verified-resource core | Nomad-browser | implemented native alpha and release pipeline | signed bundles, immutable verified cache, periodic query-independent disk reload, local-only adapter and deny-all egress contract; a protected fail-closed Developer ID/notary workflow exists, but no credentialed notarized artifact has been produced |
 | Browser-engine isolation | Firefox/Chromium forks | missing production gate | integration notes only; engines do not yet enforce the core contract |
 | Publisher deposit/airlock | none | missing production gate | architecture/threat-model concept only |
 | SiteID/key discovery | none | missing production gate | embedded-key signatures do not establish a human-facing publisher identity |
