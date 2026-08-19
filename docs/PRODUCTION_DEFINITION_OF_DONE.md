@@ -102,15 +102,19 @@ of five independently administered operators, regions, WAN behavior, witnessed
 key custody/erasure, epoch rotation, a general peer session handshake,
 separately administered shuffles or independent review.
 
-The native macOS alpha at Nomad-browser commit
-`f5d1d6aaca487d84c005a60b6518e1133c72c997` provides concrete partial evidence
-for PROD-09, PROD-16, PROD-22, PROD-23 and PROD-26: a search-only SwiftUI client,
-periodic query-independent cache reload, effective App Sandbox entitlement
-without network client/server entitlement, source and binary egress gates, a
-universal DMG, integrity checksum and passing macOS CI. It does not replace an
-Apple-provisioned cross-application App Group or reviewed IPC boundary,
-release-binary packet/DNS capture, Developer ID notarization, secure
-update/rollback work or independent review.
+The native macOS branch at Nomad-browser commit
+`b19710be10b896e47e97885d5f7391c0c9213455`, source CI `32303046813` and universal-build CI
+`32303046809` provides concrete partial evidence for PROD-09, PROD-16, PROD-22,
+PROD-23, PROD-25 and PROD-26. It retains the search-only SwiftUI client,
+query-independent cache reload, effective App Sandbox without network
+client/server entitlement, source/binary egress gates and verified universal
+DMG. It also adds a protected, fail-closed workflow for ephemeral Developer ID
+key import, expected-team/runtime/timestamp checks, Apple notarization, stapling
+and Gatekeeper assessment. No credentialed run or notarized artifact exists
+yet; the downloadable `f5d1d6aa` alpha remains ad-hoc signed. Production still
+requires the Apple-provisioned IPC boundary, release-binary packet/DNS capture,
+a successful credentialed notarization record, secure update/rollback work and
+independent review.
 
 ## Claim discipline
 
