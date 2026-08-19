@@ -85,19 +85,22 @@ Completion of the table also requires a single release record containing:
 - emergency shutdown, rollback and key-compromise procedures.
 
 The live reader testnet at nomad-testnet commit
-`6233ec09ba4380e451f9128498eb4166d83d948a` provides concrete partial evidence
+`80b9f5c83e30114f6f749a39b89a6d77638abe4c`, CI run
+`32301972409` and release `nomad-live-testnet-80b9f5c83e30` provides concrete partial evidence
 for PROD-05, PROD-06, PROD-09 through PROD-14, PROD-16, PROD-21, PROD-22 and
 PROD-25, and for the admission portion of PROD-19. Its release gate exercises
-three authenticated fixed-cadence UDP nodes, three threshold-share processes,
-a public fixed-cadence share fetcher, bounded immutable caches and a networkless
-materializer. An offline ceremony lets operators create their own Ed25519 and
-X25519 secrets, exchange self-signed public enrollments, attest the same full
-topology draft and derive directed hop keys locally without an authority key
-distributor. A strict capture on a dedicated bridge records exact 1200-byte
-cells and protocol cadence. This is still a single-administrator Docker
-fixture, not evidence of independent operators, regions, WAN behavior,
-distributed DKG transport, a session handshake or separate shuffle
-administration.
+three authenticated fixed-cadence UDP nodes, bounded immutable caches, three
+isolated threshold-share processes and a networkless materializer. The signed
+topology binds dedicated DKG identities and HTTPS endpoints. Three separate
+TLS operator processes execute Kyber v4 Pedersen DKG, require every member in
+QUAL, sign one identical activation certificate, produce distinct private
+shares and bind that exact certificate into descriptor v2 before live
+threshold decryption. A strict capture on a dedicated bridge records exact
+1200-byte cells and protocol cadence. This closes the testnet software DKG
+integration, but it is still a single-administrator Docker fixture—not evidence
+of five independently administered operators, regions, WAN behavior, witnessed
+key custody/erasure, epoch rotation, a general peer session handshake,
+separately administered shuffles or independent review.
 
 The native macOS alpha at Nomad-browser commit
 `f5d1d6aaca487d84c005a60b6518e1133c72c997` provides concrete partial evidence
