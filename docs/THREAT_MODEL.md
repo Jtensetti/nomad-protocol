@@ -39,10 +39,20 @@ The following are outside the network-protocol claim and require separate endpoi
 
 ## Work required before deployment claims
 
-- reviewed payload-preserving mix construction,
-- packet-capture tests under loss, congestion and churn,
+- independent review of the Kyber shuffle integration and a threshold
+  committee key/decryption protocol,
+- packet-capture tests under WAN loss, congestion, churn and active delay/drop,
 - long-horizon intersection analysis,
 - cache/availability side-channel analysis,
 - basin inversion and membership-inference analysis,
-- browser-engine isolation tests,
+- Firefox/Chromium engine and background-service isolation tests,
+- publication-airlock and SiteID/key-lifecycle specifications,
 - independent cryptographic and systems-security review.
+
+## Bounded v0.1 evidence
+
+The v0.1 loopback testnet captures actual 1200-byte UDP datagrams sent to four
+publicly planned peer slots. It compares idle/active reader worlds and two
+distinct query worlds, then reconstructs only from captured cells. This is
+useful regression evidence for the reference implementation; it is not a
+global-observer, congestion, browser-engine or deployment experiment.

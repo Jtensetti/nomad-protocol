@@ -1,37 +1,82 @@
 # Security properties under investigation
 
-These are target properties, not proven guarantees.
+These are target properties with bounded implementation evidence, not proven
+system-wide guarantees.
 
 ## Reader action non-interference
 
-Let `R` be private reader state and `P` the public inputs to network scheduling. For the network scheduler, the desired dependency is:
+Let R be private reader state and P be public network-planning state. The
+required dependency is:
 
-```text
-observable emission plan = f(P)
-```
+    observable emission plan = f(P)
 
-not:
+and never:
 
-```text
-observable emission plan = f(P, R)
-```
+    observable emission plan = f(P, R)
 
-The implementation work therefore tries to remove `R` from the scheduler's API and process boundary entirely. Packet-capture tests are still required because OS scheduling, congestion handling, caches and browser subsystems can reintroduce dependence outside that API.
+The Go planner API contains only P. CI also rejects dependency paths from the
+network packages into semantic selection/reconstruction and from private
+packages into planner/fabric/mix.
+
+The composed loopback experiment schedules the same prefilled network-domain
+queue in idle and active worlds and in two distinct query worlds. Receiver-side
+capture checks count, 1200-byte size, peer slot, encrypted payload, plan digest
+and bounded cadence. Those tests currently pass.
+
+This evidence is narrower than end-to-end non-interference. It does not cover a
+browser engine, kernel packet timestamps, a WAN, congestion/churn, resource
+contention, cache state across long periods or a global deployment adversary.
 
 ## Object verification
 
-A locally reconstructed byte sequence is not accepted merely because a decoder succeeds. Acceptance requires an expected content commitment and a valid publisher signature over the protocol-defined signing message.
+A reconstructed byte sequence is never accepted merely because an RLNC decoder
+succeeds or a basin is close. Acceptance checks signed manifest metadata, exact
+length, SHA-256 content root, domain-separated Ed25519 object signature and
+domain-separated manifest signature.
 
-This authenticates the recovered object relative to the supplied key/commitment. It does not solve key discovery, revocation or publisher identity policy.
+This authenticates an object relative to the embedded public key. SiteID key
+discovery, rotation, revocation and human-facing identity policy are separate.
 
-## Mix unlinkability
+## Mix payload preservation and unlinkability
 
-The desired mix property is that an observer cannot link an input representation to its output representation beyond the information intentionally exposed by the batch protocol, assuming at least one relevant mixing contribution is honest.
+The v0.1 mix encrypts 18 chunks per cell as ElGamal point pairs and delegates
+the shared-permutation proof to Kyber's Andrew Neff sequence shuffle. Tests
+establish that:
 
-No current Nomad repository implements a reviewed payload-preserving mix cryptosystem. `nomad-anytrust-mix-sim` is only a falsifiable model for batch/permutation plumbing.
+- decrypted input and output payload multisets match;
+- ciphertext batch digests change;
+- tampered outputs fail proof verification;
+- two independently randomized verified rounds compose in the testnet.
+
+The privacy assumption is anytrust: at least one relevant mixer must choose its
+permutation and randomness honestly. The reference implementation still uses a
+single test decryption key and has no DKG, threshold decryption, authenticated
+committee protocol, replay/drop/delay accountability or independent audit.
+Therefore it is not a deployable mixnet claim.
+
+## RLNC integrity boundary
+
+An inconsistent dependent symbol is rejected immediately. An innovative
+polluted symbol can still enter the decoding basis and waste or poison a
+generation. Exact post-reconstruction verification detects the wrong object but
+does not provide pollution resistance or availability against an injector.
+
+## Browser local-resource boundary
+
+Nomad-browser accepts only verified immutable objects and resolves renderer
+paths through a signed bundle. Its egress contract denies ordinary schemes and
+browser background network capabilities by default.
+
+This is an integration contract. It becomes an endpoint security property only
+after Firefox/Chromium route every relevant engine and service path through it
+and packet-level negative tests observe no egress.
 
 ## Publisher unlinkability
 
-Reader-side non-interference does not remove the causal fact that new information must enter the network somewhere. A global active adversary that can selectively isolate candidate publishers may create an availability oracle before first deposit.
+Reader non-interference does not remove the causal fact that new information
+enters the network somewhere. The testnet publisher is a local fixture, not an
+airlock. A global active adversary may selectively isolate candidate publishers
+and create an availability oracle before independent replication.
 
-Any stronger publisher claim requires a separately specified deposit/airlock protocol and adversary model.
+Any publisher-anonymity claim requires a separately specified deposit/airlock,
+time separation, failure model and adversary analysis.

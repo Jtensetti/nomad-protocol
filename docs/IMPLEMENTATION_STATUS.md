@@ -4,22 +4,28 @@ Last reviewed: 2026-08-19.
 
 | Area | Current artifact | Status | What is actually established |
 |---|---|---|---|
-| Cell representation | `nomad-constant-rate-fabric` | implemented experiment | Go type fixes cell size at 1200 bytes |
-| Wall-clock cadence | `nomad-constant-rate-fabric` | implemented experiment | scheduler emits one cell per configured interval; no packet-capture claim |
-| Real UDP transport | `nomad-testnet` | missing | issue/work item only |
-| Batch permutation | `nomad-anytrust-mix-sim` | model | cohort bookkeeping and random permutation |
-| Payload-preserving mix crypto | none | missing | no deployable construction exists in this project |
-| Anytrust committee protocol | none | missing | repository name does not imply implementation |
-| RLNC | `nomad-rlnc` | implemented experiment | GF(2^8) encode/re-encode/decode |
-| Coded-symbol pollution resistance | none | missing | exact verification happens after decoding only |
-| Local lexical embedding | `nomad-semantic-basins` | implemented baseline | deterministic lexical vector only, not semantic understanding |
-| Local model adapter | `nomad-semantic-basins` | implemented adapter | loopback-only HTTP embeddings request |
-| Basin quantization | `nomad-semantic-basins` | implemented experiment | seeded 64-bit random-hyperplane signature |
-| Basin privacy | none | missing | inversion/membership leakage not solved |
-| Exact reconstructed-object verification | `nomad-local-reconstruction` | implemented experiment | SHA-256 commitment + Ed25519 over domain-separated hash |
-| Public/private client dependency split | `Nomad-browser` | implemented code structure | selector and planner are separate Go packages with dependency tests |
-| Browser process isolation | Firefox/Chromium forks | missing | integration documents only |
-| Reader packet-trace indistinguishability | none | missing | requires real transport and capture experiments |
-| Publisher deposit/airlock | none | missing | architecture/threat-model concept only |
+| Cell representation | nomad-constant-rate-fabric | implemented experiment | Go types and UDP writes are exactly 1200 bytes in the v0.1 profile |
+| Wall-clock cadence | nomad-constant-rate-fabric | implemented experiment | absolute-deadline scheduler emits one cell per interval and rejects catch-up bursts |
+| UDP transport | nomad-testnet | implemented loopback harness | multi-peer datagrams are captured on the receiver side; no WAN/NAT claim |
+| Public emission plan | nomad-selection-firewall | implemented experiment | count, size, cadence index, offset and peer slot depend only on public inputs |
+| Payload-preserving mix | nomad-anytrust-mix-sim | implemented research integration | ElGamal ciphertext batches preserve 504-byte payloads through Kyber Neff sequence shuffles |
+| Shuffle verification | nomad-anytrust-mix-sim | implemented research integration | each round has a checked non-interactive proof and fresh representation |
+| Anytrust committee protocol | none | missing production gate | testnet composes two verified rounds but has no membership, DKG, threshold decryption or accountability protocol |
+| RLNC | nomad-rlnc | implemented experiment | GF(2^8) systematic/random coding, re-encoding, fixed packets and incremental decoding |
+| Coded-symbol pollution resistance | none | missing | contradictions are detected when dependent, but innovative pollution is rejected only after object verification |
+| Local lexical embedding | nomad-semantic-basins | implemented baseline | deterministic lexical vector only, not semantic understanding |
+| Local model adapter | nomad-semantic-basins | implemented adapter | literal-loopback-only HTTP endpoint, no proxy and no redirects |
+| Basin quantization | nomad-semantic-basins | implemented experiment | seeded 64-bit random-hyperplane signature |
+| Basin privacy | none | missing production gate | inversion and membership leakage are not solved |
+| Signed object manifest | nomad-local-reconstruction | implemented experiment | length, basin, generation, root, key and object signature are bound by Ed25519 |
+| Exact object verification | nomad-local-reconstruction | implemented experiment | SHA-256 plus Ed25519 over the domain-separated object hash |
+| Selection dependency boundary | nomad-testnet and Nomad-browser | implemented structural gate | CI inspects Go dependency graphs in both directions |
+| Reader packet-trace comparison | nomad-testnet | implemented loopback experiment | idle/active and Iran/sourdough worlds match normalized count, size, peers, encrypted payload and plan |
+| Browser verified-resource core | Nomad-browser | implemented core | signed bundles, immutable verified cache, local-only adapter and deny-all egress contract |
+| Browser-engine isolation | Firefox/Chromium forks | missing production gate | integration notes only; engines do not yet enforce the core contract |
+| Publisher deposit/airlock | none | missing production gate | architecture/threat-model concept only |
+| SiteID/key discovery | none | missing production gate | embedded-key signatures do not establish a human-facing publisher identity |
 
-“Implemented experiment” means runnable code with tests. It does not mean independently reviewed, production-ready or secure against the full threat model.
+“Implemented experiment” means runnable code with tests. It does not mean
+independently reviewed, production-ready or secure against the full threat
+model. The exact v0.1 completion boundary is in DEFINITION_OF_DONE.md.

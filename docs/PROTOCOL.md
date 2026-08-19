@@ -1,27 +1,121 @@
-# Protocol constraints
+# Protocol constraints and v0.1 encodings
 
-This document records cross-component constraints. It is not yet a wire-format specification.
+This records the interoperating research profile. It is not yet a stable
+Internet wire standard.
 
-## Cell
+## Public traffic class
 
-A traffic class defines a fixed externally visible cell size. Application objects must not change that size.
+A traffic class defines:
 
-## Cadence
+- cells per epoch;
+- cell size;
+- exact cell interval;
+- peer-slot count;
+- public planning seed;
+- public maximum scheduler lateness.
 
-A traffic class defines a public emission cadence. Implementations must schedule cells individually at that cadence; emitting an epoch's cells as a burst is not equivalent.
+The planner produces an epoch, slot, global cadence index, epoch-relative
+offset, peer slot and size for every emission. Private reader state is not an
+input. A lost cell never adds a retransmission cell or catch-up burst; useful
+work may only reuse a later cell that already exists in the public plan.
 
-## Epoch
+## Wire cell
 
-Epochs are accounting/coordination windows for batch formation and public scheduling state. Private reader activity is not an epoch input.
+The v0.1 profile uses an exact 1200-byte UDP payload:
 
-## Coded symbol
+| Region | Bytes | Meaning |
+|---|---:|---|
+| ElGamal sequence ciphertext | 1152 | 18 chunks × 2 compressed Ed25519 points × 32 bytes |
+| Random representation padding | 48 | fresh filler, not application data |
 
-The RLNC experiment represents a symbol as a coefficient vector and data vector over GF(2^8). Re-encoding forms new linear combinations. Encryption, authentication, generation identifiers and pollution resistance are separate concerns.
+The 1200-byte value is a versioned profile constant, not a claim that every
+future traffic class must use this size.
 
-## Basin
+## RLNC generation packet
 
-A basin is a lossy local similarity signature derived from a vector representation. Basin proximity may guide local ranking or future privacy-preserving retrieval work. Exact object correctness never comes from basin proximity.
+The mix cleartext is exactly 504 bytes:
 
-## Reconstruction
+| Field | Bytes |
+|---|---:|
+| Magic/version | 4 |
+| Generation ID | 16 |
+| Source-symbol count K | 2 |
+| Symbol size | 2 |
+| Original object length | 4 |
+| GF(2^8) coefficient vector | K |
+| Coded data | symbol size |
+| Random padding | remainder to 504 |
 
-A client may combine already-available coded fragments until its decoder succeeds. The recovered bytes are accepted only after checking the expected commitment and signature.
+The generation ID is the first 16 bytes of:
+
+    SHA256("nomad-generation-v1" || content_root)
+
+Packet metadata is routing/decoding information, not authentication. Exact
+object verification remains mandatory. RLNC provides loss tolerance and
+re-encoding; it does not provide encryption, anonymity or pollution resistance.
+
+## Mix batch and proof
+
+Each 504-byte packet is split into 18 28-byte chunks. Every chunk is embedded
+in an Ed25519 group point and ElGamal-encrypted. Kyber's sequence shuffle gives
+all 18 rows the same secret column permutation and fresh encryption randomness.
+
+The Fiat-Shamir proof domain is:
+
+    nomad-neff-sequence-shuffle-v1
+
+Sequence challenges bind the public key, input batch digest and output batch
+digest. A round is accepted only if its proof verifies and its batch size is
+unchanged. At least one honestly randomized relevant round is the anytrust
+privacy assumption. The current profile does not specify committee identity,
+threshold keys or accountability.
+
+## Signed object manifest
+
+The fixed v0.1 manifest is 228 bytes:
+
+| Field | Bytes |
+|---|---:|
+| Magic/version | 4 |
+| Exact object length | 8 |
+| Public semantic basin | 8 |
+| Deterministic generation ID | 16 |
+| SHA-256 content root | 32 |
+| Ed25519 public key | 32 |
+| Object signature | 64 |
+| Manifest signature | 64 |
+
+The object signing message is:
+
+    "nomad-object-v1" || SHA256(canonical_content)
+
+The manifest signing message is the domain string
+nomad-manifest-v1 followed by the canonical length, basin, generation, root,
+public key and object signature fields.
+
+This self-authenticates the manifest to its embedded key. It does not decide
+which key belongs to a SiteID.
+
+## Semantic basin
+
+The reference quantizer is a seeded 64-bit random-hyperplane signature.
+Hamming distance is a lossy similarity hint used only for local ordering.
+Similarity never establishes object identity or correctness.
+
+## Reconstruction and acceptance
+
+A private decoder may add already-cached generation packets until rank K is
+reached. Acceptance requires all of:
+
+1. generation and dimensions remain consistent;
+2. decoded length equals the signed manifest length;
+3. SHA-256(decoded bytes) equals the manifest root;
+4. the object signature verifies in the nomad-object-v1 domain;
+5. the manifest signature verifies in the nomad-manifest-v1 domain.
+
+## Browser bundle
+
+A browser bundle is itself a signed Nomad object. Its canonical bytes map clean
+local paths to exact object roots and canonical MIME types. Because that mapping
+is inside signed content, an untrusted transport header cannot reinterpret a
+resource. The browser adapter has no network fallback.
