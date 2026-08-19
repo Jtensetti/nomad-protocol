@@ -1,23 +1,27 @@
-# Protocol components
+# Protocol constraints
 
-This document defines interfaces, not a deployable Internet wire protocol.
+This document records cross-component constraints. It is not yet a wire-format specification.
 
 ## Cell
 
-Every observable information-fabric unit has a fixed protocol-defined size inside a traffic class. Variable application objects are converted to equal-size encrypted/coded symbols before they reach the fabric.
+A traffic class defines a fixed externally visible cell size. Application objects must not change that size.
+
+## Cadence
+
+A traffic class defines a public emission cadence. Implementations must schedule cells individually at that cadence; emitting an epoch's cells as a burst is not equivalent.
 
 ## Epoch
 
-Traffic schedules and mix batches operate in epochs. An epoch defines cell count, peer slots and the anonymity threshold. Local user activity is not an epoch input.
+Epochs are accounting/coordination windows for batch formation and public scheduling state. Private reader activity is not an epoch input.
 
 ## Coded symbol
 
-A coded symbol contains a coefficient vector and equal-size data vector over GF(2^8). It may be re-encoded by forming new linear combinations. Authentication/encryption is a separate layer.
+The RLNC experiment represents a symbol as a coefficient vector and data vector over GF(2^8). Re-encoding forms new linear combinations. Encryption, authentication, generation identifiers and pollution resistance are separate concerns.
 
 ## Basin
 
-A basin is a coarse opaque identifier derived locally from a vector representation. Basin proximity is probabilistic discovery metadata; exact object correctness always comes from cryptographic verification.
+A basin is a lossy local similarity signature derived from a vector representation. Basin proximity may guide local ranking or future privacy-preserving retrieval work. Exact object correctness never comes from basin proximity.
 
 ## Reconstruction
 
-A client may combine locally cached candidate symbols until a decoder has enough independent information. The resulting canonical object is accepted only if its commitment and publisher signature verify.
+A client may combine already-available coded fragments until its decoder succeeds. The recovered bytes are accepted only after checking the expected commitment and signature.

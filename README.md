@@ -1,35 +1,31 @@
-# Nomad protocol research stack
+# Nomad protocol
 
-Nomad is a research architecture for an **activity-unobservable, content-addressed information fabric**. The central design goal is not merely to encrypt a client-server relationship, but to avoid creating a necessary publisher-to-reader network relationship in the first place.
+Working specification for the Nomad networking experiments.
 
-This repository is the shared specification, threat model and executable security-game harness. The implementation is intentionally split into six independently testable repositories:
+Nomad explores one architectural question: can private content selection be separated from externally observable network activity strongly enough that reading an object does not create a reader-to-object traffic event?
 
-1. `nomad-constant-rate-fabric` — fixed-size, protocol-scheduled cells.
-2. `nomad-anytrust-mix-sim` — fail-closed anytrust batch-mixing research model.
-3. `nomad-rlnc` — random linear network coding and re-encoding.
-4. `nomad-semantic-basins` — local embeddings and coarse basin mapping.
-5. `nomad-local-reconstruction` — local candidate selection, reconstruction orchestration and exact verification.
-6. `nomad-selection-firewall` — non-interference boundary between private consumption and network scheduling.
+This repository contains **only** the shared architecture, terminology, threat model and protocol constraints. Executable code lives in the component repositories. Nothing here is a proof of anonymity or a deployable wire standard.
 
-## Status
+## Component repositories
 
-**Research prototype, not an audited anonymity network.** The deterministic/data-structure components are executable and tested. The repository deliberately does not ship public-Internet peer discovery, censorship-evasion deployment, autonomous infrastructure acquisition or an unreviewed production mixnet cryptosystem.
+- `nomad-constant-rate-fabric` — fixed-size, fixed-cadence traffic scheduling.
+- `nomad-anytrust-mix-sim` — model of a shuffled/replaced batch representation; not mixnet cryptography.
+- `nomad-rlnc` — GF(2^8) random linear network coding.
+- `nomad-semantic-basins` — local vector-to-basin experiments.
+- `nomad-local-reconstruction` — local ranking, decoding orchestration and exact verification.
+- `nomad-selection-firewall` — public network emission planning with no private-selection input.
+- `Nomad-browser` — browser-independent client composition.
+- `nomad-testnet` — cross-component integration and packet-level experiments.
+- `firefox-nomad`, `chromium-nomad` — browser-engine integration work.
 
-## Core invariants
+## Current architectural constraints
 
-- Fixed externally observable cell size and schedule within a selected traffic class.
-- Local read/search/reconstruction choices do not change network emission plans.
-- Mix stages fail closed below their anonymity threshold.
-- Exact recovered objects are cryptographically verified.
-- RLNC is transport/coding, not encryption.
-- Semantic basins are hints, not secrets.
-- Publisher anonymity before first anonymous deposit is a harder problem than reader unobservability.
+1. A traffic class fixes cell size and cadence independently of reader activity.
+2. Private search, ranking and reconstruction state must not be an input to the network scheduler.
+3. Network coding is transport coding, not encryption or authentication.
+4. Basin identifiers are similarity metadata and must be treated as potentially revealing.
+5. Mix-stage security is unimplemented until a reviewed payload-preserving construction replaces the current model.
+6. Reconstructed objects are accepted only after exact commitment/signature verification.
+7. Publisher unlinkability before first deposit is a separate and harder problem than reader-side non-interference.
 
-## Run the executable security games
-
-```bash
-go test ./...
-go run ./cmd/security-games
-```
-
-Read `docs/ARCHITECTURE.md` and `docs/THREAT_MODEL.md` before treating any component as security-relevant.
+Read `docs/IMPLEMENTATION_STATUS.md` first, then `docs/ARCHITECTURE.md`, `docs/PROTOCOL.md`, `docs/THREAT_MODEL.md` and `docs/SECURITY_PROPERTIES.md` before making claims about the system.

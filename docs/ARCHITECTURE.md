@@ -1,51 +1,53 @@
 # Architecture
 
-## Data flow
+## Data path under investigation
 
 ```text
-publisher canonical object
-        |
-        +--> content commitment + publisher signature
-        |
-        +--> encryption (outside RLNC)
-        |
-        +--> equal-size coded symbols
-                 |
-                 v
-        constant-rate information fabric
-                 |
-          anytrust batch mixing
-                 |
-          re-encoding / replication
-                 |
-                 v
-          distributed coded potential
-                 |
-                 v
-browser network cache ----> private selection cache
-                                  |
-                         local basin ranking
-                                  |
-                         local reconstruction
-                                  |
-                         hash/signature verify
-                                  |
-                             exact object
+publisher object
+    |
+    +--> canonical bytes / commitment / signature
+    |
+    +--> encryption layer (not implemented by RLNC)
+    |
+    +--> equal-size coded symbols
+             |
+             v
+      fixed-cadence fabric
+             |
+       mixing layer  [currently only a model]
+             |
+      re-encoding / replication
+             |
+             v
+      distributed coded state
+             |
+             v
+      local network cache
+             |
+      private selection domain
+             |
+      local reconstruction
+             |
+      commitment/signature check
+             |
+         accepted object
 ```
 
-## Selection Firewall
+The arrows describe intended responsibilities. They do not imply that a complete payload-preserving pipeline exists today.
 
-The browser is conceptually split into two processes/domains:
+## Selection boundary
 
-- **Network domain:** traffic scheduling, utility work, coded cache maintenance. It does not receive private user intent.
-- **Selection domain:** private semantic intent, local ranking, reconstruction and rendering. It has no API that changes network scheduling.
+The reader implementation is split conceptually into two capabilities:
 
-This non-interference boundary is the most important reader-side privacy invariant.
+- **network capability:** traffic scheduling and protocol maintenance using public state,
+- **selection capability:** private query processing, local ranking and reconstruction.
+
+The design objective is that the selection capability has no authority to change the externally observable schedule. Browser and OS integrations can still violate this unless they are tested separately.
 
 ## Semantic basins
 
-Basins are coarse routing/indexing hints. They must never be treated as confidential labels. A production design would require private retrieval/aggregation to stop basin metadata from becoming a new surveillance surface.
+Basins are coarse similarity hints. They are not secret labels. Exposing them directly may enable inversion, membership inference or interest profiling; the current repository does not solve that problem.
 
 ## Mixing
 
-A real Nomad mix requires a reviewed verifiable/re-randomizable shuffle or equivalent construction. The simulator repository models the required property but intentionally does not invent production cryptography.
+The current mix repository does not carry application payload through a deployable re-randomizable encryption scheme. It models batch thresholding, permutation and representation replacement so that integration code can be written without pretending the cryptography is solved.

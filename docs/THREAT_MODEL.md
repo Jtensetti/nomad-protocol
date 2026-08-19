@@ -1,45 +1,48 @@
 # Threat model
 
-## Reader security goal
+The threat model distinguishes **participation visibility** from **activity visibility**. A network observer may know that an endpoint participates in Nomad; the reader-side goal is to prevent that observer from learning which local object the endpoint is selecting or reconstructing from activity-dependent traffic.
 
-For any two local reader actions `R0` and `R1`, the externally observable network transcript should be indistinguishable within the ideal model:
+## Adversary capabilities considered
 
-`T(R0) == T(R1)`.
+Depending on the experiment, the adversary may:
 
-This requires traffic schedule, size, peer-selection policy, network cache behavior and retransmission behavior to be independent of private local selection.
+- observe links globally,
+- operate many intermediate nodes,
+- correlate observations over long periods,
+- drop, delay, replay or inject traffic around a modeled honest mixing boundary,
+- probe public availability and cache state,
+- know the protocol and all public scheduling inputs.
 
-## Publisher security goal
+The adversary is not assumed able to break standard cryptographic primitives.
 
-After a publication has crossed an anonymous deposit/airlock and is independently replicated, the public object should not be linkable to the original network identity solely from protocol metadata.
+## Reader-side target
 
-This is weaker than perfect pre-deposit publisher anonymity. A global active censor capable of selectively isolating candidate publishers can create an availability oracle before new information enters the network. The architecture does not claim to make that causal fact disappear.
+For two private reader states `R0` and `R1` under the same public traffic-class state, the target is that observable network behavior does not depend on which reader state is active.
 
-## In scope
+Achieving this requires more than fixed packet sizes. Cadence, peer selection, congestion behavior, retransmission, cache maintenance, speculative browser networking and failure handling must also avoid private-reader inputs.
 
-- passive global observation,
-- large colluding node sets,
-- one-honest-mix/anytrust assumptions,
-- active dropping/tagging as research tests,
-- traffic-shape and selection side channels,
-- semantic metadata leakage,
-- compromised intermediate nodes.
+## Publisher-side target
 
-## Out of scope
+After a publication has crossed a future anonymous deposit/airlock and has been independently replicated, protocol metadata should not provide a direct mapping from public object to original endpoint.
 
-- compromised endpoint hardware or OS,
-- forensic seizure of plaintext at an endpoint,
-- malware inside the trusted browser domain,
-- identity disclosure in the published content itself,
-- cryptographic breaks of standardized primitives.
+This does **not** claim perfect pre-deposit publisher anonymity. Selective isolation before first deposit can create an availability oracle.
 
-## Required falsification work
+## Endpoint boundary
 
-Before any deployment claim:
+The following are outside the network-protocol claim and require separate endpoint security:
 
-1. formal non-interference proof for Selection Firewall,
-2. reviewed mix cryptography and active-attack proof,
-3. long-horizon intersection tests,
-4. cache/churn side-channel tests,
-5. basin inversion and membership-inference tests,
-6. packet loss/congestion tests proving application activity cannot affect observable transport,
-7. independent security review.
+- compromised OS or hardware,
+- forensic seizure of plaintext or keys,
+- malware in the trusted browser/process domain,
+- identifying metadata or prose inside published content,
+- extensions or browser services that make ordinary network requests.
+
+## Work required before deployment claims
+
+- reviewed payload-preserving mix construction,
+- packet-capture tests under loss, congestion and churn,
+- long-horizon intersection analysis,
+- cache/availability side-channel analysis,
+- basin inversion and membership-inference analysis,
+- browser-engine isolation tests,
+- independent cryptographic and systems-security review.
