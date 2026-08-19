@@ -52,7 +52,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-10 | For equal public state, private reader activity does not change packet size, count, cadence, peers, retransmission, congestion response, cache maintenance or speculative networking. | Blind two-world packet/DNS captures across idle and diverse private workloads, including failures and congestion. | PARTIAL |
 | PROD-11 | Constant cadence is maintained on the actual wire across clock drift, suspend/resume, loss, congestion and process stalls without catch-up bursts. | At least 72 hours of WAN capture per supported platform with preregistered tolerances and zero unexplained violations. | PARTIAL |
 | PROD-12 | Network coding is generation-bound and pollution-resistant; malicious innovative symbols cannot cause accepted corruption or unbounded resource use. | Authenticated coding design, fuzz/property tests and Byzantine pollution campaign. | PARTIAL |
-| PROD-13 | Distributed storage meets measured availability and durability targets while replication, eviction, repair and cache warming remain independent of private reads. | Multi-region churn/partition tests, repair traces and private-state non-interference comparison. | NOT_MET |
+| PROD-13 | Distributed storage meets measured availability and durability targets while replication, eviction, repair and cache warming remain independent of private reads. | Multi-region churn/partition tests, repair traces and private-state non-interference comparison. | PARTIAL |
 | PROD-14 | All queues, batches, generations and caches have explicit resource limits and safe backpressure that does not create private-dependent wire behavior. | Load tests at every limit, OOM/disk-full tests and wire-trace comparisons. | PARTIAL |
 | PROD-15 | SiteID and publisher-key discovery, binding, rotation, expiry, revocation and recovery are authenticated and resistant to rollback/equivocation. | Normative specification, transparency/equivocation tests and recovery drill. | NOT_MET |
 | PROD-16 | Objects, manifests, bundles and executable MIME decisions use canonical encodings and exact hash/signature verification; ambiguous or stale representations fail closed. | Cross-platform vectors plus mutation, truncation, rollback and parser-differential tests. | PARTIAL |
@@ -60,7 +60,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-18 | Publication uses constant-rate ingress, threshold mixing, replication and protocol-defined time separation; failure and retry do not expose a private publication event. | Multi-publisher packet capture under success, timeout, restart and adversarial loss. | NOT_MET |
 | PROD-19 | Peer discovery, admission and session handshakes authenticate protocol state, prevent downgrade/replay and do not depend on private content. | Interoperability, downgrade, replay and stale-directory tests. | NOT_MET |
 | PROD-20 | Sybil, eclipse, amplification, resource-exhaustion and abusive-peer risks are bounded by a documented admission and rate-control model. | Economic/operational analysis plus red-team saturation and eclipse tests. | NOT_MET |
-| PROD-21 | The transport works across IPv4, IPv6, NAT, churn, partitions and multiple operators/regions while preserving the traffic-class contract. | At least three independent operators and regions, WAN chaos tests and recovery evidence. | NOT_MET |
+| PROD-21 | The transport works across IPv4, IPv6, NAT, churn, partitions and multiple operators/regions while preserving the traffic-class contract. | At least three independent operators and regions, WAN chaos tests and recovery evidence. | PARTIAL |
 | PROD-22 | At least one supported browser/client build routes every Nomad resource through verified local data and has no ordinary-network fallback in the Nomad security context. | Engine-level implementation, source review and release-binary integration tests. | PARTIAL |
 | PROD-23 | DNS, TCP, UDP, QUIC, WebSocket, WebRTC, preconnect, speculative fetch, reports, service workers, extensions, updates, telemetry, crash upload and reputation services cannot egress from the Nomad context. | Packet/DNS capture of negative tests for every path on every supported platform. | PARTIAL |
 | PROD-24 | Query embedding and semantic selection run in a sandboxed local service with authenticated IPC, no network capability, bounded inputs and reproducible model identity. | Sandbox/capability tests, model hash attestation and attempted-egress capture. | PARTIAL |
@@ -84,13 +84,26 @@ Completion of the table also requires a single release record containing:
 - all known limitations and residual risks;
 - emergency shutdown, rollback and key-compromise procedures.
 
+The live reader testnet at nomad-testnet commit
+`85e7f3f89d539c065ceffef2cfc541813f36367e` provides concrete partial evidence
+for PROD-05, PROD-06, PROD-09 through PROD-14, PROD-16, PROD-21, PROD-22 and
+PROD-25. Its release gate exercises three authenticated fixed-cadence UDP
+nodes, three threshold-share processes, a public fixed-cadence share fetcher,
+bounded immutable caches and a networkless materializer. A strict capture on a
+dedicated bridge records exact 1200-byte cells and protocol cadence. This is a
+single-administrator Docker fixture, not evidence of independent operators,
+regions, WAN behavior, distributed DKG transport or separate shuffle
+administration.
+
 The native macOS alpha at Nomad-browser commit
-`60801f8c141229330e81ec6a5db6c1ab0e4db0be` provides concrete partial evidence
-for PROD-22, PROD-23 and PROD-26: a search-only SwiftUI client, effective App
-Sandbox entitlement without network client/server entitlement, source and
-binary egress gates, a universal DMG, integrity checksum and passing macOS CI.
-It does not replace live-fabric integration, packet-capture verification,
-Developer ID notarization, secure update/rollback work or independent review.
+`f5d1d6aaca487d84c005a60b6518e1133c72c997` provides concrete partial evidence
+for PROD-09, PROD-16, PROD-22, PROD-23 and PROD-26: a search-only SwiftUI client,
+periodic query-independent cache reload, effective App Sandbox entitlement
+without network client/server entitlement, source and binary egress gates, a
+universal DMG, integrity checksum and passing macOS CI. It does not replace an
+Apple-provisioned cross-application App Group or reviewed IPC boundary,
+release-binary packet/DNS capture, Developer ID notarization, secure
+update/rollback work or independent review.
 
 ## Claim discipline
 
