@@ -35,14 +35,14 @@ does not count.
 
 | Repository | Commit |
 |---|---|
-| nomad-constant-rate-fabric | 19c40723c3518f51ad34867a32dfd755cceda023 |
+| nomad-constant-rate-fabric | 872686c3626fda1381b9058887e90e9a343cd367 |
 | nomad-anytrust-mix-sim | 35aa0f84769023b92d108e511bad7af47c34bbd1 |
-| nomad-rlnc | 463537740ee86f95aeb1cb65c3e2130300663f9a |
-| nomad-local-reconstruction | 5aff4db34adec4f6d01a27f713fd84f0a3495ea6 |
-| nomad-selection-firewall | 6e67690f6ed2125cd88dfd3c4da8c7c12d63664b |
-| nomad-semantic-basins | 0cad8aa5c74f51b2d463a3a3febb62c17e4ae529 |
-| nomad-testnet | b50536cb545448c00a9a04799d3d2620edd43d69 |
-| Nomad-browser | 7f4e82c95e7c3457b23b168e00e7d2c5f104464e |
+| nomad-rlnc | b395aa0b0dbd129a2820dbe02ee96d2a87f87273 |
+| nomad-local-reconstruction | 032f6f1ad3984e86d5812bd6ae07143d7a806a24 |
+| nomad-selection-firewall | 0bc4acd475f10bbfe0388629a3d00810a6579328 |
+| nomad-semantic-basins | 644bff28a2075b66426f1cf4b5960ae18363ac60 |
+| nomad-testnet | 0e02d1cf5d6c26502072adbd3cbbf302926abcfe |
+| Nomad-browser | 705a3c0b11e2cfc3b7e18e89effd3d4958948176 |
 
 The lock records candidate heads, not a claim that draft pull requests have
 been reviewed or merged.
