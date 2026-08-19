@@ -58,7 +58,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-16 | Objects, manifests, bundles and executable MIME decisions use canonical encodings and exact hash/signature verification; ambiguous or stale representations fail closed. | Cross-platform vectors plus mutation, truncation, rollback and parser-differential tests. | PARTIAL |
 | PROD-17 | A publication airlock accepts new content without exposing a direct publisher-to-object mapping to the stated adversary. | End-to-end anonymous-deposit implementation and controlled correlation experiment. | NOT_MET |
 | PROD-18 | Publication uses constant-rate ingress, threshold mixing, replication and protocol-defined time separation; failure and retry do not expose a private publication event. | Multi-publisher packet capture under success, timeout, restart and adversarial loss. | NOT_MET |
-| PROD-19 | Peer discovery, admission and session handshakes authenticate protocol state, prevent downgrade/replay and do not depend on private content. | Interoperability, downgrade, replay and stale-directory tests. | NOT_MET |
+| PROD-19 | Peer discovery, admission and session handshakes authenticate protocol state, prevent downgrade/replay and do not depend on private content. | Interoperability, downgrade, replay and stale-directory tests. | PARTIAL |
 | PROD-20 | Sybil, eclipse, amplification, resource-exhaustion and abusive-peer risks are bounded by a documented admission and rate-control model. | Economic/operational analysis plus red-team saturation and eclipse tests. | NOT_MET |
 | PROD-21 | The transport works across IPv4, IPv6, NAT, churn, partitions and multiple operators/regions while preserving the traffic-class contract. | At least three independent operators and regions, WAN chaos tests and recovery evidence. | PARTIAL |
 | PROD-22 | At least one supported browser/client build routes every Nomad resource through verified local data and has no ordinary-network fallback in the Nomad security context. | Engine-level implementation, source review and release-binary integration tests. | PARTIAL |
@@ -85,14 +85,18 @@ Completion of the table also requires a single release record containing:
 - emergency shutdown, rollback and key-compromise procedures.
 
 The live reader testnet at nomad-testnet commit
-`85e7f3f89d539c065ceffef2cfc541813f36367e` provides concrete partial evidence
+`6233ec09ba4380e451f9128498eb4166d83d948a` provides concrete partial evidence
 for PROD-05, PROD-06, PROD-09 through PROD-14, PROD-16, PROD-21, PROD-22 and
-PROD-25. Its release gate exercises three authenticated fixed-cadence UDP
-nodes, three threshold-share processes, a public fixed-cadence share fetcher,
-bounded immutable caches and a networkless materializer. A strict capture on a
-dedicated bridge records exact 1200-byte cells and protocol cadence. This is a
-single-administrator Docker fixture, not evidence of independent operators,
-regions, WAN behavior, distributed DKG transport or separate shuffle
+PROD-25, and for the admission portion of PROD-19. Its release gate exercises
+three authenticated fixed-cadence UDP nodes, three threshold-share processes,
+a public fixed-cadence share fetcher, bounded immutable caches and a networkless
+materializer. An offline ceremony lets operators create their own Ed25519 and
+X25519 secrets, exchange self-signed public enrollments, attest the same full
+topology draft and derive directed hop keys locally without an authority key
+distributor. A strict capture on a dedicated bridge records exact 1200-byte
+cells and protocol cadence. This is still a single-administrator Docker
+fixture, not evidence of independent operators, regions, WAN behavior,
+distributed DKG transport, a session handshake or separate shuffle
 administration.
 
 The native macOS alpha at Nomad-browser commit
