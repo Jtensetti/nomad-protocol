@@ -7,7 +7,7 @@
     {"id":"PROD-02","status":"PARTIAL","evidence":["docs/THREAT_MODEL.md"],"blockers":["production claim-to-test traceability"]},
     {"id":"PROD-03","status":"NOT_MET","evidence":[],"blockers":["independent second implementation"]},
     {"id":"PROD-04","status":"PARTIAL","evidence":["https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1"],"blockers":["independent cryptographic review"]},
-    {"id":"PROD-05","status":"NOT_MET","evidence":[],"blockers":["authenticated DKG and threshold decryption"]},
+    {"id":"PROD-05","status":"PARTIAL","evidence":["https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/1f75bfb79182db0968db00e612852f0ee6d028e8"],"blockers":["production broadcast transport","operator admission","isolated share storage","epoch rotation and compromise recovery","independent cryptographic review"]},
     {"id":"PROD-06","status":"PARTIAL","evidence":["https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1"],"blockers":["committee and epoch binding"]},
     {"id":"PROD-07","status":"NOT_MET","evidence":[],"blockers":["active-adversary accountability"]},
     {"id":"PROD-08","status":"NOT_MET","evidence":[],"blockers":["rotation and compromise recovery"]},
