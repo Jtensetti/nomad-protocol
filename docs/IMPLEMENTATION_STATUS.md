@@ -6,8 +6,9 @@ Last reviewed: 2026-08-19.
 |---|---|---|---|
 | Cell representation | nomad-constant-rate-fabric | implemented experiment | Go types and UDP writes are exactly 1200 bytes in the v0.1 profile |
 | Wall-clock cadence | nomad-constant-rate-fabric | implemented experiment | absolute-deadline scheduler emits one cell per interval and rejects catch-up bursts |
-| UDP transport | nomad-testnet | implemented live testnet | three authenticated operator nodes exchange exact fixed-size datagrams on a dedicated IPv4 bridge; a documented multi-host deployment is available, but no WAN/NAT/IPv6 claim is made |
+| UDP transport | nomad-testnet | implemented live testnet | three authenticated operator nodes exchange exact fixed-size datagrams on a dedicated IPv4 bridge using locally derived X25519+HKDF hop keys; a documented multi-host deployment is available, but no WAN/NAT/IPv6 claim is made |
 | Public emission plan | nomad-selection-firewall | implemented experiment | count, size, cadence index, offset and peer slot depend only on public inputs |
+| Operator topology ceremony | nomad-testnet | implemented offline ceremony | each operator creates its own Ed25519/X25519 secrets and self-signed enrollment, signs one complete deterministic draft, and derives directed hop keys locally; CI cannot establish independent legal administration and no session handshake exists |
 | Payload-preserving mix | nomad-anytrust-mix-sim | implemented research integration | ElGamal ciphertext batches preserve 504-byte payloads through Kyber Neff sequence shuffles |
 | Shuffle verification | nomad-anytrust-mix-sim | implemented research integration | each round has a checked non-interactive proof and fresh representation |
 | Anytrust committee protocol | nomad-testnet | implemented test harness | authenticated in-memory DKG creates a 2-of-3 threshold committee; three isolated share services and the networkless materializer verify partial proofs and threshold-decrypt, but the ceremony is not yet distributed across administrators |
