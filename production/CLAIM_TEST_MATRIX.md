@@ -1,70 +1,98 @@
 # Claim-to-test matrix
 
-Maps every security claim to the tests/evidence that exercise it at the
-claimed boundary, and states the boundary explicitly. A claim without a
-boundary-level test row is not evidenced. Feeds PROD-02.
+Maps every security claim to the tests that exercise it and states the
+boundary each reached. A claim without a boundary-level row is not evidenced
+at that boundary, however much code exists. Feeds PROD-02.
 
-Levels: `unit` (in-process), `integration` (composed processes, loopback or
-Compose), `boundary` (real interface/process/release artifact), `independent`
-(external assessor).
+Levels, weakest first:
+
+- `structural` — enforced by API shape or a CI dependency gate, not by a test
+  of behavior;
+- `unit` — in-process test;
+- `adversarial` — negative and attack tests at the same boundary as the claim;
+- `integration` — composed processes, loopback or Compose;
+- `boundary` — real interface, process, or release artifact;
+- `independent` — verified by an external assessor. **Nothing is here yet.**
 
 ## Reader path
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
+| Claim | Boundary required | Tests | Level |
 |---|---|---|---|
-| Emission plan depends only on public inputs | planner API + package graph | selection-firewall unit tests; Selection Firewall CI dependency gates | integration |
-| Wire cells are exactly 1200 bytes at fixed cadence | real interface | testnet Compose pcap gate (run 32301972409) | boundary (single-host) |
-| Lost cells never cause catch-up bursts | real interface under loss/suspension | scheduler unit tests only | unit |
-| Private reader activity does not change wire behavior | real interface, two worlds, blind | loopback two-world regression (not blind, not WAN) | integration |
-| Cache maintenance independent of reads | wire trace comparison | design + code structure only | unit |
+| Emission plan takes no private input | planner API + package graph | selection-firewall tests; Selection Firewall CI gates | structural |
+| Cells are exactly 1200 bytes at fixed cadence | real interface | Compose pcap gate (run 32301972409) | boundary, single host |
+| Lost cells never cause catch-up bursts | real interface under loss/suspension | scheduler unit tests | unit |
+| Private reader activity does not change wire behavior | real interface, two worlds, blind | loopback two-world regression, not blind, not WAN | integration |
+| Cache maintenance independent of reads | wire trace comparison | CI dependency gates only | structural |
 
-## Mix and committee
+## Epoch and key lifecycle
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
+| Claim | Boundary required | Tests | Level |
 |---|---|---|---|
-| Shuffle preserves payload multiset | crypto vectors | mix-sim tests | unit |
-| Tampered shuffle output rejected | negative proof tests | mix-sim tests | unit |
-| Proof bound to key + input/output batch digests | vectors + negative tests | mix-sim tests | unit |
-| DKG fails closed (partial membership, equivocation, late, resume) | multi-process TLS ceremony | testnet DKG-01..12 evidence | integration |
-| No machine holds a complete decryption key | process + host separation | Compose share isolation (single host) | integration |
-| Epoch rotation/retirement/erasure | lifecycle tests + drills | none | none |
-| Cross-epoch transplant rejected (proofs, shares, sessions, attestations) | negative tests per object | DKG packets only | unit |
+| Descriptor digests and signatures are canonical and reproducible | published vectors | epoch vectors incl. real signatures from a published key | adversarial |
+| No single previous operator can force a membership transition | negative tests | quorum-forgery regression (index aliasing + approver binding) | adversarial |
+| Split-brain fails closed, halt survives persistence failure | negative tests | equivocation, halt-fails-open, cross-process regressions | adversarial |
+| Rollback to a burned epoch is rejected | negative tests | high-water-mark regression | adversarial |
+| Rotation timing takes no private input | determinism test | `TestPlanIsDeterministicAndPublicOnly` | unit |
+| Retired shares are refused | production path | share-service guard tests; `Chain.ServesEpoch` | unit |
+| Retired epoch material is unrecoverable after erasure | adversarial experiment | `TestForwardSecrecyAfterErasure` | adversarial |
+| Compromise recovery works end to end | drill | `TestRecoveryDrill` (5-operator, 3-of-5) | integration |
+| No machine holds a complete decryption key | process + host separation | Compose share isolation | integration, single host |
 
-## Objects and identity
+## Publisher identity
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
+| Claim | Boundary required | Tests | Level |
 |---|---|---|---|
-| Object accepted only with exact length/root/signature chain | reconstruction tests | local-reconstruction tests | unit |
-| Manifest self-authenticates to embedded key | vectors | local-reconstruction tests | unit |
-| Publisher identity (SiteID) valid for intended site | full descriptor-chain verification | none (PROD-15) | none |
-| Rollback to superseded descriptor rejected | negative tests | none | none |
-| Equivocating site histories detected | split-view tests | none | none |
+| SiteID derivation is deterministic and domain-separated | published vectors | site vectors | adversarial |
+| Theft of a signing key does not confer recovery authority | negative tests | recovery-policy seizure regression | adversarial |
+| A superseded descriptor cannot be reinstated | negative tests | rollback and absorbing-revocation property test | adversarial |
+| Equivocation yields a transferable proof | third-party verification | forged-proof rejection + genuine-proof acceptance | adversarial |
+| A foreign descriptor cannot poison a site | negative tests | foreign-genesis regression | adversarial |
+| Encodings are unambiguous across implementations | parser differential | strict-parsing table, base64 malleability regression | adversarial |
+| Identity resolution creates no query-dependent traffic | capture | pure function, no I/O; **no capture** | structural |
+| Browser distinguishes integrity from identity | release binary | states defined; **not integrated** | none |
 
 ## Publication
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
+| Claim | Boundary required | Tests | Level |
 |---|---|---|---|
-| Publish is a purely local operation | package graph + process boundary | none (fixture publisher only) | none |
-| Publish/no-publish wire equivalence | blind two-world capture | none | none |
-| Failed publication adds no traffic | capture under failure | none | none |
-| Single operator cannot link ingress to plaintext | threshold + mix composition tests | none | none |
+| Publish cannot reach a socket, transport or scheduler | package graph, transitively | in-package architectural test + CI gate | structural |
+| The queue is bounded, crash-safe, idempotent, encrypted at rest | unit + restart | publish queue tests | unit |
+| Drain order leaks no publication timing | unit | content-derived order test | unit |
+| Uplink work and cover are indistinguishable to an observer | classifier | two independent classifiers fail against uplink | adversarial, cell level |
+| Uplink work and cover are indistinguishable to the entry operator | design + test | cover is a real committee encryption on the identical path | unit |
+| Publish/no-publish wire equivalence | blind two-world capture | **none** | none |
+| One operator cannot link ingress to released plaintext | composition tests | **none — deposit path not built** | none |
+| Failure and retry add no traffic | capture under failure | **none** | none |
+
+## Network coding and resources
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| Inconsistent dependent symbols are rejected | unit | rlnc tests | unit |
+| Polluted systematic symbols never enter the basis | negative tests | commitment-mismatch test | adversarial |
+| A malicious symbol cannot exceed the generation budget | Byzantine campaign | 50/90/100% campaigns, all budgets asserted | adversarial |
+| Replay drains no budget | unit | duplicate test | unit |
+| Coded-symbol pollution is prevented | per-symbol verification | **not claimed; see POLLUTION_AND_RESOURCES.md** | none |
+| Sybil, eclipse, amplification bounded | simulation | **none** | none |
+| Backpressure does not alter private-sensitive cadence | wire trace under load | **none** | none |
 
 ## Browser and release
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
+| Claim | Boundary required | Tests | Level |
 |---|---|---|---|
-| Browser has no network entitlement | release binary inspection | CI entitlement gates (build) | integration |
-| Zero browser egress incl. DNS | packet/DNS capture of release binary | none | none |
-| Browser renders only verified materialized objects | filesystem boundary tests | unit tests + process gate | integration |
-| Partial write/symlink/traversal rejected | adversarial filesystem tests | none explicit | none |
-| Release reproducible | two independent builds | none | none |
-| Update cannot roll back | updater tests | none (no updater) | none |
+| Browser has no network entitlement | release binary inspection | CI entitlement gates at build | integration |
+| Zero browser egress including DNS | packet/DNS capture of the binary | **none** | none |
+| Partial write cannot render | filesystem adversarial tests | materializer boundary tests | adversarial |
+| Symlink, traversal, overwrite rejected | filesystem adversarial tests | materializer boundary tests | adversarial |
+| Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |
+| Dependencies are scanned and gated | CI | govulncheck reachability gate | integration |
+| Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
+| Update cannot roll back | updater tests | **no updater** | none |
 
-## RLNC and resources
+## How to read the gaps
 
-| Claim | Boundary required | Current tests/evidence | Level reached |
-|---|---|---|---|
-| Inconsistent dependent symbol rejected | unit tests | rlnc tests | unit |
-| Malicious innovative symbols bounded (CPU/mem) | Byzantine campaign | none (known gap) | none |
-| Queues/caches bounded under attack | load/OOM/disk-full tests | bounded-cache unit tests | unit |
-| Backpressure does not alter private-sensitive cadence | wire trace under load | none | none |
+Every row at `none` is a claim the project must not make. Several of them —
+publish/no-publish equivalence, browser egress capture, reproducibility with
+a second builder, blind two-world classification — are the specific reasons
+no PROD gate is MET, and they are gated on external resources (EB-1, EB-3,
+EB-4) rather than on further design.
