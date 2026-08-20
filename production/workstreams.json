@@ -593,7 +593,7 @@
           "id": "F-07",
           "summary": "failed load never opens Safari/HTTP fallback",
           "status": "PARTIAL",
-          "note": "no fallback code path; negative test missing"
+          "note": "no fallback code path plus the negative test: thirteen ways a load can fail each end in a local 4xx with an empty body, no redirect header and an intact CSP, and the adapter's transitive graph holds no socket. Not yet exercised against a running release binary"
         },
         {
           "id": "F-08",

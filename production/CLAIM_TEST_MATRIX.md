@@ -89,6 +89,8 @@ Levels, weakest first:
 | Claim | Boundary required | Tests | Level |
 |---|---|---|---|
 | Browser has no network entitlement | release binary inspection | CI entitlement gates at build | integration |
+| A failed load never falls back to ordinary networking | negative tests at the adapter | thirteen failure modes, each ending in a local 4xx with no redirect header and an intact CSP; adapter graph holds no socket | adversarial |
+| The renderer admits only local, non-scriptable URLs | negative tests | scheme, traversal, encoding and data: media-type table; the URL gate and the adapter share one path rule and a test fails if their verdicts diverge | adversarial |
 | Zero browser egress including DNS | packet/DNS capture of the binary | **none** | none |
 | Partial write cannot render | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Symlink, traversal, overwrite rejected | filesystem adversarial tests | materializer boundary tests | adversarial |

@@ -180,3 +180,30 @@ actually demonstrates and, equally, what it does not.
   entry operator (A-09). Deposits are held in memory and are lost on restart,
   which is the intended trade. Not yet independently reviewed. No PROD gate
   changes.
+
+### Renderer URL and failed-load boundary (Workstream F, F-07)
+
+- Implementation: `Jtensetti/Nomad-browser@0388b7e` (`egress`, `adapter`).
+- Demonstrates: thirteen distinct failed loads -- unknown resource, an object
+  missing from the verified store, traversal, backslash separators,
+  non-canonical paths, URL syntax in the path, NUL, relative, empty and
+  oversized paths, and write methods -- each end in a local 4xx with an empty
+  body, no `Location`, `Refresh`, `Link` or `Content-Location` header, and an
+  intact `default-src 'none'; connect-src 'none'` policy. The adapter's
+  transitive package graph holds no socket, so the absence of a fallback is a
+  property of its capability rather than of today's code. The renderer URL
+  gate and the local adapter now share one resource-path rule, with a test
+  that fails if their verdicts ever diverge, and `data:` URLs are limited to
+  an allowlist of non-scriptable media types.
+- Two defects found while writing the missing negative test, neither
+  exploitable: the URL gate and the adapter each carried their own path rule
+  and disagreed (the gate accepted `nomad:/../../etc/passwd`, which the
+  adapter refused, so nothing reached the filesystem), and the gate admitted
+  `data:text/html` carrying script, which does not inherit the adapter's CSP
+  because a navigated `data:` URL is its own opaque-origin document. Egress
+  was still blocked by the absent network entitlement in both cases.
+- Does NOT demonstrate: anything about a running release binary. There is no
+  packet or DNS capture (F-08), the binary is unsigned (F-09, EB-1), the
+  engine forks carry integration contracts only (F-11), and no independent
+  browser-security assessment has happened (F-10, EB-4). No PROD gate
+  changes.
