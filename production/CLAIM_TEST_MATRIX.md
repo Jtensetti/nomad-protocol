@@ -64,7 +64,12 @@ Levels, weakest first:
 | Uplink work and cover are indistinguishable to an observer | classifier | two independent classifiers fail against uplink | adversarial, cell level |
 | Uplink work and cover are indistinguishable to the entry operator | design + test | cover is a real committee encryption on the identical path | unit |
 | Publish/no-publish wire equivalence | blind two-world capture | **none** | none |
-| One operator cannot link ingress to released plaintext | composition tests | **none — deposit path not built** | none |
+| One operator cannot link ingress to released plaintext | composition tests | airlock chain: a byte-level matcher over sealed input and chain output links at chance (5/48 vs 6.0), with a positive control that is perfect without re-randomisation | adversarial, in-process |
+| A partial or reordered shuffle chain is refused | negative tests | ten deviations, each failing the epoch closed | adversarial |
+| Release timing takes no private input | determinism test | pure function of four public parameters; seal refused early at every occupancy | unit |
+| Batch size and shape do not reveal the deposit count | unit + decryption | identical size and shape at 0, 1, n-1, n deposits; every column including cover decrypts | adversarial |
+| Deposits are idempotent and capacity does not grow | negative tests | resend, conflict, over-capacity and restart regressions | adversarial |
+| The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
 | Failure and retry add no traffic | capture under failure | **none** | none |
 
 ## Network coding and resources

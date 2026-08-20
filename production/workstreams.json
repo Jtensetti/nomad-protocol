@@ -229,7 +229,8 @@
         {
           "id": "A-03",
           "summary": "publication fragments ride pre-existing fixed-size fixed-cadence cells; queue state cannot change schedule",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "the airlock has no transitive path to a socket, scheduler or peer selection (in-package architectural test plus a CI dependency gate), so queue state cannot reach the cell schedule; a running publisher client riding real cells does not exist yet"
         },
         {
           "id": "A-04",
@@ -239,22 +240,26 @@
         {
           "id": "A-05",
           "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "deposit/seal/verifiable-shuffle-chain/threshold-release implemented in live/airlock with the full certified chain required and every deviation failing closed; a byte-level matcher holding the sealed batch and the chain output links ingress to release at chance against a positive control. In-process only: the online distributed mix path (A-15) does not exist, and the measurement is one matcher over a small sample, not a proof"
         },
         {
           "id": "A-06",
           "summary": "activity-independent public release epochs; no release on private queue completion",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "release timing is a pure function of four public schedule parameters and an epoch number; Seal refuses to run before the boundary at every occupancy from empty to full. Not yet carried in the signed epoch descriptor"
         },
         {
           "id": "A-07",
           "summary": "timeout/loss/restart/retry create no extra private-dependent traffic",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "deposits are idempotent by ID and a restart re-derives the same window and accepts the resend, so retry and restart add no airlock-level event; no wire capture under failure"
         },
         {
           "id": "A-08",
           "summary": "duplicate deposits idempotent",
-          "status": "NOT_STARTED"
+          "status": "VERIFIED",
+          "note": "idempotent by deposit ID with a conflicting payload refused rather than overwritten; resends consume no extra slot, tested including across a simulated operator restart"
         },
         {
           "id": "A-09",
@@ -265,13 +270,13 @@
           "id": "A-10",
           "summary": "reconstructed object still requires exact hash/signature/SiteID verification",
           "status": "PARTIAL",
-          "note": "object verification path exists; airlock integration missing"
+          "note": "the airlock provides unlinkability only; released fragments still face the existing exact-object and SiteID verification path, which is stated in the specification but not yet wired end to end"
         },
         {
           "id": "A-11",
           "summary": "no ordinary-network fallback",
           "status": "PARTIAL",
-          "note": "the uplink profile has no fallback path by construction; the airlock as a whole does not exist yet"
+          "note": "no fallback path exists in the airlock: an incomplete or unverifiable shuffle chain fails the epoch closed with no partial-chain or degraded mode, tested across ten deviations"
         },
         {
           "id": "A-12",

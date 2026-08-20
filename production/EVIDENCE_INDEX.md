@@ -148,3 +148,35 @@ actually demonstrates and, equally, what it does not.
   packets, which the existing `verify-pcap.py` CI gate shared -- a tagged
   capture would have passed its 1200-byte cell check without inspecting a
   single packet.
+
+### Publication airlock (Workstream A, sprint A2)
+
+- Implementation: `Jtensetti/nomad-testnet@1df9113` (`live/airlock`).
+- Specification: `docs/PUBLICATION_AIRLOCK.md`.
+- Demonstrates: release timing is a pure function of four public schedule
+  parameters and an epoch number, refused early at every occupancy from empty
+  to full; sealed batches are identical in size and shape at 0, 1, n-1 and n
+  real deposits, with every column including cover decrypting; deposits are
+  idempotent by ID with conflicts refused rather than overwritten and
+  capacity refusing rather than growing; a restart re-derives the same window
+  and accepts the resend; sealed placement carries no stable information
+  about arrival order; ten distinct deviations from the full certified
+  shuffle chain each fail the epoch closed with no partial-chain path; and a
+  byte-level nearest-neighbour matcher holding both the sealed batch and the
+  chain output links ingress to release at chance (5 of 48 against 6.0
+  expected), against a positive control where the same matcher is perfect
+  once re-randomisation is removed. The package has no transitive path to a
+  socket, scheduler or peer selection, enforced by an in-package
+  architectural test verified by mutation and by a CI dependency gate.
+- Does NOT demonstrate: unlinkability as a proof. The measurement is one
+  concrete matcher over a small sample; the guarantee rests on re-randomised
+  ElGamal being IND-CPA and on the anytrust assumption, and a test
+  establishes neither. The anytrust assumption itself is untestable -- if
+  every shuffler colludes the chain is linkable by construction -- so what is
+  tested is that the code requires every member to participate. There is no
+  wire capture (A-04, A-12), no online distributed mix path (A-15; the chain
+  runs in-process and the fixture bootstrap holding every identity is not a
+  production ceremony), and no analysis of selective dropping by a malicious
+  entry operator (A-09). Deposits are held in memory and are lost on restart,
+  which is the intended trade. Not yet independently reviewed. No PROD gate
+  changes.
