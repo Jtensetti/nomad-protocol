@@ -33,10 +33,9 @@ only the listed action. Never fabricate these.
   synthesized; five processes under one admin are one trust domain.
 - **Where obtained:** recruit operators (e.g. privacy-community organizations,
   universities, individuals) willing to run the operator package.
-- **Where configured:** each operator follows the onboarding package in
-  nomad-testnet (`deploy/MULTI_OPERATOR.md`, being extended into a full
-  operator package under Workstream B), generating all private material
-  locally and publishing only signed public enrollments.
+- **Where configured:** each operator follows
+  `nomad-testnet/deploy/OPERATOR_ONBOARDING.md`, generating all private
+  material locally and publishing only signed public enrollments.
 - **Verification afterward:** signed enrollments from distinct identities,
   WAN DKG transcript across their hosts, per-operator attestations of the
   activated epoch descriptor, and (for PROD-05) witnessed key custody/erasure
