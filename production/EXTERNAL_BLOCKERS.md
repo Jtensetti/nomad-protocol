@@ -41,9 +41,15 @@ only the listed action. Never fabricate these.
   WAN DKG transcript across their hosts, per-operator attestations of the
   activated epoch descriptor, and (for PROD-05) witnessed key custody/erasure
   statements from each administrator.
-- **Already complete / in progress:** software-level separation, ceremony and
-  DKG protocol proven in the single-admin fixture; Workstream B is building
-  the complete operator lifecycle tooling and onboarding package.
+- **Already complete:** the onboarding package is written and the lifecycle
+  tooling exists. `nomad-testnet/deploy/OPERATOR_ONBOARDING.md` is addressed
+  to an external administrator and needs no other project knowledge; it
+  covers identity generation, reading and attesting the draft, verifying the
+  signed topology, the DKG, serving, rotation and erasure, and states what
+  an operator will never be asked for. `nomad-operator` provides init,
+  inspect, attest, verify and erase; `deploy/RECOVERY_RUNBOOK.md` covers the
+  failure cases and is exercised by TestRecoveryDrill. **The only remaining
+  action is recruiting the people.**
 
 ## EB-3: Multi-region WAN test infrastructure
 
@@ -76,8 +82,11 @@ only the listed action. Never fabricate these.
   vectors, reproducible builds, captures, limitations).
 - **Verification afterward:** publicly identifiable final reports, recorded
   findings, and assessor-verified remediation with zero unresolved Sev1/Sev2.
-- **Already complete / in progress:** claim-to-test matrix and audit package
-  are being assembled under Workstreams C/D/A/E/I.
+- **Already complete / in progress:** specifications, published test
+  vectors, adversarial test suites and claim documentation are being
+  assembled continuously; two internal adversarial reviews have already run
+  and their findings are fixed with regressions. Booking assessors is
+  wall-clock bound and should start now rather than after implementation.
 
 ## EB-5: Second independent protocol implementation (PROD-03)
 

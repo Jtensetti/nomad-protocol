@@ -342,7 +342,8 @@
         {
           "id": "B-07",
           "summary": "one compromised operator cannot alter membership alone (governance as protocol)",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "governance transitions consume the membership-transition primitive from Workstream C (approval quorum of the previous committee, revocation with peer quorum); protocol-level, drilled, not deployed"
         },
         {
           "id": "B-08",
@@ -358,7 +359,7 @@
           "id": "B-10",
           "summary": "documented independent deployment artifacts + operator onboarding package",
           "status": "PARTIAL",
-          "note": "MULTI_OPERATOR.md exists; onboarding package incomplete"
+          "note": "deploy/OPERATOR_ONBOARDING.md is a complete external-administrator package; nomad-operator covers init/inspect/attest/verify/erase; RECOVERY_RUNBOOK.md plus TestRecoveryDrill cover failures. Recruiting the administrators is all that remains (EB-2)"
         },
         {
           "id": "B-11",
