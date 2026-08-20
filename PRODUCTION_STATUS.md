@@ -30,10 +30,12 @@ core and no production deployment. Concretely:
 - **A publication airlock** (Workstream A): a bounded, encrypted, crash-safe
   publication queue with no network capability; an uplink cell format in
   which work and cover are indistinguishable to both a network observer and
-  the entry operator; and a deposit boundary whose release timing is a pure
-  function of public parameters, whose batch size does not vary with how many
-  people published, and which requires a full certified shuffle chain before
-  threshold release. The distributed form of that chain does not exist yet.
+  the entry operator; and a deposit boundary whose release timing and cost
+  are pure functions of public parameters, whose batch size does not vary
+  with how many people published, and which requires a full shuffle chain
+  authenticated to the certified committee before per-column threshold
+  release. The distributed form of that chain does not exist, and two
+  deposit-ID findings from the review are still open.
 - **Bounded network coding** (Workstream G): enforced per-generation CPU,
   memory, byte, symbol and lifetime budgets, with pre-admission verification
   of systematic symbols.
@@ -121,11 +123,23 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 **None.** 0/30. The registry currently holds 18 PARTIAL, 11 NOT_MET and 1
 BLOCKED. Substantial protocol work has moved several criteria forward
 internally, but none has the boundary-level evidence its own rule demands,
-so none has been promoted. Two reviews during this work each found
-exploitable defects in code that looked finished — a single-operator
-approval-quorum forgery in the epoch lifecycle, and a remote site-bricking
-denial of service in publisher identity — which is the strongest available
-argument for not promoting gates on internal confidence.
+so none has been promoted.
+
+Three adversarial reviews during this work each found exploitable defects in
+code that looked finished, and had passing tests: a single-operator
+approval-quorum forgery in the epoch lifecycle; a remote site-bricking denial
+of service in publisher identity; and, in the publication airlock, four Sev1
+defects including one that let a party holding no committee share forge the
+entire "certified" shuffle chain and read the whole ingress-to-egress map.
+
+The airlock review is the sharpest argument against promoting gates on
+internal confidence, because two of its findings invalidated claims this
+project had already written down and one of them showed a *measurement* to be
+worthless: the unlinkability matcher scored chance against a chain with zero
+anonymity. Those claims were retracted rather than amended. An internal
+review is QA, not independent assessment (PROD-04, PROD-29), and each of
+these found real exploits — which says more about what a genuinely
+independent assessment would find than about what has been fixed.
 
 ## Which remain blocked, and on what?
 
