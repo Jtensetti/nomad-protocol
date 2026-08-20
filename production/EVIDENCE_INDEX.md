@@ -207,3 +207,52 @@ actually demonstrates and, equally, what it does not.
   engine forks carry integration contracts only (F-11), and no independent
   browser-security assessment has happened (F-10, EB-4). No PROD gate
   changes.
+
+### RETRACTION: airlock unlinkability and chain-integrity claims (Workstream A, sprint A2)
+
+An adversarial review of the airlock, run under the evaluator-separation rule
+before any promotion, found four Sev1 defects with working exploits. Two of
+them invalidate claims recorded in the sprint A2 entry above. Those claims are
+retracted here rather than amended in place, so the record shows they were
+made and withdrawn.
+
+**"A partial or reordered shuffle chain is refused" is withdrawn.**
+`Round.Member` is an unauthenticated `uint32` label, and a Neff shuffle proof
+binds only to the public key and the input/output digests -- nothing ties a
+proof to the member that produced it. An entry operator holding no committee
+share at all can run every shuffle itself, label the rounds with the certified
+member indices, and `VerifyChain` accepts. The ten deviation tests are real,
+but they constrain only an adversary that volunteers the truth about who
+shuffled. The anytrust assumption inverts: the adversary needs to corrupt no
+shufflers rather than all of them.
+
+**"One operator cannot link ingress to released plaintext" is withdrawn.**
+The byte-level matcher scores chance whenever re-randomisation occurs,
+independently of whether the permutation hides anything. The review
+demonstrated the same measurement, at the same five-sigma bound, passing
+against an output that is the same plaintexts in the same positions with
+fresh randomness -- total linkage, zero anonymity. The positive control
+removed only re-randomisation, so it never exercised the failure mode that
+mattered. Under the project evidence rules this measurement must not be cited
+as boundary evidence for A-05.
+
+Two further Sev1 findings are recorded here because they contradict statements
+in `docs/PUBLICATION_AIRLOCK.md` rather than in this index:
+
+- Cover columns were distinguishable from real deposits **before any
+  decryption**: a real deposit left wire bytes 1152..1200 zero while cover,
+  produced through `MarshalWire`, filled them from `crypto/rand`. A one-line
+  classifier recovered the exact real-deposit count, and which columns were
+  real, at every occupancy. The specification's "indistinguishable from a real
+  deposit until it has been decrypted" was false. The existing tests missed it
+  by slicing comparisons to `[:DepositSize]`, exactly the region that cannot
+  vary.
+- `Seal` generated one ElGamal encryption per *empty* slot inside the lock, so
+  its runtime was linear in how few people published: 2.59s at zero real
+  deposits against 0.014s at a full batch, a 190x readout of publication
+  volume, and a concurrent depositor could read the same signal remotely by
+  measuring how long its own call blocked.
+
+Remediation is tracked in the commits that follow. No claim above is restored
+until it is re-evidenced against the fixed code, and no PROD gate was ever
+promoted on any of them.

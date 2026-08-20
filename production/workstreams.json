@@ -241,7 +241,7 @@
           "id": "A-05",
           "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext",
           "status": "PARTIAL",
-          "note": "deposit/seal/verifiable-shuffle-chain/threshold-release implemented in live/airlock with the full certified chain required and every deviation failing closed; a byte-level matcher holding the sealed batch and the chain output links ingress to release at chance against a positive control. In-process only: the online distributed mix path (A-15) does not exist, and the measurement is one matcher over a small sample, not a proof"
+          "note": "deposit/seal/shuffle-chain/threshold-release implemented, but an adversarial review found four Sev1 defects with working exploits: shuffle rounds are unauthenticated so one party forges the whole certified chain, a chain that never re-randomises verifies, wire padding distinguished cover from real deposits pre-decryption, and Seal's runtime read out publication volume. The unlinkability measurement also passes against an order-preserving chain. Claims retracted in EVIDENCE_INDEX.md; remediation in progress"
         },
         {
           "id": "A-06",
@@ -276,7 +276,7 @@
           "id": "A-11",
           "summary": "no ordinary-network fallback",
           "status": "PARTIAL",
-          "note": "no fallback path exists in the airlock: an incomplete or unverifiable shuffle chain fails the epoch closed with no partial-chain or degraded mode, tested across ten deviations"
+          "note": "no fallback path exists in the airlock and ten chain deviations fail closed, but those deviations bind only an adversary that labels its rounds honestly (Sev1, unauthenticated rounds); re-evidence after remediation"
         },
         {
           "id": "A-12",
