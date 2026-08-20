@@ -39,7 +39,8 @@
         {
           "id": "C-04",
           "summary": "automatic next-epoch DKG while epoch N active",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "rotation planner implemented as a pure function of chain, clock and public policy, with a determinism test proving no private input path (nomad-testnet live/epoch); protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-05",
@@ -50,7 +51,8 @@
         {
           "id": "C-06",
           "summary": "retired epoch shares rejected",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "share service refuses threshold work outside the serving window and requires an explicit guard; TopologyWindowGuard for current deployments, Chain.ServesEpoch for chain-carrying ones; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-07",
@@ -61,22 +63,26 @@
         {
           "id": "C-08",
           "summary": "key-erasure procedure implemented, documented, tested with evidence",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "EraseEpochMaterial overwrites, syncs and unlinks, and emits a signed statement carrying mandatory limitations text; canonical encoding rejects a statement that understates them; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-09",
           "summary": "operator replacement via signed protocol transition (membership-transition primitive defined here, DEC-006; B consumes it)",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "membership transition implemented and drilled (approval quorum of the previous committee; a revoked operator cannot approve its own replacement); protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-10",
           "summary": "compromise recovery flow (credential compromise, lost operator, emergency transition)",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "compromise recovery drilled end to end: peer-quorum revocation, emergency transition, retired-epoch refusal, erasure; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-11",
           "summary": "signing-identity revocation",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "revocation statements with self and peer-quorum authorization, persisted store feeding chain admission; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-12",
@@ -94,23 +100,25 @@
           "id": "C-14",
           "summary": "interrupted DKG never resumes from unsafe ambiguous state",
           "status": "PARTIAL",
-          "note": "DKG-07 refuses resume of interrupted ephemeral session; lifecycle retry semantics for N+1 unbuilt"
+          "note": "DKG journal refuses to resume an interrupted session; the rotation planner supplies the public retry ladder and escalation offset; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-15",
           "summary": "forward-secrecy adversarial experiment",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "forward-secrecy experiment: captured epoch ciphertext, control decryption before erasure, then the complete post-erasure state of every operator yields no usable share; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-16",
           "summary": "recovery drill documented and executed in test environment",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "deploy/RECOVERY_RUNBOOK.md with TestRecoveryDrill executing procedures 1-5 on a five-operator 3-of-5 network; protocol-level only, no live/WAN integration or independent review"
         },
         {
           "id": "C-17",
           "summary": "CI regression tests for the epoch lifecycle",
           "status": "PARTIAL",
-          "note": "lifecycle unit and adversarial regressions exist in-package; not yet wired into the repo CI workflow"
+          "note": "epoch package in the Selection Firewall CI graph plus a transitive no-network-capability gate on the publication API; protocol-level only, no live/WAN integration or independent review"
         }
       ]
     },
