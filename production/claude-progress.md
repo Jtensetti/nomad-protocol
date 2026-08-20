@@ -114,3 +114,61 @@ machine spec and vectors.
 **External blockers** EB-1 (Apple credentials), EB-2 (independent operators),
 EB-3 (WAN infra), EB-4 (assessors/red team), EB-5 (second implementation),
 EB-6 (second release approver). Details in EXTERNAL_BLOCKERS.md.
+
+## Checkpoint: airlock built, reviewed, and remediated
+
+**Workstream A (publication airlock)** — built the deposit boundary that the
+claim matrix previously carried with no evidence at all: a public release
+schedule, a fixed-size batch padded with real committee cover, a shuffle chain
+authenticated to the certified committee, and per-column threshold release.
+
+An adversarial review under the evaluator-separation rule found **four Sev1 and
+three Sev2 defects, each with a working exploit**, in code whose own tests were
+green. All seven are now fixed with a regression each:
+
+1. Shuffle rounds were unauthenticated — a party holding no committee share
+   forged the entire "certified" chain and knew the whole ingress-to-egress
+   map. The anytrust assumption inverted.
+2. A chain that never re-randomised verified; the map was readable off the
+   bytes.
+3. Wire padding identified every cover column before any decryption. The
+   existing tests missed it by slicing comparisons to `[:DepositSize]`.
+4. `Seal` ran in time linear in the number of *empty* slots, reading out
+   publication volume at 190x, remotely observable by a concurrent depositor.
+5. Nothing bound a chain to an epoch, committee or batch; whole chains replayed.
+6. One malformed or poisoned deposit destroyed the epoch for every publisher.
+7. `ErrEpochFull` was an exact occupancy oracle, and the deposit-ID namespace
+   was unauthenticated (membership oracle plus targeted squatting).
+
+**Two claims were retracted, not amended**, because the review invalidated
+them: "a partial or reordered chain is refused" and "one operator cannot link
+ingress to release". The second is the sharper lesson — the unlinkability
+*measurement* passed against a chain with zero anonymity, because a
+byte-similarity matcher scores chance whenever re-randomisation happens
+regardless of whether the permutation hides anything. It was rebuilt to
+measure permutation uniformity instead.
+
+**Workstream E** — the preregistered two-world rule is now executable with
+both-direction self-tests in CI, plus a wire-level campaign against the
+production node. Two defects found while building it, both of which made the
+tooling agree that two worlds matched when they did not: a KS walk that charged
+tied values as ECDF gaps (a sample against itself scored p=9e-35 on exactly the
+quantized inter-arrivals a fixed-cadence capture produces), and a capture regex
+that silently skipped VLAN-tagged packets, shared with a live CI gate.
+
+**Workstream G** — amplification measured at 0.0003–0.0008 under floods of up
+to 396 MB, with cadence unaffected, and a check that the flood is not a
+private-state oracle.
+
+**Workstream F** — the missing F-07 negative test, plus two non-exploitable
+defects it surfaced: the renderer URL gate and the local adapter disagreed on
+what a resource path may be, and the gate admitted scriptable `data:` URLs.
+
+**Process finding:** `components/nomad-anytrust-mix-sim` inside nomad-testnet
+has diverged from its standalone repository in both directions. A security fix
+made in the standalone repo would not reach what ships. Fixes landed in both;
+reconciling the vendoring is outstanding.
+
+Still **0 of 30 PROD gates MET**. Three adversarial reviews have now each found
+exploitable defects in finished-looking code, which is the strongest available
+argument against promoting any gate on internal confidence.
