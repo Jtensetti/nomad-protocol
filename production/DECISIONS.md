@@ -2,6 +2,58 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-009 (2026-08-20): One two-world capture harness, born in A, extended in E
+
+The blind-capture/preregistration machinery required by the airlock DoD
+(A-12) and by WAN testing (E-06/E-07) is a single harness to prevent
+divergent methodology. Built during Workstream A, extended in E.
+
+## DEC-008 (2026-08-20): Publication ingress spike before descriptor freeze
+
+The client constant-rate uplink and online distributed mix path do not exist
+yet (evaluator findings 1-2). An ingress spike runs immediately after C's
+descriptor core lands; EpochDescriptor v1 reserves a versioned
+`uplink_profile` field so the spike's traffic-class parameters land without
+re-cutting the descriptor. A minimal authenticated operator-service layer is
+pulled into A's scope; B extends it.
+
+## DEC-007 (2026-08-20): Public rotation-failure policy for full-QUAL DKG
+
+Full-QUAL ceremonies mean one unresponsive operator aborts rotation. Policy:
+public retry ladder with fresh sessions; after three failed sessions the
+sanctioned path is a membership transition excluding the non-completing
+operator under the approval quorum; if no successor exists at retire_at the
+epoch retires anyway (availability sacrificed, no silent extension). The
+Pedersen abort-on-complaint/bias tradeoff is recorded in the spec for the
+external cryptographic review.
+
+## DEC-006 (2026-08-20): Membership transition is defined once, in Workstream C
+
+The signed membership-transition primitive (approval quorum by previous-epoch
+operators inside EpochDescriptor v1) is Workstream C protocol. Workstream B
+governance tooling and PROD-07 accountability consume and extend it; they do
+not define a second transition mechanism.
+
+## DEC-005 (2026-08-20): Canonical binary encoding for all new signed objects
+
+New lifecycle and identity objects (EpochDescriptor, approvals, activations,
+revocations, erasure statements, SiteDescriptor) compute digests/signatures
+over a specified canonical binary encoding (fixed field order, big-endian
+integers, length-prefixed strings/lists, no floats). JSON is transport only.
+Existing objects (topology v3, DKG certificate v1, batch descriptor v2) are
+frozen as-is and embedded by exact bytes, preserving their digests and all
+existing evidence. Rationale: Go json.Marshal is implementation-defined and
+cannot support cross-platform vectors or a second implementation.
+
+## DEC-004 (2026-08-20): Envelope window vs. active window
+
+Topology v3 requires the DKG inside its own validity window, which conflicts
+with prepare-while-active rotation if the window means "active". Resolution:
+the topology window is the epoch's validity envelope (ceremony + DKG +
+active + grace); the descriptor's activate_at/retire_at define the ACTIVE
+sub-window; envelopes of consecutive epochs overlap. No topology schema
+change; the epoch manager alone decides which epoch is ACTIVE.
+
 ## DEC-003 (2026-08-20): Epoch lifecycle extends the existing ceremony stack
 
 Workstream C will generalize nomad-testnet's signed topology + DKG certificate

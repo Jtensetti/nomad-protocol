@@ -9,15 +9,15 @@
       "phase": 1,
       "repos": ["nomad-testnet", "nomad-anytrust-mix-sim", "nomad-protocol"],
       "requirements": [
-        {"id": "C-01", "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)", "status": "PARTIAL", "note": "signed topology + batch descriptor v2 exist; no validity window, previous-epoch digest, or lifecycle fields"},
+        {"id": "C-01", "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)", "status": "PARTIAL", "note": "signed topology v3 already carries validity window, membership, threshold, DKG schedule; missing: previous-epoch chaining, activation/retirement boundaries, approvals, canonical binary encoding (spec: docs/EPOCH_LIFECYCLE.md)"},
         {"id": "C-02", "summary": "public epoch-descriptor test vectors", "status": "NOT_STARTED"},
-        {"id": "C-03", "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants", "status": "PARTIAL", "note": "DKG packets and batch descriptors bound; mix-proof and session epoch binding needs audit"},
+        {"id": "C-03", "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants", "status": "PARTIAL", "note": "audited 2026-08-20: DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys all bind epoch+committee context correctly; remaining gap is lifecycle objects (activation/approval/revocation/erasure) that do not exist yet"},
         {"id": "C-04", "summary": "automatic next-epoch DKG while epoch N active", "status": "NOT_STARTED"},
         {"id": "C-05", "summary": "activation only at public predetermined boundary, independent of private behavior", "status": "NOT_STARTED"},
         {"id": "C-06", "summary": "retired epoch shares rejected", "status": "NOT_STARTED"},
-        {"id": "C-07", "summary": "stale proof/share/session replay rejected", "status": "PARTIAL", "note": "DKG journal rejects intra-ceremony replay; cross-epoch staleness unhandled"},
+        {"id": "C-07", "summary": "stale proof/share/session replay rejected", "status": "PARTIAL", "note": "cross-epoch binding already strong (shares/partials/proofs/hop frames bind committee+epoch; replay windows exist); genuine gap is retirement semantics: an old epoch stays usable until not_after with nothing marking it retired early"},
         {"id": "C-08", "summary": "key-erasure procedure implemented, documented, tested with evidence", "status": "NOT_STARTED"},
-        {"id": "C-09", "summary": "operator replacement via signed protocol transition", "status": "NOT_STARTED"},
+        {"id": "C-09", "summary": "operator replacement via signed protocol transition (membership-transition primitive defined here, DEC-006; B consumes it)", "status": "NOT_STARTED"},
         {"id": "C-10", "summary": "compromise recovery flow (credential compromise, lost operator, emergency transition)", "status": "NOT_STARTED"},
         {"id": "C-11", "summary": "signing-identity revocation", "status": "NOT_STARTED"},
         {"id": "C-12", "summary": "split-brain activation fails closed", "status": "PARTIAL", "note": "DKG-09 rejects split views inside one ceremony; epoch-level split-brain unhandled"},
@@ -53,7 +53,7 @@
       "repos": ["nomad-testnet", "nomad-selection-firewall", "nomad-anytrust-mix-sim", "nomad-protocol"],
       "requirements": [
         {"id": "A-01", "summary": "Publish API purely local, no network capability, enforced architecturally", "status": "NOT_STARTED"},
-        {"id": "A-02", "summary": "bounded persistent crash-safe idempotent publication queue", "status": "NOT_STARTED"},
+        {"id": "A-02", "summary": "bounded persistent crash-safe idempotent publication queue, encrypted at rest", "status": "NOT_STARTED"},
         {"id": "A-03", "summary": "publication fragments ride pre-existing fixed-size fixed-cadence cells; queue state cannot change schedule", "status": "NOT_STARTED"},
         {"id": "A-04", "summary": "publish/no-publish observable schedule equivalence under threat model", "status": "NOT_STARTED"},
         {"id": "A-05", "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext", "status": "NOT_STARTED"},
@@ -62,9 +62,11 @@
         {"id": "A-08", "summary": "duplicate deposits idempotent", "status": "NOT_STARTED"},
         {"id": "A-09", "summary": "selective dropping is not a trivial publication oracle; analysis documented", "status": "NOT_STARTED"},
         {"id": "A-10", "summary": "reconstructed object still requires exact hash/signature/SiteID verification", "status": "PARTIAL", "note": "object verification path exists; airlock integration missing"},
-        {"id": "A-11", "summary": "no ordinary-network fallback", "status": "PARTIAL", "note": "invariant holds in reader path; must hold by construction in airlock"},
-        {"id": "A-12", "summary": "blind capture experiment: idle, one, many, failed publication, restart, loss; preregistered tolerances", "status": "NOT_STARTED"},
-        {"id": "A-13", "summary": "remaining leakage/assumptions documented", "status": "NOT_STARTED"}
+        {"id": "A-11", "summary": "no ordinary-network fallback", "status": "NOT_STARTED", "note": "the airlock does not exist yet, so nothing evidences this for publication; the reader path evidences the same invariant separately"},
+        {"id": "A-12", "summary": "blind capture experiment: idle, one, many, failed publication, restart, loss; preregistered tolerances (single harness shared with E, DEC-009)", "status": "NOT_STARTED"},
+        {"id": "A-13", "summary": "remaining leakage/assumptions documented", "status": "NOT_STARTED"},
+        {"id": "A-14", "summary": "client constant-rate uplink traffic class (new protocol surface: publisher-facing cells to entry operators; participation-visibility analysis; ingress spike feeds descriptor uplink_profile)", "status": "NOT_STARTED"},
+        {"id": "A-15", "summary": "online distributed mix path: per-operator shuffle/decrypt services with authenticated inter-operator sessions (fixture bootstrap holding all identities is not reusable)", "status": "NOT_STARTED"}
       ]
     },
     "B": {
@@ -83,7 +85,8 @@
         {"id": "B-09", "summary": "regional outage test", "status": "NOT_STARTED"},
         {"id": "B-10", "summary": "documented independent deployment artifacts + operator onboarding package", "status": "PARTIAL", "note": "MULTI_OPERATOR.md exists; onboarding package incomplete"},
         {"id": "B-11", "summary": "evidence of actual administrative separation (>=3 independent admins, >=3 regions)", "status": "BLOCKED", "blocker": "requires genuinely independent operator administrators; see EXTERNAL_BLOCKERS.md"},
-        {"id": "B-12", "summary": "IPv4/IPv6 operator testing", "status": "NOT_STARTED"}
+        {"id": "B-12", "summary": "IPv4/IPv6 operator testing", "status": "NOT_STARTED"},
+        {"id": "B-13", "summary": "active-adversary accountability (PROD-07): signed blame/availability reports identifying faulty committee members, built on DKG journals and mix receipts; fault-injection campaign", "status": "PARTIAL", "note": "receipts, receipt tracker and DKG equivocation journals exist; blame report format, availability evidence and campaign missing"}
       ]
     },
     "G": {
@@ -103,7 +106,7 @@
         {"id": "G-10", "summary": "malicious peer cannot trigger catch-up traffic", "status": "PARTIAL", "note": "scheduler forbids catch-up; adversarial-peer test missing"},
         {"id": "G-11", "summary": "backpressure does not change private-sensitive cadence", "status": "NOT_STARTED"},
         {"id": "G-12", "summary": "disk-full and OOM pressure tests", "status": "NOT_STARTED"},
-        {"id": "G-13", "summary": "eviction/repair maintenance private-state-independent", "status": "PARTIAL", "note": "design holds; wire-level comparison missing"}
+        {"id": "G-13", "summary": "eviction/repair maintenance private-state-independent", "status": "PARTIAL", "note": "CI dependency gates prove network/cache packages cannot import private selection code (structural evidence); wire-level comparison missing"}
       ]
     },
     "E": {
@@ -121,7 +124,8 @@
         {"id": "E-08", "summary": "no private-event catch-up burst under congestion/suspension on the wire", "status": "PARTIAL", "note": "scheduler semantics tested; wire campaigns missing"},
         {"id": "E-09", "summary": "72-hour per-platform capture harness validated; real run executed where environment permits", "status": "NOT_STARTED"},
         {"id": "E-10", "summary": "long-horizon intersection analysis", "status": "NOT_STARTED"},
-        {"id": "E-11", "summary": "immutable reports and capture digests", "status": "PARTIAL", "note": "digest discipline exists for current artifacts"}
+        {"id": "E-11", "summary": "immutable reports and capture digests", "status": "PARTIAL", "note": "digest discipline exists for current artifacts"},
+        {"id": "E-12", "summary": "measured availability/durability targets with multi-region churn/partition repair traces (PROD-13)", "status": "NOT_STARTED"}
       ]
     },
     "F": {
@@ -139,7 +143,8 @@
         {"id": "F-08", "summary": "DNS capture shows zero browser-originated DNS; packet capture shows zero ordinary networking", "status": "NOT_STARTED"},
         {"id": "F-09", "summary": "actual signed release binary tested", "status": "BLOCKED", "blocker": "requires Developer ID credentials for signed binary; ad-hoc binary capture achievable"},
         {"id": "F-10", "summary": "independent browser-security assessment", "status": "BLOCKED", "blocker": "external assessor; see EXTERNAL_BLOCKERS.md"},
-        {"id": "F-11", "summary": "engine forks route all renderer/service paths through the verified-local contract", "status": "NOT_STARTED", "note": "firefox-nomad/chromium-nomad carry integration contracts only"}
+        {"id": "F-11", "summary": "engine forks route all renderer/service paths through the verified-local contract", "status": "NOT_STARTED", "note": "firefox-nomad/chromium-nomad carry integration contracts only"},
+        {"id": "F-12", "summary": "semantic service sandbox: authenticated IPC, no network capability, bounded inputs, reproducible model hash attestation, attempted-egress capture (PROD-24)", "status": "PARTIAL", "note": "loopback-only bounded adapter exists in nomad-semantic-basins; sandbox, IPC auth, attestation and egress capture missing"}
       ]
     },
     "H": {
@@ -154,11 +159,22 @@
         {"id": "H-05", "summary": "signed SLSA-style provenance", "status": "NOT_STARTED"},
         {"id": "H-06", "summary": "pinned/reviewed dependencies", "status": "PARTIAL", "note": "COMPONENTS.lock digests exist"},
         {"id": "H-07", "summary": "vulnerability scanning gate + severity/response policy", "status": "NOT_STARTED"},
-        {"id": "H-08", "summary": "authenticated updater, anti-rollback, fail closed, recovery", "status": "NOT_STARTED"},
+        {"id": "H-08", "summary": "authenticated updater, anti-rollback, fail closed, recovery; architecturally unable to grant the networkless browser web capability (separate constrained component); update-check cadence private-state-independent", "status": "NOT_STARTED"},
         {"id": "H-09", "summary": "OS-backed key storage (Keychain), no plaintext secrets", "status": "NOT_STARTED"},
         {"id": "H-10", "summary": "clean uninstall/private-data removal test; OS retention documented", "status": "NOT_STARTED"},
         {"id": "H-11", "summary": "allowlisted log/telemetry schemas; crash dump privacy audit", "status": "NOT_STARTED"},
         {"id": "H-12", "summary": "immutable commit-addressed release evidence", "status": "PARTIAL"}
+      ]
+    },
+    "M": {
+      "title": "Stabilization: freeze, traceability, second implementation, operations",
+      "phase": 5,
+      "repos": ["nomad-protocol", "nomad-testnet"],
+      "requirements": [
+        {"id": "M-01", "summary": "frozen versioned protocol specification: every wire message, state transition, error, timeout, limit, downgrade rule; conformance schema, golden vectors, compatibility matrix, signed specification tag (PROD-01)", "status": "PARTIAL", "note": "docs/PROTOCOL.md records the v0.1 research profile; no conformance schema, vectors or freeze"},
+        {"id": "M-02", "summary": "claim-to-test traceability complete for the reviewed threat model (PROD-02)", "status": "PARTIAL", "note": "THREAT_MODEL.md + CLAIM_TEST_MATRIX.md exist; matrix has known empty boundary rows"},
+        {"id": "M-03", "summary": "second-implementation enablement package: spec + vectors + transcript corpus sufficient to build an interoperating implementation without shared code (PROD-03; the implementation itself is EB-5)", "status": "NOT_STARTED"},
+        {"id": "M-04", "summary": "SLOs, 30-day soak (wall-clock bound; clock starts by end of Phase 3), disaster-recovery and incident exercises, runbooks (PROD-28)", "status": "NOT_STARTED"}
       ]
     },
     "I": {
@@ -178,9 +194,9 @@
     }
   },
   "prod_map": {
-    "PROD-01": {"workstreams": ["misc"], "note": "protocol freeze/conformance; phase 5"},
-    "PROD-02": {"workstreams": ["misc"], "note": "threat model + claim-to-test traceability"},
-    "PROD-03": {"workstreams": ["misc"], "note": "independent second implementation"},
+    "PROD-01": {"workstreams": ["M"]},
+    "PROD-02": {"workstreams": ["M"]},
+    "PROD-03": {"workstreams": ["M"], "note": "implementation itself is external (EB-5); M-03 is the enablement package"},
     "PROD-04": {"workstreams": ["C", "I"]},
     "PROD-05": {"workstreams": ["B", "C"]},
     "PROD-06": {"workstreams": ["B", "C"]},
@@ -205,7 +221,7 @@
     "PROD-25": {"workstreams": ["H"]},
     "PROD-26": {"workstreams": ["H"]},
     "PROD-27": {"workstreams": ["H"]},
-    "PROD-28": {"workstreams": ["misc"], "note": "SLO/soak/incident; phase 5"},
+    "PROD-28": {"workstreams": ["M"]},
     "PROD-29": {"workstreams": ["I"]},
     "PROD-30": {"workstreams": ["I"]}
   }
