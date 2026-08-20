@@ -64,8 +64,14 @@ Levels, weakest first:
 | Uplink work and cover are indistinguishable to an observer | classifier | two independent classifiers fail against uplink | adversarial, cell level |
 | Uplink work and cover are indistinguishable to the entry operator | design + test | cover is a real committee encryption on the identical path | unit |
 | Publish/no-publish wire equivalence | blind two-world capture | **none** | none |
-| One operator cannot link ingress to released plaintext | composition tests | **RETRACTED — see EVIDENCE_INDEX.md. The byte-level matcher scores chance whenever re-randomisation happens, whether or not the permutation hides anything, so it passes against a chain that preserves order exactly.** | none |
-| A partial or reordered shuffle chain is refused | negative tests | **RETRACTED — the ten deviations are enforced only against a chain whose author volunteers the truth; `Round.Member` is an unauthenticated label.** | none |
+| One operator cannot link ingress to released plaintext | composition tests | permutation uniformity across trials, recovered with threshold authority (replaces a withdrawn byte-similarity matcher that passed against an order-preserving chain) | adversarial, in-process |
+| Only the certified committee can produce a chain | forgery tests | rounds carry receipts signed by certified identity keys; a chain from a non-member, and one with a substituted signer, are refused | adversarial |
+| A chain cannot replay into another epoch or committee | negative tests | sealed digest + release-epoch commitment; cross-epoch, cross-committee and cross-committee-epoch replays refused | adversarial |
+| A round that does not re-randomise is refused | negative tests | zero-blinding detector over every column pair | adversarial |
+| A partial or reordered shuffle chain is refused | negative tests | twelve deviations, each failing the epoch closed | adversarial |
+| Cover is indistinguishable from a deposit before decryption | classifier over the wire form | whole-cell padding comparison at every occupancy | adversarial |
+| Sealing leaks no publication volume through timing | duration + lock-contention measurement | seal duration and concurrent-deposit blocking compared empty vs full | adversarial |
+| One bad deposit cannot censor an epoch | negative tests | malformed and small-order deposits refused at the boundary; an undecryptable column is dropped, not fatal | adversarial |
 | Release timing takes no private input | determinism test | pure function of four public parameters; seal refused early at every occupancy | unit |
 | Batch size and shape do not reveal the deposit count | unit + decryption | identical size and shape at 0, 1, n-1, n deposits; every column including cover decrypts | adversarial |
 | Deposits are idempotent and capacity does not grow | negative tests | resend, conflict, over-capacity and restart regressions | adversarial |

@@ -71,7 +71,12 @@ columns:
    reserved empty fragment, produced on the same code path a client uses.
    Filler that was not a valid ciphertext would fail the shuffle proofs and
    announce itself; filler that was distinguishable from a real deposit would
-   publish the count.
+   publish the count. Cover is generated when the airlock opens, before the
+   window, and the wire form of the whole batch is re-derived from the parsed
+   batch so real and cover columns get their padding from one code path. Both
+   were defects: generating cover in `Seal` made its runtime linear in the
+   number of *empty* slots, and copying a 1152-byte deposit into a 1200-byte
+   cell left the difference zero while cover had it random.
 3. The whole set is permuted by a uniform draw from the system CSPRNG, so
    cover position does not announce how many real deposits preceded it.
 
@@ -82,8 +87,27 @@ placement is a fresh draw each time.
 ## Shuffle chain
 
 Every certified committee member shuffles the batch in turn, in the
-committee's certified order, each producing a Neff sequence-shuffle proof.
-`VerifyChain` re-verifies the whole chain from the sealed batch.
+committee's certified order, each producing a Neff sequence-shuffle proof
+**and a receipt signed by that member's certified identity key**.
+`VerifyChain` re-verifies the whole chain from the sealed batch, against the
+ordered identity keys.
+
+The signature is not decoration. A Neff proof binds only to the encryption
+key and the input/output digests, so with an unauthenticated round label an
+entry operator holding no committee share could run every shuffle itself,
+label the rounds with the certified member indices, and be accepted -- knowing
+the whole ingress-to-egress map, with the anytrust assumption inverted so that
+it needed to corrupt *no* shufflers. The receipt's proof domain is derived
+from the committee ID, the committee epoch, the batch ID and the round number,
+so a proof cannot be lifted to another member, round, batch or epoch, and the
+sealed batch carries a digest commitment naming its release epoch so a whole
+chain cannot replay from one epoch into another.
+
+A round must also **re-randomise**. A Neff proof shows that some permutation
+with some blinding exists, and zero is a valid blinding, so a chain of pure
+permutations verifies and anyone who saw the sealed batch reads the map
+straight off the bytes. Every output column must therefore differ from every
+input column.
 
 **Every member must appear exactly once, in order.** This is the anytrust
 assumption made mechanical: the chain is unlinkable only if at least one
@@ -97,9 +121,17 @@ no degraded mode for an unreachable member.
 
 ## Release
 
-Threshold decryption opens the chain's output. Cover is dropped **here and
-nowhere earlier**: it is indistinguishable from a real deposit until it has
-been decrypted, which is the entire point of it. The number of real fragments
+Threshold decryption opens the chain's output, per column. Cover is dropped
+**here and nowhere earlier**: it is indistinguishable from a real deposit
+until it has been decrypted, which is the entire point of it.
+
+Decryption is per column rather than all-or-nothing. A ciphertext of valid
+points that is not a real encryption passes every structural check and every
+shuffle proof -- a shuffle proof shows a permutation, not decryptability --
+and fails only at release, so an all-or-nothing decryption let one deposit
+censor every other publisher in the epoch after the committee had already
+spent its budget on it. A column that cannot be decrypted is dropped and
+counted; the rest are released. The number of real fragments
 is therefore known only to a party already holding threshold authority, and
 never becomes part of the public record of the epoch.
 
@@ -124,27 +156,44 @@ transport.
 Claimed, and evidenced by tests at the package boundary:
 
 - release timing is a pure function of public parameters, at every occupancy
-  from empty to full;
-- batch size and shape do not vary with deposit count, and every column
-  including cover decrypts;
-- deposits are idempotent, conflicts are refused, capacity does not grow;
+  from empty to full, and sealing costs the same at every occupancy;
+- batch size and shape do not vary with deposit count, across the whole
+  1200-byte wire form rather than only the ciphertext region, and every
+  column including cover decrypts;
+- deposits are idempotent with a constant-time comparison, conflicts are
+  refused, capacity does not grow, and a malformed or small-order deposit is
+  refused before it takes a slot;
 - a restart re-derives the same window and accepts the client's resend;
 - sealed position carries no stable information about arrival order;
-- every deviation from the full certified chain fails closed;
-- a byte-level matcher holding the sealed batch and the chain output links
-  ingress to release at chance, against a positive control where the same
-  matcher is perfect when re-randomisation is removed.
+- a chain in which no certified member participated is refused, as is one
+  with a substituted signer, a borrowed receipt, a round that does not
+  re-randomise, or a chain replayed into another release epoch, committee or
+  committee epoch, alongside the earlier structural deviations;
+- one undecryptable column does not censor the epoch;
+- the ingress-to-egress permutation is uniform across trials.
 
 **Not** claimed:
 
-- The unlinkability measurement is one concrete matcher over a small sample.
-  It shows that this matcher fails; it is not a proof of indistinguishability.
-  The actual guarantee rests on the IND-CPA property of re-randomised ElGamal
-  and on the anytrust assumption, and neither is established by a test.
-- The anytrust assumption is not tested, because it cannot be: if every
-  shuffler colludes, the chain is fully linkable by construction. What is
-  tested is that the code requires every member to participate, so an
-  adversary must corrupt all of them rather than some of them.
+- Unlinkability as a proof. The permutation-uniformity measurement is over a
+  small number of trials at a small batch size. It establishes that the chain
+  permutes uniformly in this sample; the guarantee rests on re-randomised
+  ElGamal being IND-CPA and on the anytrust assumption, and a test establishes
+  neither. An earlier byte-similarity measurement was withdrawn after review
+  showed it passed against a chain that preserved order exactly.
+- The anytrust assumption, which cannot be tested: if every shuffler colludes
+  the chain is linkable by construction. What is tested is that the code
+  requires every member to participate with an authenticated round.
+- **Open, from the same review:** `ErrEpochFull` is an exact occupancy oracle
+  to any depositor, and probing it consumes every remaining slot, so slot
+  exhaustion denies the epoch at the cost of a few cheap encryptions. The
+  deposit-ID namespace is unauthenticated, allowing a membership oracle and
+  targeted squatting of another publisher's ID. Both need deposit IDs derived
+  inside the trusted boundary from the uplink session identity rather than
+  chosen by the caller; the uplink currently carries no deposit ID on the
+  wire at all, so this is a transport-contract change.
+- `Seal` takes the current time from its caller and never reads a clock, so
+  "release timing is a pure function of public parameters" holds only if the
+  caller is honest about `now`.
 - Nothing here is a wire capture. Publish/no-publish equivalence at a real
   interface (A-04, A-12) is not evidenced.
 - The online distributed mix path (A-15) does not exist. The chain is

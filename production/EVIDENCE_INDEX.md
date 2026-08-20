@@ -256,3 +256,43 @@ in `docs/PUBLICATION_AIRLOCK.md` rather than in this index:
 Remediation is tracked in the commits that follow. No claim above is restored
 until it is re-evidenced against the fixed code, and no PROD gate was ever
 promoted on any of them.
+
+### Airlock remediation (Workstream A, sprint A2 follow-up)
+
+- Implementation: `Jtensetti/nomad-testnet@42824f8` (`live/airlock`,
+  `components/nomad-anytrust-mix-sim/mix`).
+- Fixes, each with a regression, for six of the review's findings: shuffle
+  rounds now carry receipts signed by certified identity keys with a proof
+  domain bound to committee, committee epoch, batch and round; a round that
+  does not re-randomise is refused; the sealed wire form is re-derived so
+  padding cannot identify cover; cover is generated before the window so
+  sealing costs the same at every occupancy; a sealed digest and release-epoch
+  commitment stop whole-chain replay; and deposits are validated on arrival
+  while release drops an undecryptable column instead of censoring the epoch.
+  Also: committee keys, member shares and deposits reject identity and
+  small-order points, epoch arithmetic refuses values that would overflow, the
+  idempotency comparison is constant time, and sealing is bounded above.
+- The A-05 measurement was rebuilt. The withdrawn byte-similarity matcher is
+  replaced by recovering the ingress-to-egress permutation with threshold
+  authority and checking it for uniformity across trials, which is the
+  property that actually has to hold.
+- Still NOT demonstrated: unlinkability as a proof (the measurement is a small
+  number of trials at a small batch size; the guarantee rests on re-randomised
+  ElGamal being IND-CPA and on the anytrust assumption, and a test establishes
+  neither), the anytrust assumption itself, any wire capture, or the online
+  distributed mix path (A-15).
+- **Open findings from the same review, not fixed:** `ErrEpochFull` is an
+  exact occupancy oracle to any depositor and probing it consumes every
+  remaining slot; the deposit-ID namespace is unauthenticated, permitting a
+  membership oracle and targeted squatting. Both need deposit IDs derived
+  inside the trusted boundary from the uplink session identity, which changes
+  the uplink transport contract.
+- **Process finding:** `components/nomad-anytrust-mix-sim` is a vendored
+  snapshot pinned by `COMPONENTS.sha256`, and it has diverged from the
+  standalone repository in both directions -- the vendored copy carries
+  `ValidateThresholdCommittee`, `ValidateMemberSecret` and
+  `dkg_protocol.go` that the standalone lacks, while the standalone carries
+  tests the vendored copy lacks. A security fix made in the standalone
+  repository would not reach what ships. The fixes above are in the vendored
+  copy, with digests regenerated. Reconciling the two is outstanding.
+- No PROD gate changes.

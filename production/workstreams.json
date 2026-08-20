@@ -241,7 +241,7 @@
           "id": "A-05",
           "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext",
           "status": "PARTIAL",
-          "note": "deposit/seal/shuffle-chain/threshold-release implemented, but an adversarial review found four Sev1 defects with working exploits: shuffle rounds are unauthenticated so one party forges the whole certified chain, a chain that never re-randomises verifies, wire padding distinguished cover from real deposits pre-decryption, and Seal's runtime read out publication volume. The unlinkability measurement also passes against an order-preserving chain. Claims retracted in EVIDENCE_INDEX.md; remediation in progress"
+          "note": "deposit/seal/authenticated-shuffle-chain/threshold-release implemented; the four Sev1 and two Sev2 findings from the adversarial review are fixed with a regression each, and the unlinkability measurement was rebuilt to check permutation uniformity rather than byte similarity. Still in-process only (A-15), and two deposit-ID findings remain open: ErrEpochFull is an occupancy oracle and the ID namespace is unauthenticated, both needing session-derived deposit IDs"
         },
         {
           "id": "A-06",
@@ -259,7 +259,7 @@
           "id": "A-08",
           "summary": "duplicate deposits idempotent",
           "status": "VERIFIED",
-          "note": "idempotent by deposit ID with a conflicting payload refused rather than overwritten; resends consume no extra slot, tested including across a simulated operator restart"
+          "note": "idempotent by deposit ID with a constant-time comparison and a conflicting payload refused rather than overwritten; resends consume no extra slot, tested including across a simulated operator restart. Note the ID namespace itself is unauthenticated (open finding under A-05)"
         },
         {
           "id": "A-09",
@@ -276,7 +276,7 @@
           "id": "A-11",
           "summary": "no ordinary-network fallback",
           "status": "PARTIAL",
-          "note": "no fallback path exists in the airlock and ten chain deviations fail closed, but those deviations bind only an adversary that labels its rounds honestly (Sev1, unauthenticated rounds); re-evidence after remediation"
+          "note": "no fallback path exists in the airlock: twelve chain deviations, an unauthenticated chain, a non-re-randomising round and cross-epoch replay all fail the epoch closed, with no partial-chain or degraded mode"
         },
         {
           "id": "A-12",
