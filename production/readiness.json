@@ -78,10 +78,19 @@
     },
     {
       "id": "PROD-08",
-      "status": "NOT_MET",
-      "evidence": [],
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/EPOCH_LIFECYCLE.md (normative v1)",
+        "Jtensetti/nomad-testnet@d9fa296 live/epoch (production path: cmd/nomad-operator, live/share/service.go)",
+        "live/epoch/testdata/epoch-descriptor-vectors.json sha256:4591483a82b95e2d...",
+        "membership: TestApprovalQuorumCannotBeForgedByOneOperator, TestMembershipTransitionRequiresPreviousCommittee, TestVerifyRejectsInsufficientApprovals, TestVerifyRejectsDuplicateApprovals",
+        "rotation: TestPlanIsDeterministicAndPublicOnly, TestPlanFollowsThePublicSchedule, TestNextDeadlineAdvancesMonotonically, TestHaltedChainPlansNothing",
+        "forward secrecy: TestForwardSecrecyAfterErasure",
+        "key erasure: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations",
+        "compromise recovery drill: TestRecoveryDrill (5 operators, 3-of-5), TestCompromiseRevocationNeedsPeerQuorum, TestSelfRevocationRequiresTheRevokedOperator"
+      ],
       "blockers": [
-        "rotation and compromise recovery"
+        "evidence rule item 4: a successful GitHub Actions run. Actions has assigned no runner to this repository since 2026-08-20T18:21Z, so no gate can be promoted to MET until that is restored. Items 1, 2, 3 and 5 are satisfied and the tests above pass locally at Jtensetti/nomad-testnet@3eccc61."
       ]
     },
     {

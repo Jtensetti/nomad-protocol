@@ -1,8 +1,17 @@
-# Epoch and key lifecycle (draft v1)
+# Epoch and key lifecycle (v1)
 
-Status: DRAFT, revised after internal evaluator review 2026-08-20. Nothing
-here is active protocol until the implementation, vectors and tests land and
-this header changes.
+Status: NORMATIVE for the release candidate, revised after internal evaluator
+review 2026-08-20. The draft header's own condition for leaving draft was that
+the implementation, vectors and tests land; they have. `live/epoch` is on the
+production path (`cmd/nomad-operator`, `live/share/service.go`), the
+descriptor vectors are published in `live/epoch/testdata/`, and every
+transition below has positive, negative and adversarial tests.
+
+Normative here means the wire formats, digests and transition rules are fixed
+for this release candidate and change only through a versioned revision. It
+does not mean the lifecycle has been operated by independent administrators:
+that is PROD-05 and needs the operators of EB-2, and no claim on this page
+should be read as evidence of it.
 
 This specifies how Nomad transitions between committee epochs: descriptor
 format, canonical encoding, chaining, activation, retirement, key erasure,
