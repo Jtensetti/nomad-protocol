@@ -20,9 +20,12 @@ Levels, weakest first:
 |---|---|---|---|
 | Emission plan takes no private input | planner API + package graph | selection-firewall tests; Selection Firewall CI gates | structural |
 | Cells are exactly 1200 bytes at fixed cadence | real interface | Compose pcap gate (run 32301972409) | boundary, single host |
-| Lost cells never cause catch-up bursts | real interface under loss/suspension | scheduler unit tests | unit |
-| Private reader activity does not change wire behavior | real interface, two worlds, blind | loopback two-world regression, not blind, not WAN | integration |
+| Lost cells never cause catch-up bursts | real interface under loss/suspension | scheduler unit tests; one-second burst ceiling asserted on every captured world in the node wire campaign | adversarial, loopback |
+| Cell size and destination do not depend on private activity | real socket, work queue empty vs full | `TestWireContentIsIndependentOfPrivateActivity`, mutation-verified | adversarial, loopback |
+| Cell timing does not depend on private activity | real interface, two worlds, blind | `TestWireTimingIsIndependentOfPrivateActivityUnderStress`: median cadence decided against an idle-vs-idle control under CPU and disk pressure; not blind, not WAN, count-based effects undecidable on a shared host | integration, loopback |
+| Private reader activity does not change wire behavior | real interface, two worlds, blind | as above; the blind evaluator and the WAN environment are both missing | integration |
 | Cache maintenance independent of reads | wire trace comparison | CI dependency gates only | structural |
+| The analysis rule detects the differences it claims to | both-direction self-tests | `scripts/test-two-world-analysis.py`, in CI: identical worlds accepted, each preregistered difference rejected, parser fails closed on any unparsed line | adversarial |
 
 ## Epoch and key lifecycle
 

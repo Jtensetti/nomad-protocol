@@ -116,3 +116,35 @@ actually demonstrates and, equally, what it does not.
 - Does NOT demonstrate: browser integration (D-09), capture evidence for
   query-independent resolution (D-10), or a second independent
   implementation (EB-5). Not yet independently reviewed.
+
+### Two-world analysis rule and wire campaign (Workstream E, sprint E1)
+
+- Analysis rule: `Jtensetti/nomad-testnet@9c0ac81` (`scripts/capture.py`,
+  `scripts/two-world-analysis.py`, `scripts/test-two-world-analysis.py`).
+- Campaign: `Jtensetti/nomad-testnet@cda072d` (`live/wire`,
+  `live/node/campaign_test.go`).
+- Preregistration: `production/PREREGISTRATION.md` v1.
+- Demonstrates: the preregistered decision rule is executable, with its
+  thresholds as constants rather than options; its self-tests assert both
+  directions and run in CI; its capture parser fails closed on any line it
+  cannot parse. Against the production node on a real socket, cell size and
+  the ordered destination sequence are identical whether the work queue is
+  empty or full (mutation-verified: a work-dependent destination fails the
+  test on every cell), and median cadence under CPU and disk pressure is
+  within 0.006 of an idle-vs-idle control against a 0.02 tolerance
+  (mutation-verified: an injected work-dependent emission delay is caught at
+  1.0004). The one-second burst ceiling holds on every captured world.
+- Does NOT demonstrate: anything about a WAN. Loopback, single host,
+  userspace receive timestamps, seconds rather than days, and the analyst is
+  the party that wrote the system. Packet-count and early-termination
+  effects are reported but explicitly undecidable at this sample size on a
+  shared host, and are not claimed. E-01, E-02, E-06 and E-09 remain open,
+  and no PROD gate changes.
+- Two defects found and fixed while building this, both of which made the
+  tooling report that two worlds matched when they did not: a two-sample KS
+  walk that charged tied values as ECDF gaps (a sample against itself scored
+  0.44, p=9e-35, on exactly the quantized inter-arrivals a fixed-cadence
+  capture produces), and a capture regex that silently skipped VLAN-tagged
+  packets, which the existing `verify-pcap.py` CI gate shared -- a tagged
+  capture would have passed its 1200-byte cell check without inspecting a
+  single packet.

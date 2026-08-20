@@ -481,7 +481,7 @@
           "id": "E-02",
           "summary": "captures from real interfaces with kernel timestamps",
           "status": "PARTIAL",
-          "note": "dedicated-bridge pcap gate exists"
+          "note": "dedicated-bridge pcap gate; live/node wire campaign captures a real socket, but with userspace receive timestamps on loopback, not kernel timestamps on a real interface"
         },
         {
           "id": "E-03",
@@ -491,7 +491,8 @@
         {
           "id": "E-04",
           "summary": "suspend/resume, clock drift, CPU starvation, process stall, disk pressure campaigns",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "CPU-starvation and disk-pressure campaigns run against the production node in CI (live/node campaign_test.go); suspend/resume, clock drift and process stall not started"
         },
         {
           "id": "E-05",
@@ -502,18 +503,19 @@
           "id": "E-06",
           "summary": "two-world blind classification with separate evaluator",
           "status": "PARTIAL",
-          "note": "non-blind loopback two-world regression exists"
+          "note": "non-blind loopback two-world regression, plus a wire-level idle-vs-active campaign with an idle-vs-idle positive control; still not blind and the analyst is the implementer"
         },
         {
           "id": "E-07",
           "summary": "preregistered features/metrics/tolerances before results",
-          "status": "NOT_STARTED"
+          "status": "VERIFIED",
+          "note": "PREREGISTRATION.md v1 fixes features, metrics and tolerances; scripts/two-world-analysis.py applies them mechanically with thresholds as module constants rather than options; self-tests assert both directions and run in CI"
         },
         {
           "id": "E-08",
           "summary": "no private-event catch-up burst under congestion/suspension on the wire",
           "status": "PARTIAL",
-          "note": "scheduler semantics tested; wire campaigns missing"
+          "note": "the one-second burst ceiling is asserted outright on every captured world and cadence is compared against a measured control; loopback only, and count-based effects are undecidable on a shared host"
         },
         {
           "id": "E-09",
@@ -529,7 +531,7 @@
           "id": "E-11",
           "summary": "immutable reports and capture digests",
           "status": "PARTIAL",
-          "note": "digest discipline exists for current artifacts"
+          "note": "campaign captures are written to runtime/evidence/wire-campaign and uploaded by CI; no digest-pinned archive yet"
         },
         {
           "id": "E-12",
