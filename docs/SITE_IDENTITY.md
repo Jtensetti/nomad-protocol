@@ -1,0 +1,216 @@
+# SiteID and publisher identity (draft v1)
+
+Status: DRAFT. Nothing here is active protocol until the implementation,
+vectors and tests land and this header changes.
+
+Object integrity and publisher identity are separate claims. The existing
+signed manifest (`nomad-object-v1` / `nomad-manifest-v1`, 228 bytes) proves
+*this exact object was signed by this key*. It cannot answer *is this
+currently the valid key for the site the user intended*. This specification
+adds that second claim without changing the manifest wire format: the
+manifest stays byte-identical and is referenced, never modified.
+
+## Concepts
+
+- **ObjectID** — the SHA-256 content root of exact object bytes. Already
+  implemented; unchanged.
+- **SiteID** — a persistent publisher identity that survives content
+  changes, many publications and routine signing-key rotation.
+- **SiteDescriptor** — one link in a hash-linked, monotonically sequenced
+  chain that states which keys are currently authorized for a SiteID.
+- **SitePublication** — a small signed record binding one ObjectID to a
+  SiteID under a specific descriptor. This is the join between the two
+  claims.
+
+## Canonical encoding
+
+Identical discipline to the epoch lifecycle (DEC-005): digests and
+signatures are computed over a specified canonical binary encoding — fixed
+field order, big-endian fixed-width integers, uint64 length prefixes for
+byte strings and lists, no floats, absent optional fields encode as zero
+length. JSON is storage/transport only and is never hashed or signed
+directly. This is what makes cross-platform derivation (D-03) and an
+independent second implementation (PROD-03) possible.
+
+## SiteID derivation
+
+    SiteID = SHA-256("nomad-siteid-v1" || canonical_binary(genesis_core))
+
+where `genesis_core` is the genesis SiteDescriptor with its `site_id` field
+set to 32 zero bytes and its `authorizations` list empty. Every other field
+— including the full signing-key set, the recovery policy and the validity
+window — is covered. The genesis descriptor's own `site_id` field must equal
+this derivation, so a descriptor chain is self-certifying: the SiteID is a
+commitment to the exact genesis key material and policy.
+
+A SiteID is therefore **not** a trust-on-first-use name. Learning the
+correct SiteID out of band (a link, a QR code, a printed address, another
+verified site) *is* the trust decision, exactly as with a self-certifying
+onion address. This is the explicit genesis/first-key trust policy required
+by D-11: Nomad clients never infer a first key from the network, and a
+SiteID that the user did not obtain out of band conveys no authority.
+
+## SiteDescriptor v1
+
+| Field | Meaning |
+|---|---|
+| `version` | `nomad-site-descriptor-v1` |
+| `site_id` | 32 bytes; zero in genesis_core, else the derived SiteID |
+| `sequence` | uint64, 0 for genesis, exactly previous+1 otherwise |
+| `transition` | `genesis`, `rotation`, `recovery` or `revocation` |
+| `previous_descriptor_digest` | 32 bytes; zero for genesis |
+| `valid_from`, `valid_until` | canonical UTC RFC3339 |
+| `signing_keys` | ordered list of active Ed25519 publishing keys |
+| `revoked_keys` | ordered list of permanently revoked keys |
+| `recovery` | recovery policy: ordered recovery key list + threshold |
+| `authorizations` | signatures authorizing this descriptor |
+
+Descriptor digest:
+`SHA-256("nomad-site-descriptor-digest-v1" || canonical_binary(descriptor
+with authorizations emptied))`.
+
+Constraints: at least one signing key and at most 8; at least one recovery
+key and at most 8; recovery threshold between 1 and the recovery key count;
+`valid_from < valid_until`; no key may appear in both `signing_keys` and
+`revoked_keys`; no duplicate keys within a list; a key listed in
+`revoked_keys` of any ancestor may never reappear in `signing_keys` or
+`recovery` of a descendant.
+
+Recovery keys must not also be signing keys. Online publishing keys and
+recovery authority are separate by construction, so theft of a publishing
+key does not confer recovery authority.
+
+## Authorization rules
+
+The authorization message is
+`"nomad-site-authorization-v1" || descriptor_digest || role_byte || key`
+where `role_byte` is `0x01` for a signing-key authorization and `0x02` for a
+recovery-key authorization, and `key` is the authorizing public key. Binding
+both the role and the exact key prevents an authorization from being
+replayed as a different role or attributed to a different key.
+
+| Transition | Required authorizations |
+|---|---|
+| `genesis` | every key in `signing_keys` (role 0x01) and every key in `recovery` (role 0x02) of the descriptor itself |
+| `rotation` | a majority of the **previous** descriptor's `signing_keys` (role 0x01) |
+| `recovery` | at least the previous descriptor's recovery `threshold` distinct previous recovery keys (role 0x02) |
+| `revocation` | either a rotation-style signing majority or a recovery-style threshold |
+
+Recovery is deliberately stricter than rotation: it is the only transition
+that can replace a signing-key set the holder no longer controls, and it
+requires the offline recovery quorum. A `recovery` transition additionally
+must place every previously active signing key into `revoked_keys`, so
+compromise recovery is always accompanied by explicit revocation of the
+compromised set.
+
+Genesis self-signature by every listed key proves possession of each key at
+genesis and prevents a publisher from committing to a recovery key it does
+not hold.
+
+## Chain, rollback and equivocation
+
+Every client keeps, per SiteID it has ever verified, the highest-sequence
+descriptor digest it accepted. Rules:
+
+1. **Chaining** — a non-genesis descriptor's `previous_descriptor_digest`
+   must equal the digest of the descriptor for `sequence - 1`, and its
+   `site_id` must equal the chain's SiteID.
+2. **Monotonicity** — a descriptor whose sequence is at or below the
+   highest accepted sequence is rejected unless its digest is identical to
+   the stored one for that sequence (idempotent re-delivery). This is the
+   rollback defense: a superseded descriptor can never be reinstated.
+3. **Equivocation is fatal, per site** — two distinct valid descriptor
+   digests for the same `(site_id, sequence)` are recorded as an
+   equivocation proof. The site is marked EQUIVOCATING; the client refuses
+   to treat any publication from it as identity-verified from then on, and
+   refuses further descriptor updates for that site. It does not halt the
+   client or any other site. Only a fully valid competing descriptor
+   triggers this, so malformed bytes cannot be used to poison a site.
+4. **Expiry** — a descriptor outside its validity window authorizes
+   nothing. Publications previously accepted are not retroactively
+   invalidated; new publications under an expired descriptor are not
+   identity-verified.
+
+The equivocation proof is a self-contained artifact (both encoded
+descriptors) that a third party can verify independently, which is what
+makes split-view detection transferable rather than a private client
+opinion.
+
+## SitePublication v1
+
+The join between object integrity and publisher identity, kept separate
+from the manifest so the 228-byte manifest format is untouched.
+
+| Field | Meaning |
+|---|---|
+| `version` | `nomad-site-publication-v1` |
+| `site_id` | the publishing site |
+| `descriptor_digest` | digest of the descriptor authorizing the signing key |
+| `signing_key` | the Ed25519 key used, which must be active in that descriptor |
+| `object_root` | the manifest's 32-byte content root (the ObjectID) |
+| `manifest_digest` | SHA-256 of the exact 228 manifest bytes |
+| `published_at` | canonical UTC RFC3339 |
+| `signature` | Ed25519 over `"nomad-site-publication-v1" \|\| canonical_binary(record without signature)` |
+
+Binding both `object_root` and `manifest_digest` means a publication cannot
+be re-pointed at a different manifest that happens to share a content root,
+and cannot be transplanted onto another object.
+
+Acceptance as *publisher-identity verified* requires all of:
+
+1. the object verifies exactly (existing manifest rules: length, root,
+   object signature, manifest signature);
+2. the publication record's `object_root` and `manifest_digest` match that
+   exact object and manifest;
+3. the publication's signature verifies under `signing_key`;
+4. `signing_key` is active (and not revoked) in the descriptor identified by
+   `descriptor_digest`;
+5. that descriptor is the client's highest accepted descriptor for the
+   SiteID, is inside its validity window, and the site is not EQUIVOCATING;
+6. the descriptor chain from genesis to that descriptor verifies, and the
+   SiteID re-derives from the genesis descriptor.
+
+Any failure yields a lesser state; nothing degrades to a warning.
+
+## Client identity states
+
+The browser must render exactly these, never an ambiguous "verified":
+
+| State | Meaning |
+|---|---|
+| `OBJECT_VERIFIED` | bytes are exactly the signed object; publisher identity not established |
+| `PUBLISHER_VERIFIED` | all six acceptance conditions above hold for a SiteID the user asked for |
+| `PUBLISHER_UNKNOWN` | no publication record, or a SiteID with no locally verified chain |
+| `PUBLISHER_INVALID` | signature, chain, revocation, expiry, rollback or equivocation failure |
+
+`PUBLISHER_INVALID` is not a softer `PUBLISHER_UNKNOWN`: it means an
+identity claim was made and failed, and it must be visually distinct.
+Content whose identity state is `PUBLISHER_INVALID` must not be presented
+as belonging to the requested site.
+
+## Resolution must not create query-dependent traffic
+
+Descriptors and publication records are ordinary Nomad objects distributed
+by the same public, periodic, private-state-independent mechanism as all
+other content. A client must never fetch a descriptor because a user asked
+for a site, and must never emit a lookup, probe or refresh whose existence,
+timing or destination depends on which SiteID the user is interested in.
+Identity verification runs entirely against locally cached material; if the
+required descriptor is not cached, the result is `PUBLISHER_UNKNOWN` and the
+client waits for ordinary cache maintenance. This is D-10 and it is a hard
+requirement of the core privacy invariant, not a performance preference.
+
+## Non-claims
+
+- A verified SiteID says nothing about the honesty, legality or safety of
+  the publisher; it says the same party that created the genesis descriptor
+  authorized this object.
+- Out-of-band SiteID distribution is outside this specification. A user
+  given the wrong SiteID verifies the wrong site correctly.
+- Equivocation detection is per client and depends on a client actually
+  seeing both descriptors; it bounds an attacker's ability to sustain a
+  split view over time, and does not prevent a one-shot split view against a
+  client that never sees the other branch.
+- Nothing here protects a publisher who publishes identifying content, nor a
+  publisher whose signing key is stolen and used before revocation
+  propagates.
