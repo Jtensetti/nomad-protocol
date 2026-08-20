@@ -79,7 +79,16 @@ valid activation signature from every operator in the epoch's topology.
 
 Approval signature (non-genesis): Ed25519 by an operator identity from the
 **previous** epoch's topology over
-`"nomad-epoch-approval-v1" || previous_epoch_digest || descriptor_digest`.
+`"nomad-epoch-approval-v1" || previous_epoch_digest || descriptor_digest ||
+approver_identity_key`.
+
+The approver's own identity key is part of the signed message. Without it
+every approver signs identical bytes, so one approval is verbatim reusable
+in every quorum slot and a single previous-epoch operator can mint an entire
+quorum. Verifiers must additionally reject an approval whose index is
+outside the previous membership, and must deduplicate on the resolved
+operator rather than on the index as it appears on the wire, so that no
+narrowing conversion can let one operator occupy several quorum slots.
 
 ### Approval quorum (membership transition lives here)
 
@@ -168,7 +177,35 @@ persisted epoch chain store with these rules:
 4. **Operator single-signature rule**: an operator must refuse to sign
    activation or approval for a second distinct descriptor digest for the
    same epoch; its local signature journal enforces this and the refusal is
-   itself evidence.
+   itself evidence. Signing must go through the journal rather than merely
+   consulting it: because rule 3 makes any second valid descriptor halt every
+   verifier that sees it, an unjournalled signer turns a routine operational
+   mistake into a network-wide outage.
+
+Rule 3's halt is in-memory first and persisted second. A verifier that has
+observed two valid descriptors for one epoch stops serving epochs even if it
+cannot write the evidence (full disk, read-only mount, a marker another
+instance already wrote); a persistence failure is reported alongside the
+halt, never in place of it.
+
+Rule 2 is enforced against a persisted high-water mark, not merely against
+the descriptors still present in the store, so removing a descriptor file
+cannot silently re-open a burned epoch number for a different successor.
+
+Equivocation is defined over `(network_id, epoch)` read from the embedded
+topology. A verifier must not match candidates by their previous-epoch
+digest alone: every genesis descriptor shares the all-zero previous digest,
+so doing that would misrecord a lawful re-bootstrap at a later epoch as
+equivocation and halt every verifier that saw it.
+
+A store is pinned to one `network_id` and rejects descriptors from any other
+network, including the first genesis it is ever offered.
+
+Revocation is forward-scoped. A verifier applies its revocation set to what
+it admits from now on, and must not re-check already-accepted history
+against it: doing so would make a compromise announcement render the
+verifier unable to open its own chain at exactly the moment it needs to
+accept the emergency successor that excludes the compromised operator.
 
 ## Context binding
 

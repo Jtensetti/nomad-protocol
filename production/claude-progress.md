@@ -3,6 +3,53 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## 2026-08-20 — C1 implemented and hardened; D1 implemented; A spike done
+
+**Completed**
+
+- **Workstream C sprint C1** (`nomad-testnet/live/epoch`): EpochDescriptor
+  v1 wrapping the unchanged topology v3 and DKG certificate, canonical
+  binary encoding with published vectors, chained approval quorum,
+  activation signatures, envelope-vs-active windows, persisted fail-closed
+  chain store, enforced signature journal, 3-of-5 profile tests.
+- **Independent review of C1 found five must-fix defects, each with a
+  working exploit.** The most serious: `Approval.Index` was narrowed to
+  uint16 for lookup but deduplicated on the full uint32, and the approval
+  message bound nothing about the approver, so ONE previous-epoch operator
+  could mint a full 3-of-5 quorum and force a membership change alone.
+  Also: the equivocation halt failed open on any persistence error; the
+  signature journal was implemented but unreachable; revocation was applied
+  retroactively and bricked the store exactly when recovery was needed; and
+  `Append` returned success for bytes `Verify` rejects. All fixed with
+  regressions (`318845a`), plus cross-process locking (`0ad1e35`).
+- **Workstream D sprint D1** (`nomad-local-reconstruction/site`):
+  self-certifying SiteID, rotation/recovery/revocation with offline
+  recovery authority, rollback and equivocation handling, four identity
+  states, strict parsing. Spec in `docs/SITE_IDENTITY.md`. Not yet
+  independently reviewed.
+- **Workstream A ingress spike** (`live/publish`, `live/uplink`): measured
+  that the current operator cell profile leaks work-vs-cover perfectly
+  under two independent classifiers, so it cannot carry publisher traffic;
+  built and tested an uplink profile that defeats both, where cover is a
+  real committee encryption on the identical code path so the entry
+  operator cannot distinguish it either. Report in
+  `docs/PUBLICATION_INGRESS.md`.
+
+**Risks discovered**
+
+- The cleartext hop header (work flag, stream ID, batch coordinates) is a
+  publisher-traffic blocker and should be reviewed for what it reveals
+  about operator relay patterns over long horizons, even though it does
+  not break the reader claim.
+- Publication cover cells must be mixed and threshold decrypted like real
+  ones; that cost is accepted but affects capacity planning.
+
+**Next priority** Workstream C sprint C2: revocation statements, key
+erasure with the forward-secrecy experiment, retired-share refusal, and
+automatic rotation; then re-review C before any MET claim.
+
+**External blockers** unchanged (EB-1..EB-6).
+
 ## 2026-08-20 — Evaluator critique incorporated; C1 ready
 
 **Completed**
