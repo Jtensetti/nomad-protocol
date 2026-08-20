@@ -49,16 +49,32 @@ A deposit is one client-sealed committee ciphertext: exactly one column of a
 mix batch, and exactly the inner layer of one uplink cell. The airlock holds
 them keyed by a client-chosen deposit ID.
 
-- **Idempotent.** Re-offering the identical payload under an ID already held
+- **Slots are named by the airlock, not the caller.** The deposit ID is
+  derived from an opaque per-session value the entry operator holds from the
+  uplink key agreement, plus the client's sequence number. When callers named
+  their own slots the 32-byte namespace was unauthenticated: anyone could
+  probe whether an ID was held — a "did X publish this epoch?" oracle for any
+  ID derived from content or from a publisher — and could permanently block a
+  publisher by squatting its ID.
+- **Idempotent.** Re-offering the identical payload for the same sequence
   succeeds without consuming a second slot. A client that cannot tell whether
   its uplink cell arrived — and it cannot, since the uplink carries no
   acknowledgement that would distinguish work from cover — resends freely.
-- **Conflicts are refused, not resolved.** A different payload under a held ID
-  is an error. Overwriting would silently drop whichever publication lost.
-- **Capacity is fixed and public.** A deposit beyond `BatchSize` is refused
-  and waits for a later epoch. Growing the batch would publish the number of
-  real deposits in the batch size itself. Refusal is invisible on the wire:
-  the client keeps emitting uplink cells at the same rate either way.
+- **Conflicts are refused, not resolved.** A different payload for a held
+  sequence is an error. Overwriting would silently drop whichever publication
+  lost. Reporting it is safe because a caller can only collide with its own
+  earlier deposit.
+- **A full epoch is silent.** A deposit beyond `BatchSize` is dropped and
+  counted operator-locally, and the caller is told nothing. Reporting "epoch
+  full" gave any depositor the exact real-deposit count — subtract the
+  accepted count from the public batch size — and probing for it consumed
+  every remaining slot. Losing the work is the right trade: the client keeps
+  emitting uplink cells at the same rate either way, so nothing on the wire
+  changes.
+- **One session cannot take the batch.** `MaxDepositsPerSession` bounds how
+  many slots a session may hold. This does not solve Sybil — an attacker with
+  many authenticated sessions still competes for slots — which is an
+  admission question (G-05..G-09), not one this boundary can answer.
 
 ## Sealing
 
@@ -183,14 +199,13 @@ Claimed, and evidenced by tests at the package boundary:
 - The anytrust assumption, which cannot be tested: if every shuffler colludes
   the chain is linkable by construction. What is tested is that the code
   requires every member to participate with an authenticated round.
-- **Open, from the same review:** `ErrEpochFull` is an exact occupancy oracle
-  to any depositor, and probing it consumes every remaining slot, so slot
-  exhaustion denies the epoch at the cost of a few cheap encryptions. The
-  deposit-ID namespace is unauthenticated, allowing a membership oracle and
-  targeted squatting of another publisher's ID. Both need deposit IDs derived
-  inside the trusted boundary from the uplink session identity rather than
-  chosen by the caller; the uplink currently carries no deposit ID on the
-  wire at all, so this is a transport-contract change.
+- Fair access under Sybil. One session is bounded, but an attacker holding
+  many authenticated uplink sessions still competes for slots on equal terms
+  with honest publishers. Admission and rate control (G-05..G-09) are not
+  designed.
+- The uplink carries no deposit sequence on the wire today, so the session
+  and sequence a caller passes are supplied by the entry operator's own
+  session handling rather than authenticated end to end by the client.
 - `Seal` takes the current time from its caller and never reads a clock, so
   "release timing is a pure function of public parameters" holds only if the
   caller is honest about `now`.

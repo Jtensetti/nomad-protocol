@@ -75,6 +75,9 @@ Levels, weakest first:
 | Release timing takes no private input | determinism test | pure function of four public parameters; seal refused early at every occupancy | unit |
 | Batch size and shape do not reveal the deposit count | unit + decryption | identical size and shape at 0, 1, n-1, n deposits; every column including cover decrypts | adversarial |
 | Deposits are idempotent and capacity does not grow | negative tests | resend, conflict, over-capacity and restart regressions | adversarial |
+| A depositor learns nothing about the epoch's occupancy | oracle tests | a full epoch drops silently; probing past capacity is indistinguishable from acceptance | adversarial |
+| One depositor cannot name or squat another's slot | derivation + negative tests | IDs derived from (session, sequence); a foreign session cannot collide across 16 sequences | adversarial |
+| One session cannot occupy the whole batch | quota test | per-session bound enforced silently, other sessions unaffected | adversarial |
 | The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
 | Failure and retry add no traffic | capture under failure | **none** | none |
 

@@ -241,7 +241,7 @@
           "id": "A-05",
           "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext",
           "status": "PARTIAL",
-          "note": "deposit/seal/authenticated-shuffle-chain/threshold-release implemented; the four Sev1 and two Sev2 findings from the adversarial review are fixed with a regression each, and the unlinkability measurement was rebuilt to check permutation uniformity rather than byte similarity. Still in-process only (A-15), and two deposit-ID findings remain open: ErrEpochFull is an occupancy oracle and the ID namespace is unauthenticated, both needing session-derived deposit IDs"
+          "note": "deposit/seal/authenticated-shuffle-chain/per-column-threshold-release implemented; all four Sev1 and all three Sev2 findings from the adversarial review are fixed with a regression each, deposit IDs are derived from the session so one depositor cannot name another's slot, a full epoch drops silently rather than reporting occupancy, and the unlinkability measurement was rebuilt to check permutation uniformity. Still in-process only (A-15) and with no wire capture"
         },
         {
           "id": "A-06",
@@ -264,7 +264,8 @@
         {
           "id": "A-09",
           "summary": "selective dropping is not a trivial publication oracle; analysis documented",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "a full epoch is silent and per-session slot quotas bound one client's share, so capacity refusal is not an occupancy oracle; selective dropping by a malicious entry operator is still unanalysed, and fair access under Sybil depends on admission control that does not exist (G-05..G-09)"
         },
         {
           "id": "A-10",
