@@ -70,7 +70,10 @@ Descriptor digest:
 with authorizations emptied))`.
 
 Constraints: at least one signing key and at most 8; at least one recovery
-key and at most 8; recovery threshold between 1 and the recovery key count;
+key and at most 8; `revoked_keys` has its own, far larger bound (1024),
+because revocation is absorbing and sharing the active-key bound would make
+a site permanently unrotatable after eight revocations; recovery threshold
+between 1 and the recovery key count;
 `valid_from < valid_until`; no key may appear in both `signing_keys` and
 `revoked_keys`; no duplicate keys within a list; a key listed in
 `revoked_keys` of any ancestor may never reappear in `signing_keys` or
@@ -92,9 +95,22 @@ replayed as a different role or attributed to a different key.
 | Transition | Required authorizations |
 |---|---|
 | `genesis` | every key in `signing_keys` (role 0x01) and every key in `recovery` (role 0x02) of the descriptor itself |
-| `rotation` | a majority of the **previous** descriptor's `signing_keys` (role 0x01) |
+| `rotation` | a majority of the **previous** descriptor's `signing_keys` (role 0x01), and the recovery policy must be byte-identical to the previous descriptor's |
 | `recovery` | at least the previous descriptor's recovery `threshold` distinct previous recovery keys (role 0x02) |
 | `revocation` | either a rotation-style signing majority or a recovery-style threshold |
+
+**Recovery-policy authority.** Changing `recovery` at all, or revoking a
+currently active recovery key, additionally requires the previous
+descriptor's recovery `threshold` in role-0x02 authorizations, whatever the
+transition kind. Without this rule a thief holding only the online signing
+keys could install their own recovery set and revoke the real one; because
+revocation is absorbing, the rightful owner could then never recover. Online
+publishing authority must never reach offline recovery authority.
+
+**Possession of new keys.** Every key that first appears in `signing_keys`
+or `recovery` in any transition must carry a role-appropriate self-signature,
+not only at genesis. Installing a recovery key nobody holds is a one-shot
+permanent brick of the site.
 
 Recovery is deliberately stricter than rotation: it is the only transition
 that can replace a signing-key set the holder no longer controls, and it
@@ -131,10 +147,17 @@ descriptor digest it accepted. Rules:
    invalidated; new publications under an expired descriptor are not
    identity-verified.
 
-The equivocation proof is a self-contained artifact (both encoded
-descriptors) that a third party can verify independently, which is what
-makes split-view detection transferable rather than a private client
-opinion.
+The equivocation proof carries both encoded descriptors **and the accepted
+chain from genesis to the contested sequence**. The prefix is not optional:
+judging whether either branch is authorized requires its ancestors, and a
+proof that only compared shapes could be fabricated against any honest site,
+turning split-view detection into an attacker-controlled kill switch. A
+verifier re-derives the SiteID from the proof's genesis and verifies both
+branches against the prefix before accepting the conflict.
+
+A descriptor for a different site is never equivocation. A verifier pins the
+SiteID it is tracking and rejects anything else as unrelated, because a
+genesis descriptor only proves that it commits to its own derived SiteID.
 
 ## SitePublication v1
 
@@ -165,8 +188,11 @@ Acceptance as *publisher-identity verified* requires all of:
 3. the publication's signature verifies under `signing_key`;
 4. `signing_key` is active (and not revoked) in the descriptor identified by
    `descriptor_digest`;
-5. that descriptor is the client's highest accepted descriptor for the
-   SiteID, is inside its validity window, and the site is not EQUIVOCATING;
+5. that descriptor is an accepted descriptor for the SiteID which was inside
+   its validity window at the publication's `published_at`, the head has not
+   revoked the signing key, and the site is not EQUIVOCATING. It need not be
+   the head: a routine rotation must not turn a publisher's back catalogue
+   into failed identity claims;
 6. the descriptor chain from genesis to that descriptor verifies, and the
    SiteID re-derives from the genesis descriptor.
 
@@ -181,10 +207,15 @@ The browser must render exactly these, never an ambiguous "verified":
 | `OBJECT_VERIFIED` | bytes are exactly the signed object; publisher identity not established |
 | `PUBLISHER_VERIFIED` | all six acceptance conditions above hold for a SiteID the user asked for |
 | `PUBLISHER_UNKNOWN` | no publication record, or a SiteID with no locally verified chain |
-| `PUBLISHER_INVALID` | signature, chain, revocation, expiry, rollback or equivocation failure |
+| `PUBLISHER_INVALID` | signature, chain, revocation, expiry, rollback or equivocation failure, including a claim contradicted by a chain the client holds |
+| `OBJECT_INVALID` | the bytes are not the signed object; no identity claim was reached |
 
 `PUBLISHER_INVALID` is not a softer `PUBLISHER_UNKNOWN`: it means an
 identity claim was made and failed, and it must be visually distinct.
+`PUBLISHER_UNKNOWN` is reserved for a well-formed claim whose chain is
+genuinely not cached yet. A malformed claim, or one naming a descriptor the
+client's accepted chain cannot contain, is INVALID: otherwise an attacker
+chooses the softer state simply by naming a digest the client never saw.
 Content whose identity state is `PUBLISHER_INVALID` must not be presented
 as belonging to the requested site.
 
