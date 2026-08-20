@@ -93,6 +93,14 @@ Levels, weakest first:
 | Sybil, eclipse, amplification bounded | simulation | **none** | none |
 | Backpressure does not alter private-sensitive cadence | wire trace under load | **none** | none |
 
+## Operational output
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| A process may emit only fields with a written public rationale | schema allowlist | `live/telemetry` fails closed on any unlisted field; fourteen forbidden counters named with reasons | adversarial |
+| Operational output contains no secret in any encoding | scan of everything written | production node run with known secrets; every file under its state directory scanned in raw, hex, upper hex and three base64 forms; instrument rehearsed against all five secrets first | adversarial |
+| Operational output does not accumulate | retention test | health file rewritten in place, no append-only log | unit |
+
 ## Browser and release
 
 | Claim | Boundary required | Tests | Level |

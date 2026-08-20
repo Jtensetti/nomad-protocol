@@ -322,9 +322,13 @@
     {
       "id": "PROD-27",
       "status": "NOT_MET",
-      "evidence": [],
+      "evidence": [
+        "Jtensetti/nomad-testnet@068453f live/telemetry (schema allowlist + secret scanner)",
+        "live/node/telemetry_test.go: production node run with known secrets, every state file scanned"
+      ],
       "blockers": [
-        "privacy-preserving operations telemetry"
+        "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
+        "operator-deployment retention controls and a privacy review, neither of which is a test"
       ]
     },
     {
