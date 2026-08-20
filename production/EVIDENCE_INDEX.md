@@ -281,12 +281,16 @@ promoted on any of them.
   ElGamal being IND-CPA and on the anytrust assumption, and a test establishes
   neither), the anytrust assumption itself, any wire capture, or the online
   distributed mix path (A-15).
-- **Open findings from the same review, not fixed:** `ErrEpochFull` is an
-  exact occupancy oracle to any depositor and probing it consumes every
-  remaining slot; the deposit-ID namespace is unauthenticated, permitting a
-  membership oracle and targeted squatting. Both need deposit IDs derived
-  inside the trusted boundary from the uplink session identity, which changes
-  the uplink transport contract.
+- Both remaining findings were subsequently closed in
+  `Jtensetti/nomad-testnet@845edff`: deposit IDs are derived from an opaque
+  per-session value and a sequence number, so one depositor cannot name
+  another's slot, and a full epoch drops the deposit silently rather than
+  reporting occupancy, with the count surviving only in operator-local
+  accounting. Per-session slot quotas bound one client's share of a batch.
+  This does not give fair access under Sybil: an attacker holding many
+  authenticated sessions still competes for slots, which needs the
+  admission and rate-control model of G-05..G-09. All seven Sev1/Sev2
+  findings from the review are now fixed, each with a regression.
 - **Process finding:** `components/nomad-anytrust-mix-sim` is a vendored
   snapshot pinned by `COMPONENTS.sha256`, and it has diverged from the
   standalone repository in both directions -- the vendored copy carries
