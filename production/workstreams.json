@@ -135,13 +135,13 @@
           "id": "D-01",
           "summary": "canonical versioned SiteDescriptor (SiteID, sequence, signing keys, recovery policy, validity, previous-descriptor commitment, transition signatures, revocation)",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-02",
           "summary": "domain-separated deterministic SiteID derivation from defined genesis; public vectors",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-03",
@@ -153,31 +153,31 @@
           "id": "D-04",
           "summary": "rotation authorized by previous valid chain; rollback to superseded descriptor prevented",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-05",
           "summary": "expiry and revocation",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-06",
           "summary": "offline recovery keys; recovery stricter than rotation",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-07",
           "summary": "split-view/equivocation detection model implemented",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-08",
           "summary": "malformed descriptors fail closed",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-09",
@@ -194,13 +194,13 @@
           "id": "D-11",
           "summary": "genesis/first-key trust policy explicitly defined",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         },
         {
           "id": "D-12",
           "summary": "adversarial tests: theft, stale descriptor, fork, rollback, replay, invalid recovery, conflicting chains",
           "status": "PARTIAL",
-          "note": "implemented with negative tests and published vectors in nomad-local-reconstruction site package (commit d572673); awaiting evaluator review and browser integration"
+          "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
         }
       ]
     },
@@ -391,17 +391,20 @@
         {
           "id": "G-01",
           "summary": "cheap pollution validation before decoder admission (established construction)",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "systematic symbols verified against signed per-source commitments before admission; coded symbols cannot be checked pre-admission and the reason is documented in docs/POLLUTION_AND_RESOURCES.md"
         },
         {
           "id": "G-02",
           "summary": "per-generation bounds: symbols, bytes, rank attempts, CPU budget, memory, lifetime, malformed/duplicate handling",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "symbols, bytes, rank attempts, deterministic work units, basis memory and lifetime all enforced per generation (nomad-rlnc bounded.go)"
         },
         {
           "id": "G-03",
           "summary": "Byzantine pollution campaign incl. 100% malicious symbols; no OOM/unbounded CPU",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "Byzantine campaign at 50/90/100 percent malicious: every budget holds, heap growth bounded, generation terminates"
         },
         {
           "id": "G-04",
