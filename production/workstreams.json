@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-20",
+  "status_values": ["NOT_STARTED", "PARTIAL", "BLOCKED", "VERIFIED"],
+  "note": "Requirement registry for production/GOAL.md. VERIFIED requires the four-part DONE rule (implementation, failure behavior, adversarial evidence, claim boundary). PROD gate statuses live in production/readiness.json; the prod_map below only assigns ownership.",
+  "workstreams": {
+    "C": {
+      "title": "Epoch and key lifecycle",
+      "phase": 1,
+      "repos": ["nomad-testnet", "nomad-anytrust-mix-sim", "nomad-protocol"],
+      "requirements": [
+        {"id": "C-01", "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)", "status": "PARTIAL", "note": "signed topology + batch descriptor v2 exist; no validity window, previous-epoch digest, or lifecycle fields"},
+        {"id": "C-02", "summary": "public epoch-descriptor test vectors", "status": "NOT_STARTED"},
+        {"id": "C-03", "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants", "status": "PARTIAL", "note": "DKG packets and batch descriptors bound; mix-proof and session epoch binding needs audit"},
+        {"id": "C-04", "summary": "automatic next-epoch DKG while epoch N active", "status": "NOT_STARTED"},
+        {"id": "C-05", "summary": "activation only at public predetermined boundary, independent of private behavior", "status": "NOT_STARTED"},
+        {"id": "C-06", "summary": "retired epoch shares rejected", "status": "NOT_STARTED"},
+        {"id": "C-07", "summary": "stale proof/share/session replay rejected", "status": "PARTIAL", "note": "DKG journal rejects intra-ceremony replay; cross-epoch staleness unhandled"},
+        {"id": "C-08", "summary": "key-erasure procedure implemented, documented, tested with evidence", "status": "NOT_STARTED"},
+        {"id": "C-09", "summary": "operator replacement via signed protocol transition", "status": "NOT_STARTED"},
+        {"id": "C-10", "summary": "compromise recovery flow (credential compromise, lost operator, emergency transition)", "status": "NOT_STARTED"},
+        {"id": "C-11", "summary": "signing-identity revocation", "status": "NOT_STARTED"},
+        {"id": "C-12", "summary": "split-brain activation fails closed", "status": "PARTIAL", "note": "DKG-09 rejects split views inside one ceremony; epoch-level split-brain unhandled"},
+        {"id": "C-13", "summary": "two valid conflicting descriptors for one epoch cannot both silently activate", "status": "NOT_STARTED"},
+        {"id": "C-14", "summary": "interrupted DKG never resumes from unsafe ambiguous state", "status": "PARTIAL", "note": "DKG-07 refuses resume of interrupted ephemeral session; lifecycle retry semantics for N+1 unbuilt"},
+        {"id": "C-15", "summary": "forward-secrecy adversarial experiment", "status": "NOT_STARTED"},
+        {"id": "C-16", "summary": "recovery drill documented and executed in test environment", "status": "NOT_STARTED"},
+        {"id": "C-17", "summary": "CI regression tests for the epoch lifecycle", "status": "PARTIAL", "note": "DKG ceremony regression exists; no lifecycle coverage"}
+      ]
+    },
+    "D": {
+      "title": "SiteID and publisher identity",
+      "phase": 1,
+      "repos": ["nomad-local-reconstruction", "Nomad-browser", "nomad-protocol"],
+      "requirements": [
+        {"id": "D-01", "summary": "canonical versioned SiteDescriptor (SiteID, sequence, signing keys, recovery policy, validity, previous-descriptor commitment, transition signatures, revocation)", "status": "NOT_STARTED"},
+        {"id": "D-02", "summary": "domain-separated deterministic SiteID derivation from defined genesis; public vectors", "status": "NOT_STARTED"},
+        {"id": "D-03", "summary": "cross-platform identical derivation; parser differential tests", "status": "NOT_STARTED"},
+        {"id": "D-04", "summary": "rotation authorized by previous valid chain; rollback to superseded descriptor prevented", "status": "NOT_STARTED"},
+        {"id": "D-05", "summary": "expiry and revocation", "status": "NOT_STARTED"},
+        {"id": "D-06", "summary": "offline recovery keys; recovery stricter than rotation", "status": "NOT_STARTED"},
+        {"id": "D-07", "summary": "split-view/equivocation detection model implemented", "status": "NOT_STARTED"},
+        {"id": "D-08", "summary": "malformed descriptors fail closed", "status": "NOT_STARTED"},
+        {"id": "D-09", "summary": "browser distinguishes object integrity, publisher identity verified/unknown/revoked", "status": "NOT_STARTED"},
+        {"id": "D-10", "summary": "SiteID resolution introduces no query-dependent network behavior", "status": "NOT_STARTED"},
+        {"id": "D-11", "summary": "genesis/first-key trust policy explicitly defined", "status": "NOT_STARTED"},
+        {"id": "D-12", "summary": "adversarial tests: theft, stale descriptor, fork, rollback, replay, invalid recovery, conflicting chains", "status": "NOT_STARTED"}
+      ]
+    },
+    "A": {
+      "title": "Publication airlock",
+      "phase": 1,
+      "repos": ["nomad-testnet", "nomad-selection-firewall", "nomad-anytrust-mix-sim", "nomad-protocol"],
+      "requirements": [
+        {"id": "A-01", "summary": "Publish API purely local, no network capability, enforced architecturally", "status": "NOT_STARTED"},
+        {"id": "A-02", "summary": "bounded persistent crash-safe idempotent publication queue", "status": "NOT_STARTED"},
+        {"id": "A-03", "summary": "publication fragments ride pre-existing fixed-size fixed-cadence cells; queue state cannot change schedule", "status": "NOT_STARTED"},
+        {"id": "A-04", "summary": "publish/no-publish observable schedule equivalence under threat model", "status": "NOT_STARTED"},
+        {"id": "A-05", "summary": "anytrust mix + threshold deposit boundary; single entry operator cannot link ingress to released plaintext", "status": "NOT_STARTED"},
+        {"id": "A-06", "summary": "activity-independent public release epochs; no release on private queue completion", "status": "NOT_STARTED"},
+        {"id": "A-07", "summary": "timeout/loss/restart/retry create no extra private-dependent traffic", "status": "NOT_STARTED"},
+        {"id": "A-08", "summary": "duplicate deposits idempotent", "status": "NOT_STARTED"},
+        {"id": "A-09", "summary": "selective dropping is not a trivial publication oracle; analysis documented", "status": "NOT_STARTED"},
+        {"id": "A-10", "summary": "reconstructed object still requires exact hash/signature/SiteID verification", "status": "PARTIAL", "note": "object verification path exists; airlock integration missing"},
+        {"id": "A-11", "summary": "no ordinary-network fallback", "status": "PARTIAL", "note": "invariant holds in reader path; must hold by construction in airlock"},
+        {"id": "A-12", "summary": "blind capture experiment: idle, one, many, failed publication, restart, loss; preregistered tolerances", "status": "NOT_STARTED"},
+        {"id": "A-13", "summary": "remaining leakage/assumptions documented", "status": "NOT_STARTED"}
+      ]
+    },
+    "B": {
+      "title": "Truly independent operators",
+      "phase": 2,
+      "repos": ["nomad-testnet", "nomad-protocol"],
+      "requirements": [
+        {"id": "B-01", "summary": "five operator identities in supported topology", "status": "PARTIAL", "note": "three-operator fixture proven; five-operator profile untested"},
+        {"id": "B-02", "summary": "independent local private-key generation per operator", "status": "PARTIAL", "note": "software-level separation proven single-admin"},
+        {"id": "B-03", "summary": "no central machine holds all threshold shares or creates all identities", "status": "PARTIAL", "note": "process separation proven; single-host fixture violates machine separation"},
+        {"id": "B-04", "summary": "real WAN DKG across hosts", "status": "NOT_STARTED"},
+        {"id": "B-05", "summary": "required canonical topology validation by every operator", "status": "PARTIAL", "note": "implemented in fixture"},
+        {"id": "B-06", "summary": "one compromised operator cannot decrypt alone", "status": "PARTIAL", "note": "threshold decryption exists; verify t-of-n semantics under rotation"},
+        {"id": "B-07", "summary": "one compromised operator cannot alter membership alone (governance as protocol)", "status": "NOT_STARTED"},
+        {"id": "B-08", "summary": "operator disappearance: private reader activity does not influence peer replacement", "status": "NOT_STARTED"},
+        {"id": "B-09", "summary": "regional outage test", "status": "NOT_STARTED"},
+        {"id": "B-10", "summary": "documented independent deployment artifacts + operator onboarding package", "status": "PARTIAL", "note": "MULTI_OPERATOR.md exists; onboarding package incomplete"},
+        {"id": "B-11", "summary": "evidence of actual administrative separation (>=3 independent admins, >=3 regions)", "status": "BLOCKED", "blocker": "requires genuinely independent operator administrators; see EXTERNAL_BLOCKERS.md"},
+        {"id": "B-12", "summary": "IPv4/IPv6 operator testing", "status": "NOT_STARTED"}
+      ]
+    },
+    "G": {
+      "title": "Pollution, Sybil and DoS resistance",
+      "phase": 2,
+      "repos": ["nomad-rlnc", "nomad-testnet", "nomad-constant-rate-fabric"],
+      "requirements": [
+        {"id": "G-01", "summary": "cheap pollution validation before decoder admission (established construction)", "status": "NOT_STARTED"},
+        {"id": "G-02", "summary": "per-generation bounds: symbols, bytes, rank attempts, CPU budget, memory, lifetime, malformed/duplicate handling", "status": "NOT_STARTED"},
+        {"id": "G-03", "summary": "Byzantine pollution campaign incl. 100% malicious symbols; no OOM/unbounded CPU", "status": "NOT_STARTED"},
+        {"id": "G-04", "summary": "bounded cache disk, queues, batches, peer state", "status": "PARTIAL", "note": "bounded immutable caches exist in testnet; full audit missing"},
+        {"id": "G-05", "summary": "explicit documented admission/rate model", "status": "NOT_STARTED"},
+        {"id": "G-06", "summary": "authenticated production operator membership", "status": "PARTIAL", "note": "signed enrollment exists in fixture"},
+        {"id": "G-07", "summary": "large-scale identity/Sybil simulation", "status": "NOT_STARTED"},
+        {"id": "G-08", "summary": "eclipse tests", "status": "NOT_STARTED"},
+        {"id": "G-09", "summary": "amplification measured and bounded", "status": "NOT_STARTED"},
+        {"id": "G-10", "summary": "malicious peer cannot trigger catch-up traffic", "status": "PARTIAL", "note": "scheduler forbids catch-up; adversarial-peer test missing"},
+        {"id": "G-11", "summary": "backpressure does not change private-sensitive cadence", "status": "NOT_STARTED"},
+        {"id": "G-12", "summary": "disk-full and OOM pressure tests", "status": "NOT_STARTED"},
+        {"id": "G-13", "summary": "eviction/repair maintenance private-state-independent", "status": "PARTIAL", "note": "design holds; wire-level comparison missing"}
+      ]
+    },
+    "E": {
+      "title": "Real WAN and adversarial testing",
+      "phase": 3,
+      "repos": ["nomad-testnet", "nomad-constant-rate-fabric"],
+      "requirements": [
+        {"id": "E-01", "summary": ">=3 real WAN regions/failure domains", "status": "BLOCKED", "blocker": "requires cloud infrastructure/payment; see EXTERNAL_BLOCKERS.md"},
+        {"id": "E-02", "summary": "captures from real interfaces with kernel timestamps", "status": "PARTIAL", "note": "dedicated-bridge pcap gate exists"},
+        {"id": "E-03", "summary": "loss/latency/jitter/congestion/duplication/reordering matrix (netem)", "status": "NOT_STARTED"},
+        {"id": "E-04", "summary": "suspend/resume, clock drift, CPU starvation, process stall, disk pressure campaigns", "status": "NOT_STARTED"},
+        {"id": "E-05", "summary": "NAT rebinding, IPv4-only, IPv6-only, dual stack, partition", "status": "NOT_STARTED"},
+        {"id": "E-06", "summary": "two-world blind classification with separate evaluator", "status": "PARTIAL", "note": "non-blind loopback two-world regression exists"},
+        {"id": "E-07", "summary": "preregistered features/metrics/tolerances before results", "status": "NOT_STARTED"},
+        {"id": "E-08", "summary": "no private-event catch-up burst under congestion/suspension on the wire", "status": "PARTIAL", "note": "scheduler semantics tested; wire campaigns missing"},
+        {"id": "E-09", "summary": "72-hour per-platform capture harness validated; real run executed where environment permits", "status": "NOT_STARTED"},
+        {"id": "E-10", "summary": "long-horizon intersection analysis", "status": "NOT_STARTED"},
+        {"id": "E-11", "summary": "immutable reports and capture digests", "status": "PARTIAL", "note": "digest discipline exists for current artifacts"}
+      ]
+    },
+    "F": {
+      "title": "Browser/materializer production boundary",
+      "phase": 4,
+      "repos": ["Nomad-browser", "nomad-testnet", "firefox-nomad", "chromium-nomad"],
+      "requirements": [
+        {"id": "F-01", "summary": "release browser has no network client/server entitlement; prohibited frameworks not linked", "status": "PARTIAL", "note": "entitlement gates in CI; release-binary link audit incomplete"},
+        {"id": "F-02", "summary": "browser reads only verified materialized objects; atomic write-verify-rename handoff", "status": "PARTIAL"},
+        {"id": "F-03", "summary": "materializer cannot read browser query state; query cannot trigger IPC", "status": "PARTIAL"},
+        {"id": "F-04", "summary": "cache discovery via public periodic process independent of queries", "status": "PARTIAL", "note": "periodic reload implemented"},
+        {"id": "F-05", "summary": "Apple-provisioned App Group or independently reviewed IPC", "status": "BLOCKED", "blocker": "requires Apple Developer provisioning; see EXTERNAL_BLOCKERS.md"},
+        {"id": "F-06", "summary": "partial write cannot render; symlink/path traversal/tamper/oversize rejected", "status": "NOT_STARTED"},
+        {"id": "F-07", "summary": "failed load never opens Safari/HTTP fallback", "status": "PARTIAL", "note": "no fallback code path; negative test missing"},
+        {"id": "F-08", "summary": "DNS capture shows zero browser-originated DNS; packet capture shows zero ordinary networking", "status": "NOT_STARTED"},
+        {"id": "F-09", "summary": "actual signed release binary tested", "status": "BLOCKED", "blocker": "requires Developer ID credentials for signed binary; ad-hoc binary capture achievable"},
+        {"id": "F-10", "summary": "independent browser-security assessment", "status": "BLOCKED", "blocker": "external assessor; see EXTERNAL_BLOCKERS.md"},
+        {"id": "F-11", "summary": "engine forks route all renderer/service paths through the verified-local contract", "status": "NOT_STARTED", "note": "firefox-nomad/chromium-nomad carry integration contracts only"}
+      ]
+    },
+    "H": {
+      "title": "Notarization and release engineering",
+      "phase": 4,
+      "repos": ["Nomad-browser", "nomad-testnet"],
+      "requirements": [
+        {"id": "H-01", "summary": "Developer ID signing, notarization Accepted, stapled ticket, Gatekeeper pass", "status": "BLOCKED", "blocker": "Apple credentials; protected fail-closed workflow already exists"},
+        {"id": "H-02", "summary": "installer digest published immutably", "status": "PARTIAL", "note": "ad-hoc alpha digests published"},
+        {"id": "H-03", "summary": "two independent builders, reproducibility evidence or normalized comparison", "status": "NOT_STARTED"},
+        {"id": "H-04", "summary": "machine-readable SBOM per release with licenses", "status": "NOT_STARTED"},
+        {"id": "H-05", "summary": "signed SLSA-style provenance", "status": "NOT_STARTED"},
+        {"id": "H-06", "summary": "pinned/reviewed dependencies", "status": "PARTIAL", "note": "COMPONENTS.lock digests exist"},
+        {"id": "H-07", "summary": "vulnerability scanning gate + severity/response policy", "status": "NOT_STARTED"},
+        {"id": "H-08", "summary": "authenticated updater, anti-rollback, fail closed, recovery", "status": "NOT_STARTED"},
+        {"id": "H-09", "summary": "OS-backed key storage (Keychain), no plaintext secrets", "status": "NOT_STARTED"},
+        {"id": "H-10", "summary": "clean uninstall/private-data removal test; OS retention documented", "status": "NOT_STARTED"},
+        {"id": "H-11", "summary": "allowlisted log/telemetry schemas; crash dump privacy audit", "status": "NOT_STARTED"},
+        {"id": "H-12", "summary": "immutable commit-addressed release evidence", "status": "PARTIAL"}
+      ]
+    },
+    "I": {
+      "title": "Independent external assessment",
+      "phase": 6,
+      "repos": ["nomad-protocol"],
+      "requirements": [
+        {"id": "I-01", "summary": "frozen review target + complete audit package (spec, threat model, matrix, vectors, builds, SBOM, provenance, captures, limitations)", "status": "NOT_STARTED"},
+        {"id": "I-02", "summary": "independent cryptographic assessment", "status": "BLOCKED", "blocker": "external assessor"},
+        {"id": "I-03", "summary": "independent systems assessment", "status": "BLOCKED", "blocker": "external assessor"},
+        {"id": "I-04", "summary": "independent browser assessment", "status": "BLOCKED", "blocker": "external assessor"},
+        {"id": "I-05", "summary": "independent privacy/traffic-analysis assessment", "status": "BLOCKED", "blocker": "external assessor"},
+        {"id": "I-06", "summary": "independent red team after remediation", "status": "BLOCKED", "blocker": "external red team"},
+        {"id": "I-07", "summary": "zero unresolved Sev1/Sev2, remediation independently verified", "status": "BLOCKED", "blocker": "depends on I-02..I-06"},
+        {"id": "I-08", "summary": "multi-operator beta, two-person signed release decision", "status": "BLOCKED", "blocker": "external operators and second approver"}
+      ]
+    }
+  },
+  "prod_map": {
+    "PROD-01": {"workstreams": ["misc"], "note": "protocol freeze/conformance; phase 5"},
+    "PROD-02": {"workstreams": ["misc"], "note": "threat model + claim-to-test traceability"},
+    "PROD-03": {"workstreams": ["misc"], "note": "independent second implementation"},
+    "PROD-04": {"workstreams": ["C", "I"]},
+    "PROD-05": {"workstreams": ["B", "C"]},
+    "PROD-06": {"workstreams": ["B", "C"]},
+    "PROD-07": {"workstreams": ["B", "G"]},
+    "PROD-08": {"workstreams": ["C"]},
+    "PROD-09": {"workstreams": ["F"]},
+    "PROD-10": {"workstreams": ["E"]},
+    "PROD-11": {"workstreams": ["E"]},
+    "PROD-12": {"workstreams": ["G"]},
+    "PROD-13": {"workstreams": ["E", "G"]},
+    "PROD-14": {"workstreams": ["G"]},
+    "PROD-15": {"workstreams": ["D"]},
+    "PROD-16": {"workstreams": ["D"]},
+    "PROD-17": {"workstreams": ["A"]},
+    "PROD-18": {"workstreams": ["A"]},
+    "PROD-19": {"workstreams": ["B"]},
+    "PROD-20": {"workstreams": ["G"]},
+    "PROD-21": {"workstreams": ["B", "E"]},
+    "PROD-22": {"workstreams": ["F"]},
+    "PROD-23": {"workstreams": ["F"]},
+    "PROD-24": {"workstreams": ["F", "G"]},
+    "PROD-25": {"workstreams": ["H"]},
+    "PROD-26": {"workstreams": ["H"]},
+    "PROD-27": {"workstreams": ["H"]},
+    "PROD-28": {"workstreams": ["misc"], "note": "SLO/soak/incident; phase 5"},
+    "PROD-29": {"workstreams": ["I"]},
+    "PROD-30": {"workstreams": ["I"]}
+  }
+}
