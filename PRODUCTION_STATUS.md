@@ -27,13 +27,21 @@ core and no production deployment. Concretely:
 - **A publisher identity system** (Workstream D): self-certifying SiteIDs,
   rotation, offline recovery authority, rollback and equivocation handling,
   and four explicit client identity states.
-- **The local half of a publication airlock** (Workstream A): a bounded,
-  encrypted, crash-safe publication queue with no network capability, and an
-  uplink cell format in which work and cover are indistinguishable to both a
-  network observer and the entry operator.
+- **A publication airlock** (Workstream A): a bounded, encrypted, crash-safe
+  publication queue with no network capability; an uplink cell format in
+  which work and cover are indistinguishable to both a network observer and
+  the entry operator; and a deposit boundary whose release timing is a pure
+  function of public parameters, whose batch size does not vary with how many
+  people published, and which requires a full certified shuffle chain before
+  threshold release. The distributed form of that chain does not exist yet.
 - **Bounded network coding** (Workstream G): enforced per-generation CPU,
   memory, byte, symbol and lifetime budgets, with pre-admission verification
   of systematic symbols.
+- **An executable traffic-analysis rule** (Workstream E): the preregistered
+  two-world decision rule as code, with its thresholds fixed as constants
+  rather than options, self-tests that assert it still detects each
+  difference it claims to, and a wire-level campaign against the production
+  node. It runs on loopback, which is its main limitation.
 
 ## What privacy claims are evidenced?
 
@@ -50,6 +58,12 @@ Only these, and only at the level stated:
 | Publish cannot reach a socket, transport or scheduler | structural (transitive CI gate) |
 | Uplink work and cover are byte-indistinguishable | measured, cell level |
 | A malicious symbol cannot cost more than the generation budget | measured, Byzantine campaign |
+| Cell size and destination do not depend on private activity | adversarial at a real socket, loopback; mutation-verified |
+| Cell timing does not depend on private activity | measured against a same-run control, loopback only |
+| Publication release timing and batch size take no private input | unit + adversarial, protocol level |
+| A partial or reordered shuffle chain is refused | adversarial, ten deviations |
+| One operator cannot link ingress to release | measured at chance against a positive control, in-process |
+| A failed browser load never falls back to ordinary networking | adversarial, thirteen failure modes |
 
 ## Against which threat model?
 
@@ -73,22 +87,32 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## What is NOT protected?
 
-- **Publication anonymity.** The airlock is incomplete. The deposit,
-  distributed mixing, threshold release and time separation are not built.
-  Cell indistinguishability is one necessary piece, not the property.
+- **Publication anonymity.** The airlock now has a deposit boundary, a
+  fixed-size batch, a required full shuffle chain and threshold release, and
+  an unlinkability result measured at chance against a positive control --
+  but all of it runs in one process. The distributed form, with per-operator
+  shuffle and decryption services over authenticated sessions, does not
+  exist, and there is no wire capture of a publisher. Cell
+  indistinguishability and an in-process chain are necessary pieces, not the
+  property.
 - **Availability against a sustained polluter.** Bounds stop resource
   exhaustion; at 50% or more malicious symbols a generation still fails to
   complete.
 - **Sybil, eclipse and amplification.** No admission or rate-control model
   exists (G-05..G-09).
-- **Anything at WAN scale.** All network evidence is single-host. There are
-  no multi-region, loss, congestion, NAT, IPv6, suspend/resume or
-  clock-drift results, and no blind two-world classification.
+- **Anything at WAN scale.** All network evidence is single-host. The
+  two-world campaign runs on loopback with userspace receive timestamps over
+  seconds, and it reports honestly that a shared host cannot resolve
+  packet-count effects at all. There are no multi-region, loss, congestion,
+  NAT, IPv6, suspend/resume or clock-drift results, and no blind two-world
+  classification by an independent analyst.
 - **Browser egress at the binary level.** The release binary has never been
   packet- or DNS-captured, and the engine forks carry integration contracts
   only.
-- **Anything about the shipped artifact.** No notarized build, no
-  reproducibility, no SBOM, no provenance, no updater.
+- **Anything about the shipped artifact.** SBOM and provenance generators
+  exist and a dependency-vulnerability gate runs in CI, but there is no
+  notarized build, no second builder to establish reproducibility, no signed
+  provenance outside CI, and no updater.
 - **Long-horizon correlation.** No intersection analysis, no 72-hour
   captures, no soak.
 
