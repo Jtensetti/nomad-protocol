@@ -300,3 +300,62 @@ promoted on any of them.
   repository would not reach what ships. The fixes above are in the vendored
   copy, with digests regenerated. Reconciling the two is outstanding.
 - No PROD gate changes.
+
+### FINDING: private activity perturbs emission timing (Workstream E, E-08)
+
+A measured, reproducible difference between the idle and active worlds at the
+sender's socket. This contradicts the claim "cell timing does not depend on
+private activity" at the level the campaign can currently test, and that row
+is marked CONTRADICTED rather than downgraded.
+
+**What was measured.** The wire campaign runs three idle series and one active
+series, interleaved. The distance between two worlds is now also computed with
+a two-sample Kolmogorov-Smirnov test over inter-arrivals, the same statistic
+the published decision rule uses, expressed as 1 − p so that a larger number
+means less alike.
+
+| Stressor | idle vs active | control spread | verdict |
+|---|---|---|---|
+| baseline | 0.9983, then 0.9931 | 0.5168 | finding, reproduced |
+| cpu-starvation | 0.0748 | 0.8606 | no finding |
+| disk-pressure | 0.9974, then 0.9991 | 0.6453 | finding, reproduced |
+
+**Two of the project's own instruments were wrong, and both are corrected.**
+
+The campaign ran its three idle series and then the treatment, every round, so
+the treatment was always last and any within-round drift landed systematically
+on it. That is a confound, not a leak. The order is now rotated as a complete
+Latin square, so every series occupies every position exactly once. The
+finding survives the rotation.
+
+The in-process gate compared only the median inter-arrival, and the median is
+far less sensitive than KS: on the same captures it reported "no finding"
+while the published rule rejected at p = 1.5e-06. Gating on a weaker statistic
+than the one being published means the gate passes what the published rule
+would reject, so KS was added to the in-process gate.
+
+**A third instrument was silently broken.** The CI step that ran the published
+rule over the campaign captures passed already-rendered text captures to a
+reader that shells out to `tcpdump -r`. Every invocation crashed, and the
+crash was recorded as a rejection — the rule reporting that two worlds
+differed when it had never read them. `read_capture` now decides from the
+file's own first four bytes whether it holds a pcap or rendered text, and the
+rule exits 2 when it cannot run at all, distinct from exit 1 for a finding, so
+a crash can no longer be recorded as a verdict.
+
+**Most likely mechanism, not established.** The private-side work in the
+active world (repeated hashing and small file writes) shares a process and a
+host with the fixed-cadence emitter, so it competes for CPU and disk. That is
+consistent with cpu-starvation showing no finding: when the whole host is
+already saturated, the marginal contention from private work is lost in it.
+This has not been isolated to a cause, and no claim is made that it has.
+
+**Where the fix is.** `agent/operator-shaper-process` moves fixed-rate egress
+into a dedicated process, which is the structural answer: private work cannot
+contend with an emitter it does not share a runtime with. That branch is not
+merged and this campaign has not been run against it, so nothing here yet
+shows the fix works.
+
+**Boundary.** Loopback, single host, userspace receive timestamps, seconds.
+This is not WAN evidence and does not become a WAN claim. It blocks PROD-10
+and PROD-11 rather than supporting them, and no gate is promoted on it.

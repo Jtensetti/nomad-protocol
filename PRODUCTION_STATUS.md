@@ -61,7 +61,7 @@ Only these, and only at the level stated:
 | Uplink work and cover are byte-indistinguishable | measured, cell level |
 | A malicious symbol cannot cost more than the generation budget | measured, Byzantine campaign |
 | Cell size and destination do not depend on private activity | adversarial at a real socket, loopback; mutation-verified |
-| Cell timing does not depend on private activity | measured against a same-run control, loopback only |
+| Cell timing does not depend on private activity | **CONTRADICTED — a reproducible difference is measured on loopback; see EVIDENCE_INDEX.md** |
 | Publication release timing and batch size take no private input | unit + adversarial, protocol level |
 | A partial or reordered shuffle chain is refused | adversarial, ten deviations |
 | One operator cannot link ingress to release | measured at chance against a positive control, in-process |
@@ -102,6 +102,11 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
   complete.
 - **Sybil, eclipse and amplification.** No admission or rate-control model
   exists (G-05..G-09).
+- **Timing independence from private activity.** The campaign now measures a
+  reproducible difference: private-side work perturbs the inter-arrival
+  distribution, most likely by contending for CPU and disk with an emitter in
+  the same process. A dedicated shaper process is the structural fix and has
+  not yet been measured. This is an open defect, not a gap in testing.
 - **Anything at WAN scale.** All network evidence is single-host. The
   two-world campaign runs on loopback with userspace receive timestamps over
   seconds, and it reports honestly that a shared host cannot resolve

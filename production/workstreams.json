@@ -509,7 +509,7 @@
           "id": "E-06",
           "summary": "two-world blind classification with separate evaluator",
           "status": "PARTIAL",
-          "note": "non-blind loopback two-world regression, plus a wire-level idle-vs-active campaign with an idle-vs-idle positive control; still not blind and the analyst is the implementer"
+          "note": "non-blind loopback two-world campaign with three idle control series interleaved as a Latin square; the analyst is still the implementer and it is not blind"
         },
         {
           "id": "E-07",
@@ -521,7 +521,7 @@
           "id": "E-08",
           "summary": "no private-event catch-up burst under congestion/suspension on the wire",
           "status": "PARTIAL",
-          "note": "the one-second burst ceiling is asserted outright on every captured world and cadence is compared against a measured control; loopback only, and count-based effects are undecidable on a shared host"
+          "note": "FINDING: with the position confound removed and a KS statistic added, the campaign measures a reproducible idle-vs-active difference in emission timing (1-p = 0.993 against a 0.517 control spread). The burst ceiling still holds outright. Most likely private-side CPU/disk contention with the in-process emitter; agent/operator-shaper-process is the structural fix and has not been measured. Blocks PROD-10/PROD-11 rather than supporting them"
         },
         {
           "id": "E-09",
