@@ -579,7 +579,8 @@
         {
           "id": "F-06",
           "summary": "partial write cannot render; symlink/path traversal/tamper/oversize rejected",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "adversarial filesystem tests against the real materializer path: atomic publish with no surviving temporary, immutability, symlink-at-target refusal, symlinked/non-directory output refusal, name escape, permissions (nomad-testnet live/materialize)"
         },
         {
           "id": "F-07",
@@ -641,17 +642,20 @@
         {
           "id": "H-03",
           "summary": "two independent builders, reproducibility evidence or normalized comparison",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "scripts/compare-builds.sh reports where two build trees differ and fails closed; two genuinely independent builders remain to be run"
         },
         {
           "id": "H-04",
           "summary": "machine-readable SBOM per release with licenses",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "scripts/generate-sbom.sh emits CycloneDX from the real module graph plus pinned components, deterministically per commit; wired into CI"
         },
         {
           "id": "H-05",
           "summary": "signed SLSA-style provenance",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "scripts/generate-provenance.sh emits SLSA-shaped in-toto provenance binding artifact digest, commit, builder, toolchain and dependency state; attests but does not sign, and stamps itself unsigned outside CI"
         },
         {
           "id": "H-06",
@@ -662,7 +666,8 @@
         {
           "id": "H-07",
           "summary": "vulnerability scanning gate + severity/response policy",
-          "status": "NOT_STARTED"
+          "status": "PARTIAL",
+          "note": "govulncheck reachability gate on every push plus docs/VULNERABILITY_POLICY.md with severity, response and explicit non-coverage (Nomad-browser)"
         },
         {
           "id": "H-08",
