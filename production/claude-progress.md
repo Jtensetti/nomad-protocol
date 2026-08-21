@@ -172,3 +172,58 @@ reconciling the vendoring is outstanding.
 Still **0 of 30 PROD gates MET**. Three adversarial reviews have now each found
 exploitable defects in finished-looking code, which is the strongest available
 argument against promoting any gate on internal confidence.
+
+## Checkpoint 2026-08-21: multi-region WAN campaign
+
+Six campaigns on real hosts in fr-par-1 (FR), nl-ams-1 (NL) and pl-waw-1 (PL),
+1200-byte cells at 50 ms in a signed ring. All six deployments verified
+destroyed by direct API query; the campaign buckets keep results only, staged
+key material removed.
+
+**The measurement.** Runs 5 and 6 are controlled (two idle series plus one
+active, order rotated so exactly one host is active per position) and
+synchronised on shared absolute world boundaries. Across those two runs, 18
+comparisons at a registered alpha of 0.01, no treatment pair was rejected. Cell
+counts were exactly equal within every pair on every host, and mean
+inter-arrival drift stayed at 1e-6 to 1e-7 of the cadence against a 2e-2
+tolerance. The single rejection landed on a *control* pair -- two idle worlds,
+where a leak is impossible by construction.
+
+**Four instrument defects, found in order, each hiding the next.**
+
+1. The analysis pooled every packet in a capture into one series, when the
+   preregistration extracts features per direction and per peer. A capture
+   holds the host's emissions and its peers' arrivals, and restarting the node
+   re-randomises their relative phase, so pooled it rejects whatever the node
+   does. It rejected all three hosts. PREREGISTRATION v2 writes the sample
+   definition down and voids that run; no threshold changed.
+2. The in-process campaign wrote one file per series spanning four rounds, with
+   multi-second pauses inside it where the other worlds ran. The rule compares
+   equal-length windows of a continuous stream. Captures are now per round, and
+   with that fixed the campaign's own controls pass (KS p=0.62, 0.95, 0.95)
+   while the treatment is still rejected in two of three evaluable rounds --
+   the E-08 finding survives a correct instrument and a passing control.
+3. The CI gate accumulated each comparison's exit status and then ended the
+   step without consulting it. It had been reporting green while the rule
+   rejected its own idle-versus-idle control. It now fails on a finding, fails
+   when nothing was compared, and keeps "could not run" distinct from a
+   verdict.
+4. The WAN campaign had no negative control at all, so its first verdict --
+   one host rejected at KS p=0.00988 -- could not be interpreted. Adding the
+   control is what made run 5's operator-a result readable as noise floor
+   rather than as a leak.
+
+**A fifth defect was the node being right.** The first run captured zero
+packets on all three hosts because `curl` wrote the operator secret at the
+inherited umask and `nomad-node` refuses a group-readable secret. The check was
+correct; the payload was wrong.
+
+**Boundary.** One administrator, one provider, one account. Three geographic
+failure domains, one administrative. This is not evidence of independent
+operation and does not support PROD-05 or PROD-21. One run per host against a
+registered screening design of 30 captures per world is a single screening
+sample, not the screening.
+
+E-01 moves BLOCKED to PARTIAL; E-02, E-06 and E-11 stay PARTIAL with WAN
+evidence attached. Still **0 of 30 PROD gates MET**. Nothing here promotes a
+gate, and PROD-28's 30-day soak is untouched.
