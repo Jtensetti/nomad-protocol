@@ -359,3 +359,110 @@ shows the fix works.
 **Boundary.** Loopback, single host, userspace receive timestamps, seconds.
 This is not WAN evidence and does not become a WAN claim. It blocks PROD-10
 and PROD-11 rather than supporting them, and no gate is promoted on it.
+
+### Multi-region WAN two-world campaign (Workstream E, E-01/E-02)
+
+Five campaigns on 21 August 2026, on Scaleway DEV1-S instances in fr-par-1
+(FR), nl-ams-1 (NL) and pl-waw-1 (PL), in a signed ring a to b to c to a, 1200
+byte cells at a 50 ms cadence. Harness in `Jtensetti/nomad-testnet`
+`scripts/wan/`, driven by `run-campaign.sh`; every resource carries a
+deployment tag and teardown runs from an EXIT trap. All five deployments were
+verified destroyed, servers and public addresses, by direct API query after
+the run.
+
+The first four are reported because the instrument changed under them, and a
+campaign whose earlier attempts are not shown is a campaign whose method was
+chosen after seeing the answer.
+
+| Run | Deployment | Worlds | Outcome |
+|---|---|---|---|
+| 1 | `nomad-wan-20260821-122122` | idle, active | no data: 0 packets on all 3 hosts |
+| 2 | `nomad-wan-20260821-123801` | idle, active | VOID under PREREGISTRATION v2 |
+| 3 | `nomad-wan-20260821-125932` | idle, active | uninterpretable: no control pair |
+| 4 | `nomad-wan-20260821-131659` | idle1, idle2, active | PASS on 3/3, degraded fabric |
+| 5 | `nomad-wan-20260821-134230` | idle1, idle2, active | b and c PASS, a INCONCLUSIVE |
+
+**Run 1 captured nothing, and the node was right.** `curl` honours the
+inherited umask, so the fetched operator secret landed 0644, and `nomad-node`
+refused to load a group-readable secret. The check was correct and the payload
+was wrong. Reproduced locally at both modes before the fix, and the payload now
+sets `umask 077`, chmods the secret, and preflights the node so a refusal shows
+in seconds instead of after two empty captures.
+
+**Run 2 is void, not a finding.** It was rejected on all three hosts. The cause
+was the analysis script, which pooled each capture's packets into one series
+when PREREGISTRATION v1 registered extraction "per capture, per direction, per
+peer". A capture taken with `-i any` holds the host's own emissions and its
+peers' arrivals, the node restarts between worlds, and the restart
+re-randomises the peers' phase; pooled, the inter-arrival distribution shifts
+on its own. PREREGISTRATION v2 writes the sample definition down and voids this
+run under the amendment rule. Recomputing it with a corrected instrument is
+diagnosis and is reported as diagnosis; it is not a result.
+
+**Run 3 rejected one host and could not be interpreted.** operator-a failed the
+inter-arrival KS at p=0.00988 against a registered alpha of 0.01, with exactly
+equal cell counts (5994/5994) and a mean drift of 8.8e-07 on the same flow;
+operator-b and operator-c passed. The campaign had no idle-versus-idle pair, so
+there was no noise floor and no way to tell a treatment effect from any two
+captures on that host differing. The campaign now runs two idle series, with
+world order rotated per operator so that exactly one host is active in each
+position.
+
+**Run 4 passed on all three hosts, on a fabric that was not healthy.**
+operator-a reported `replay_rejected` 5574 of 5675 received while the other two
+reported none. World boundaries were offsets from each host's own boot; hosts
+boot up to half a minute apart, and in a ring exactly one host starts before
+its upstream peer, records the tail of that peer's previous world, then sees
+the peer's sequence counter reset and correctly rejects the remainder as
+replays. Emissions were unaffected, but the relay path was not exercised at
+that host. World boundaries are now absolute instants shared by every host.
+
+**Run 5 is the reportable measurement.** With boundaries aligned,
+`replay_rejected` was 0 on all three hosts and each received 5975 to 5980 of
+5979 sent.
+
+- operator-b: PASS. control KS p=0.3475, treatments 0.7028 and 0.1583.
+- operator-c: PASS. control KS p=0.2725, treatments 0.3475 and 0.9848.
+- operator-a: INCONCLUSIVE. Its control pair, two idle worlds, was rejected at
+  KS p=0.007783, while both its treatment pairs passed at 0.3969 and 0.07151.
+
+**What run 5 shows.** Cell counts were exactly equal within every pair on every
+host, in every run that produced data: 5991/5991, 5993/5993, 5996/5996,
+5997/5997. The node emits the same number of cells whether or not it is the one
+publishing, and mean inter-arrival drift stayed at 1e-6 to 1e-7 of the cadence
+against a registered tolerance of 2e-2. Maximum one-second burst was identical
+across worlds everywhere.
+
+**What it does not show.** operator-a yields no verdict: on that host two
+identical worlds differ by the rule's standards more than idle differs from
+active, so its noise floor exceeds the registered alpha and nothing can be
+concluded there. fr-par-1 was also the host rejected in run 3, when no control
+existed to check it against, which is the reading the control was added to make
+possible -- but two runs cannot establish that a host is systematically noisy.
+
+**Boundary.** One administrator, one provider, one account, three regions.
+That is three failure domains in the geographic sense and one in the
+administrative sense, so it is not evidence of independent operation and does
+not support PROD-05 or PROD-21. One run per host, 300 s per world, against a
+registered screening design of 30 captures per world at 5 minutes each: this
+is a single screening sample, not the screening. No gate is promoted on it.
+PROD-28's 30-day soak is untouched by it.
+
+**Artifacts.** Run 5 (`nomad-wan-20260821-134230`) capture digests, SHA-256:
+
+| Capture | Digest |
+|---|---|
+| `operator-a-active.pcap` | `e38e39aa62daad555cf1e1a61dc76d140124197dae70f588fbab284db6111e68` |
+| `operator-a-idle1.pcap` | `6e1d48a1bc4e7ece787d2408ae8ea481cb14bccc1712dac231cc4d1f47b4e564` |
+| `operator-a-idle2.pcap` | `d2fabb2b19a0b1833024cf65debe28c1c14c7601ad59d64ffdb316ec64ee9780` |
+| `operator-b-active.pcap` | `1fcd0c741c9d4175dc427b7adac937b3093330204f5ed7fde263d4e5fc883580` |
+| `operator-b-idle1.pcap` | `c3a4ad78939721008f64f401bc14ac2441e7a214bfd211cff739cfa68ce925dc` |
+| `operator-b-idle2.pcap` | `901934f5d57f31ef28dfa1357e5c58f210fa54dfa07ba59beefb86ded2debcfc` |
+| `operator-c-active.pcap` | `721736d1b682efa3809422d682ab6cc210f8daa66c9d84e61279f684d6a057f0` |
+| `operator-c-idle1.pcap` | `77e72c585a683820f336e1912f6f06a30e6f2417f2e9e2fb861b190b45fa6976` |
+| `operator-c-idle2.pcap` | `ae2d06430b2556285291cc4c0049bd729cccfaad60d3582ff56ad5015221d252` |
+
+Analysis reports and per-host campaign logs are held with the run. The campaign is
+reproducible from `scripts/wan/run-campaign.sh` plus Scaleway credentials; the
+decision path is `scripts/wan/wan-verdict.py` over `scripts/two-world-analysis.py`,
+which is the same code and the same exit statuses CI uses.
