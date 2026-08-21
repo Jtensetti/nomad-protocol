@@ -381,6 +381,7 @@ chosen after seeing the answer.
 | 3 | `nomad-wan-20260821-125932` | idle, active | uninterpretable: no control pair |
 | 4 | `nomad-wan-20260821-131659` | idle1, idle2, active | PASS on 3/3, degraded fabric |
 | 5 | `nomad-wan-20260821-134230` | idle1, idle2, active | b and c PASS, a INCONCLUSIVE |
+| 6 | `nomad-wan-20260821-141027` | idle1, idle2, active | PASS on 3/3 (replication of run 5) |
 
 **Run 1 captured nothing, and the node was right.** `curl` honours the
 inherited umask, so the fetched operator secret landed 0644, and `nomad-node`
@@ -439,6 +440,38 @@ active, so its noise floor exceeds the registered alpha and nothing can be
 concluded there. fr-par-1 was also the host rejected in run 3, when no control
 existed to check it against, which is the reading the control was added to make
 possible -- but two runs cannot establish that a host is systematically noisy.
+
+**Run 6 replicates run 5 and resolves operator-a.** Same harness, same
+schedule, a fresh deployment. All three hosts pass, control and both
+treatments, with cell counts exactly equal in all nine comparisons
+(5996/5996 and 5994/5994) and `replay_rejected` 0 everywhere. operator-a's
+control pair, rejected at KS p=0.007783 in run 5, scores p=0.7185 here; its
+treatments score 0.6415 and 0.9813.
+
+Run 6 capture digests, SHA-256:
+
+| Capture | Digest |
+|---|---|
+| `operator-a-active.pcap` | `d145ad1638832b4810d5e36298908b95f9d7ad820200c2734ae7015dfdf88e29` |
+| `operator-a-idle1.pcap` | `599430b75361a2e475c2e1262c9877833b7fdc909151f6b4903ec5354052e265` |
+| `operator-a-idle2.pcap` | `dcd6fd677c8c1f03316515a3f19d71f6508f207dabd6df20229b938665fe2ca9` |
+| `operator-b-active.pcap` | `48b76295403461935362f0e8dca7302ca706f62152a770a5ac7ef4b5a54e48b0` |
+| `operator-b-idle1.pcap` | `82811936e4cada9074ba6abecc9c037e275db96ca2579a95f7e1a2d71fe27ecf` |
+| `operator-b-idle2.pcap` | `0fa681a80dde6b80de43f2e646df7933d9d60dd2f4afe57cbd214e983c738c70` |
+| `operator-c-active.pcap` | `9f52b46a146eadbe280fb181aa7aa9341b02b4bdac2de2d1f3c489588bca12b1` |
+| `operator-c-idle1.pcap` | `44fdb64c9863157f2d55a718fd2ed47c5f0b7e8b2e7df6dbccf8ab9f2e753399` |
+| `operator-c-idle2.pcap` | `2953e9a1f3fc6a0a1a7db4813c8879d9af2a837514ea722982579bdbb9116b37` |
+
+**Reading runs 5 and 6 together.** Across the two controlled campaigns, 18
+comparisons at a registered alpha of 0.01, no treatment pair was ever
+rejected. The single rejection was on a *control* pair -- two idle worlds on
+the same host, where a private-activity leak is impossible by construction.
+That is a direct measurement of this instrument's false-rejection behaviour at
+this sample size, and it is the reason a lone rejection must not be read as a
+leak. It is also the retrospective reading of run 3's p=0.00988: the same host,
+no control, and a conclusion that could not have been drawn.
+
+Two runs do not establish a false-positive rate, and are not offered as one.
 
 **Boundary.** One administrator, one provider, one account, three regions.
 That is three failure domains in the geographic sense and one in the

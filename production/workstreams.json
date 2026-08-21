@@ -482,13 +482,13 @@
      "summary": ">=3 real WAN regions/failure domains",
      "status": "PARTIAL",
      "blocker": "requires cloud infrastructure/payment; see EXTERNAL_BLOCKERS.md",
-     "note": "five WAN campaigns run 2026-08-21 on three Scaleway regions (fr-par-1 FR, nl-ams-1 NL, pl-waw-1 PL) in a signed ring; harness nomad-testnet scripts/wan/. Three geographic failure domains but one provider, one account and one administrator, so this is not independent operation and does not support PROD-05 or PROD-21. See EVIDENCE_INDEX."
+     "note": "six WAN campaigns run 2026-08-21 on three Scaleway regions (fr-par-1 FR, nl-ams-1 NL, pl-waw-1 PL) in a signed ring; harness nomad-testnet scripts/wan/. Runs 5 and 6 are controlled and synchronised: 18 comparisons, no treatment pair rejected, the single rejection falling on a control pair. Three geographic failure domains but one provider, one account and one administrator, so this is not independent operation and does not support PROD-05 or PROD-21. See EVIDENCE_INDEX."
     },
     {
      "id": "E-02",
      "summary": "captures from real interfaces with kernel timestamps",
      "status": "PARTIAL",
-     "note": "run 5 (nomad-wan-20260821-134230) captured with tcpdump on the hosts' own interfaces with kernel timestamps, 300s per world, 9 captures with recorded SHA-256 digests; earlier runs 1-4 are recorded with their defects rather than discarded"
+     "note": "runs 5 and 6 (nomad-wan-20260821-134230, -141027) captured with tcpdump on the hosts' own interfaces with kernel timestamps, 300s per world, 18 captures with recorded SHA-256 digests; earlier runs 1-4 are recorded with their defects rather than discarded"
     },
     {
      "id": "E-03",
