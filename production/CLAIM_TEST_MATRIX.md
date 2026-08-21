@@ -90,7 +90,11 @@ Levels, weakest first:
 | A malicious symbol cannot exceed the generation budget | Byzantine campaign | 50/90/100% campaigns, all budgets asserted | adversarial |
 | Replay drains no budget | unit | duplicate test | unit |
 | Coded-symbol pollution is prevented | per-symbol verification | **not claimed; see POLLUTION_AND_RESOURCES.md** | none |
-| Sybil, eclipse, amplification bounded | simulation | **none** | none |
+| Eclipse is structurally impossible | invariant test | no peer discovery exists; peer set is a function of the signed topology and is byte-identical after a flood from unnamed addresses and correctly sealed cells from the wrong socket | adversarial |
+| Sybil identities buy nothing | invariant test | 64 fresh identities leave the peer set unchanged; admission consults a signed document, never a population | adversarial |
+| Amplification is bounded well below 1 | flood campaign | 0.0003-0.0008 outbound/inbound across four flood types, up to 396 MB in for 118 KB out | adversarial |
+| Abusive peers are rejected for their own reason at no cost | negative tests | malformed, unauthenticated, misdirected, cross-epoch and replayed each rejected, nothing stored | adversarial |
+| Availability under flood | sustained campaign | **not claimed — a flood can push a small node past its lateness budget; see ADMISSION_AND_RATE_CONTROL.md** | none |
 | Backpressure does not alter private-sensitive cadence | wire trace under load | **none** | none |
 
 ## Operational output
