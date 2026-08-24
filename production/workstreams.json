@@ -565,7 +565,7 @@
      "id": "F-01",
      "summary": "release browser has no network client/server entitlement; prohibited frameworks not linked",
      "status": "PARTIAL",
-     "note": "entitlement gates in CI; release-binary link audit incomplete"
+     "note": "entitlement and prohibited-framework gates now run on every push on any platform (Nomad-browser/bundle_test.go): entitlements as an allowlist with a written reason per key, Info.plist checked for URL/document types and ATS exceptions, and the Swift symbol scan ported out of the macOS-only shell gate and checked against itself. Previously the only check needed PlistBuddy and swift and its workflow was pinned to `branches: [agent/macos-browser]`, so it ran on no other branch; that pin is removed. The release-binary link audit is still missing: these read source and plists, not a built binary's load commands"
     },
     {
      "id": "F-02",
@@ -695,12 +695,14 @@
     {
      "id": "H-10",
      "summary": "clean uninstall/private-data removal test; OS retention documented",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "macos/scripts/uninstall.sh removes the sandbox container (which under the sandbox holds every path the app can write) plus unsandboxed development locations, refuses to run while the app is open, and supports --dry-run. docs/DATA_RETENTION.md documents what macOS keeps anyway -- crash reports carrying raw stack words, snapshots, Spotlight, unified log, swap -- with the command for each. uninstall_test.go cross-checks the script against the Swift sources, Info.plist and the document, each verified by introducing the drift it catches. Never executed against a real installed bundle (Nomad-browser 77d632c)"
     },
     {
      "id": "H-11",
      "summary": "allowlisted log/telemetry schemas; crash dump privacy audit",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "the browser emits nothing of its own: no os_log, NSLog or print anywhere in the Swift sources, enforced by the scan in bundle_test.go, and egress.Policy refuses telemetry and crash-reporting as named capabilities. The crash-dump privacy question is answered honestly in docs/DATA_RETENTION.md rather than claimed away: macOS writes .ips reports outside the container with thread stacks as raw machine words, the app cannot prevent them, and upload is the user's setting. nomad-testnet's per-field telemetry allowlist has no browser-side equivalent because the browser has no telemetry schema at all"
     },
     {
      "id": "H-12",

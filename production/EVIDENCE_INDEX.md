@@ -850,3 +850,101 @@ Both preconditions are now enforced and fail the run:
 Verified by setting each tolerance to an impossible value in turn and confirming
 the run fails on that specific check. With the real tolerances, all seven worlds
 pass and the five preregistered comparisons return no findings.
+
+## FINDING: the browser's entitlement gate ran on no branch it was pushed to
+
+`Nomad-browser` 77d632c (`bundle_test.go`, `.github/workflows/macos-dmg.yml`)
+
+The browser's outermost guarantee is that the release binary cannot open a
+socket; everything else is defence in depth behind it. That guarantee was
+checked by `macos/scripts/security_gate.sh`, which uses PlistBuddy and `swift`
+and therefore runs only on a macOS runner. The only macOS workflow triggered on
+push for `branches: [agent/macos-browser]`.
+
+So on the branch this work happens on, and on every other branch, **nothing
+checked the entitlements at all**. PROD-23 and F-01 both cited "entitlement
+gates in CI".
+
+`bundle_test.go` parses the plists directly, so the checks run wherever Go runs:
+
+- The entitlements are an **allowlist with a written reason per key**. A
+  denylist answers "did someone add the one key we thought of"; the interesting
+  failure is always the key nobody thought of. Specific defeats still fail by
+  name so the message says what was broken rather than "unexpected key".
+- `Info.plist` must declare no URL types, document types or extension points
+  that let another application drive this one, and no App Transport Security
+  exceptions.
+- The forbidden-Swift-symbol scan is ported out of the shell gate, and a second
+  test runs it over samples containing each construct.
+
+That second test earned its place on the first run: a word boundary added
+during the port made the `CFNetwork` pattern miss
+`CFNetworkCopySystemProxySettings`, which the shell version had caught as a
+bare substring. A scan over sources that happen to be clean cannot tell you it
+has stopped working.
+
+Every gate was verified by introducing the regression it exists to catch — a
+`network.client` entitlement, an unexplained entitlement, `NSAllowsArbitraryLoads`
+flipped to true, and a `URLSession` call — and confirming each failure message
+names the right thing.
+
+The macOS workflow is no longer pinned to a branch; its path filter is what
+limits it.
+
+## Uninstall and what macOS keeps anyway
+
+`Nomad-browser` 77d632c (`macos/scripts/uninstall.sh`, `docs/DATA_RETENTION.md`)
+
+H-10 asks for a clean uninstall test and documented OS retention. The retention
+half is the substantial one, because the honest answer includes things no
+uninstaller can touch.
+
+**What the app controls** is one path. Under `com.apple.security.app-sandbox`
+every standard directory API resolves inside `~/Library/Containers/io.nomad.browser`,
+so removing the container removes the object store, saved window state and
+preferences together.
+
+**What macOS keeps anyway** is documented with the command to clear each where
+one exists. The sharp one is crash reports: a `.ips` records thread stacks with
+frame arguments as raw machine words, which for this process can be fragments
+of a materialised object. They are written outside the container by the system
+and survive uninstall. The application cannot prevent them; what it can do, and
+does, is carry no crash-reporting or telemetry capability of its own, which
+`egress.Policy` refuses by name. Also covered: local APFS snapshots and Time
+Machine, the Spotlight index, unified log entries (which record *that* the app
+ran, never what was read), and swap.
+
+The script prints that list rather than acting on it: thinning snapshots or
+reindexing Spotlight are whole-volume operations and the user's decision, not
+an uninstaller's.
+
+**The cross-check is the part that lasts.** The classic uninstaller bug is not
+a wrong path but yesterday's list, and nobody re-reads an uninstaller.
+`uninstall_test.go` reads both sides: every directory name the Swift sources
+construct must appear in the script, the bundle identifier must match
+`Info.plist`, and the retained-data list must stay in both the script and the
+document — including the sentence recording that the procedure has never been
+run against a real installed bundle.
+
+- Not evidenced: the script has never been executed on macOS against a real
+  installed bundle, and the residue lists are derived from documented platform
+  behaviour rather than observed. That needs the same macOS host with a signed
+  bundle that H-01 and F-09 need.
+
+## FINDING: a cadence test was asserting the host is fast
+
+`nomad-constant-rate-fabric` bee0cab, vendored into `nomad-testnet` 19bda21
+
+`TestRunCellsUsesCadenceInsteadOfBurst` claims four cells arrive as a cadence
+rather than a burst. It was also, accidentally, claiming the host never stalls.
+
+When a stall pushes an emission past `MaxLateness` the scheduler returns
+`ErrDeadlineMissed` — production code refusing to emit a catch-up burst,
+exactly as the design requires. The test treated that as a failure. It duly
+failed in a full-repository sweep at 42 ms over a 40 ms budget, while a
+race-instrumented crypto suite ran on the same host.
+
+A missed deadline now means the test could not run, and it skips loudly saying
+so, in the same discipline the timing campaigns already use. Every other error
+is still a failure, and the burst assertion is unchanged: removing the
+scheduler's wait still fails it, at a 14 µs span.
