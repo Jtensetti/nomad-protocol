@@ -1,367 +1,366 @@
 {
-  "schema_version": 1,
-  "release": "nomad-production-rc1",
-  "last_reviewed": "2026-08-19",
-  "criteria": [
-    {
-      "id": "PROD-01",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "protocol freeze and conformance suite"
-      ]
-    },
-    {
-      "id": "PROD-02",
-      "status": "PARTIAL",
-      "evidence": [
-        "docs/THREAT_MODEL.md"
-      ],
-      "blockers": [
-        "production claim-to-test traceability"
-      ]
-    },
-    {
-      "id": "PROD-03",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "independent second implementation"
-      ]
-    },
-    {
-      "id": "PROD-04",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1"
-      ],
-      "blockers": [
-        "independent cryptographic review"
-      ]
-    },
-    {
-      "id": "PROD-05",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/1f75bfb79182db0968db00e612852f0ee6d028e8",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30"
-      ],
-      "blockers": [
-        "at least five independently administered operators with witnessed key custody and erasure",
-        "epoch rotation and compromise recovery",
-        "independent cryptographic review"
-      ]
-    },
-    {
-      "id": "PROD-06",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
-      ],
-      "blockers": [
-        "separately administered production shuffle committee",
-        "third-party verification tool",
-        "independent cryptographic review"
-      ]
-    },
-    {
-      "id": "PROD-07",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "active-adversary accountability"
-      ]
-    },
-    {
-      "id": "PROD-08",
-      "status": "PARTIAL",
-      "evidence": [
-        "docs/EPOCH_LIFECYCLE.md (normative v1)",
-        "Jtensetti/nomad-testnet@d9fa296 live/epoch (production path: cmd/nomad-operator, live/share/service.go)",
-        "live/epoch/testdata/epoch-descriptor-vectors.json sha256:4591483a82b95e2d...",
-        "membership: TestApprovalQuorumCannotBeForgedByOneOperator, TestMembershipTransitionRequiresPreviousCommittee, TestVerifyRejectsInsufficientApprovals, TestVerifyRejectsDuplicateApprovals",
-        "rotation: TestPlanIsDeterministicAndPublicOnly, TestPlanFollowsThePublicSchedule, TestNextDeadlineAdvancesMonotonically, TestHaltedChainPlansNothing",
-        "forward secrecy: TestForwardSecrecyAfterErasure",
-        "key erasure: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations",
-        "compromise recovery drill: TestRecoveryDrill (5 operators, 3-of-5), TestCompromiseRevocationNeedsPeerQuorum, TestSelfRevocationRequiresTheRevokedOperator"
-      ],
-      "blockers": [
-        "evidence rule item 4: a successful GitHub Actions run. Actions has assigned no runner to this repository since 2026-08-20T18:21Z, so no gate can be promoted to MET until that is restored. Items 1, 2, 3 and 5 are satisfied and the tests above pass locally at Jtensetti/nomad-testnet@3eccc61."
-      ]
-    },
-    {
-      "id": "PROD-09",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "independent runtime process-boundary assessment on every supported platform"
-      ]
-    },
-    {
-      "id": "PROD-10",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
-      ],
-      "blockers": [
-        "blind two-world WAN captures under failure and congestion",
-        "supported-platform capture matrix"
-      ]
-    },
-    {
-      "id": "PROD-11",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-constant-rate-fabric/commit/872686c3626fda1381b9058887e90e9a343cd367",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32288962907"
-      ],
-      "blockers": [
-        "72-hour supported-platform WAN captures",
-        "clock drift, suspend/resume, congestion and process-stall campaigns"
-      ]
-    },
-    {
-      "id": "PROD-12",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-rlnc/commit/b395aa0b0dbd129a2820dbe02ee96d2a87f87273"
-      ],
-      "blockers": [
-        "pollution authentication and Byzantine campaign"
-      ]
-    },
-    {
-      "id": "PROD-13",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
-      ],
-      "blockers": [
-        "multi-region churn and partition testing",
-        "measured durability and repair targets",
-        "private-state non-interference comparison"
-      ]
-    },
-    {
-      "id": "PROD-14",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
-      ],
-      "blockers": [
-        "whole-system load, disk-full and OOM evidence",
-        "wire-trace comparison at every limit"
-      ]
-    },
-    {
-      "id": "PROD-15",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "SiteID and publisher key lifecycle"
-      ]
-    },
-    {
-      "id": "PROD-16",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-local-reconstruction/commit/032f6f1ad3984e86d5812bd6ae07143d7a806a24",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "cross-platform parser differential tests",
-        "rollback and stale-representation campaign"
-      ]
-    },
-    {
-      "id": "PROD-17",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "publication airlock"
-      ]
-    },
-    {
-      "id": "PROD-18",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "publisher traffic and retry non-interference"
-      ]
-    },
-    {
-      "id": "PROD-19",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
-      ],
-      "blockers": [
-        "private-independent peer discovery",
-        "authenticated session handshake",
-        "downgrade, replay and stale-directory interoperability tests"
-      ]
-    },
-    {
-      "id": "PROD-20",
-      "status": "NOT_MET",
-      "evidence": [
-        "docs/ADMISSION_AND_RATE_CONTROL.md (normative v1)",
-        "eclipse: TestNoRuntimeEventCanAddAPeer, TestPeerSetComesOnlyFromTheSignedTopology",
-        "sybil: TestUnsignedIdentitiesGainNothingByExisting",
-        "amplification: TestFloodFromAnAcceptedPeerNeitherAmplifiesNorInducesCatchUp (0.0003-0.0008)",
-        "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason"
-      ],
-      "blockers": [
-        "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
-        "the economic half of the analysis: costing an attack in money needs deployment parameters that do not exist yet",
-        "fair access under Sybil is bounded per session but not allocated fairly; availability under sustained flood is not claimed"
-      ]
-    },
-    {
-      "id": "PROD-21",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/nomad-testnet/blob/80b9f5c83e30114f6f749a39b89a6d77638abe4c/deploy/MULTI_OPERATOR.md"
-      ],
-      "blockers": [
-        "three independently administered operators and regions",
-        "WAN IPv4/IPv6, NAT, churn and partition evidence"
-      ]
-    },
-    {
-      "id": "PROD-22",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "Apple-provisioned App Group or independently reviewed production IPC boundary",
-        "independent browser/client assessment"
-      ]
-    },
-    {
-      "id": "PROD-23",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
-        "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "release-binary packet and DNS capture matrix on every supported platform"
-      ]
-    },
-    {
-      "id": "PROD-24",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60"
-      ],
-      "blockers": [
-        "sandbox, authenticated IPC and model attestation"
-      ]
-    },
-    {
-      "id": "PROD-25",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30",
-        "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-        "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "two independent matching builds",
-        "SBOM and signed provenance",
-        "continuous vulnerability gate"
-      ]
-    },
-    {
-      "id": "PROD-26",
-      "status": "PARTIAL",
-      "evidence": [
-        "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
-        "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-        "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
-      ],
-      "blockers": [
-        "Developer ID signing and Apple notarization",
-        "secure updater and rollback prevention",
-        "key storage, local-data deletion and clean-uninstall verification"
-      ]
-    },
-    {
-      "id": "PROD-27",
-      "status": "NOT_MET",
-      "evidence": [
-        "Jtensetti/nomad-testnet@068453f live/telemetry (schema allowlist + secret scanner)",
-        "live/node/telemetry_test.go: production node run with known secrets, every state file scanned"
-      ],
-      "blockers": [
-        "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
-        "operator-deployment retention controls and a privacy review, neither of which is a test"
-      ]
-    },
-    {
-      "id": "PROD-28",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "SLO, 30-day soak and incident exercises"
-      ]
-    },
-    {
-      "id": "PROD-29",
-      "status": "BLOCKED",
-      "evidence": [],
-      "blockers": [
-        "independent cryptographic, systems, browser and privacy assessors"
-      ]
-    },
-    {
-      "id": "PROD-30",
-      "status": "NOT_MET",
-      "evidence": [],
-      "blockers": [
-        "multi-operator beta and release red team"
-      ]
-    }
-  ]
+ "schema_version": 1,
+ "release": "nomad-production-rc1",
+ "last_reviewed": "2026-08-21",
+ "criteria": [
+  {
+   "id": "PROD-01",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "protocol freeze and conformance suite"
+   ]
+  },
+  {
+   "id": "PROD-02",
+   "status": "PARTIAL",
+   "evidence": [
+    "docs/THREAT_MODEL.md"
+   ],
+   "blockers": [
+    "production claim-to-test traceability"
+   ]
+  },
+  {
+   "id": "PROD-03",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "independent second implementation"
+   ]
+  },
+  {
+   "id": "PROD-04",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1"
+   ],
+   "blockers": [
+    "independent cryptographic review"
+   ]
+  },
+  {
+   "id": "PROD-05",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/1f75bfb79182db0968db00e612852f0ee6d028e8",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30"
+   ],
+   "blockers": [
+    "at least five independently administered operators with witnessed key custody and erasure",
+    "epoch rotation and compromise recovery",
+    "independent cryptographic review"
+   ]
+  },
+  {
+   "id": "PROD-06",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+   ],
+   "blockers": [
+    "separately administered production shuffle committee",
+    "third-party verification tool",
+    "independent cryptographic review"
+   ]
+  },
+  {
+   "id": "PROD-07",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "active-adversary accountability"
+   ]
+  },
+  {
+   "id": "PROD-08",
+   "status": "MET",
+   "evidence": [
+    "docs/EPOCH_LIFECYCLE.md (normative v1)",
+    "Jtensetti/nomad-testnet@d9fa296 live/epoch (production path: cmd/nomad-operator, live/share/service.go)",
+    "live/epoch/testdata/epoch-descriptor-vectors.json sha256:4591483a82b95e2d...",
+    "membership: TestApprovalQuorumCannotBeForgedByOneOperator, TestMembershipTransitionRequiresPreviousCommittee, TestVerifyRejectsInsufficientApprovals, TestVerifyRejectsDuplicateApprovals",
+    "rotation: TestPlanIsDeterministicAndPublicOnly, TestPlanFollowsThePublicSchedule, TestNextDeadlineAdvancesMonotonically, TestHaltedChainPlansNothing",
+    "forward secrecy: TestForwardSecrecyAfterErasure",
+    "key erasure: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations",
+    "compromise recovery drill: TestRecoveryDrill (5 operators, 3-of-5), TestCompromiseRevocationNeedsPeerQuorum, TestSelfRevocationRequiresTheRevokedOperator",
+    "external test report production/reports/2026-08-21-full-suite/ (nomad-testnet 19b1d6c: live/epoch 53/53 race-clean incl. all 13 named boundary tests; logs digested in SHA256SUMS) satisfying evidence rule item 4"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "PROD-09",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "independent runtime process-boundary assessment on every supported platform"
+   ]
+  },
+  {
+   "id": "PROD-10",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+   ],
+   "blockers": [
+    "blind two-world WAN captures under failure and congestion",
+    "supported-platform capture matrix"
+   ]
+  },
+  {
+   "id": "PROD-11",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-constant-rate-fabric/commit/872686c3626fda1381b9058887e90e9a343cd367",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32288962907"
+   ],
+   "blockers": [
+    "72-hour supported-platform WAN captures",
+    "clock drift, suspend/resume, congestion and process-stall campaigns"
+   ]
+  },
+  {
+   "id": "PROD-12",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-rlnc/commit/b395aa0b0dbd129a2820dbe02ee96d2a87f87273"
+   ],
+   "blockers": [
+    "pollution authentication and Byzantine campaign"
+   ]
+  },
+  {
+   "id": "PROD-13",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+   ],
+   "blockers": [
+    "multi-region churn and partition testing",
+    "measured durability and repair targets",
+    "private-state non-interference comparison"
+   ]
+  },
+  {
+   "id": "PROD-14",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+   ],
+   "blockers": [
+    "whole-system load, disk-full and OOM evidence",
+    "wire-trace comparison at every limit"
+   ]
+  },
+  {
+   "id": "PROD-15",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "SiteID and publisher key lifecycle"
+   ]
+  },
+  {
+   "id": "PROD-16",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-local-reconstruction/commit/032f6f1ad3984e86d5812bd6ae07143d7a806a24",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "cross-platform parser differential tests",
+    "rollback and stale-representation campaign"
+   ]
+  },
+  {
+   "id": "PROD-17",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "publication airlock"
+   ]
+  },
+  {
+   "id": "PROD-18",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "publisher traffic and retry non-interference"
+   ]
+  },
+  {
+   "id": "PROD-19",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+   ],
+   "blockers": [
+    "private-independent peer discovery",
+    "authenticated session handshake",
+    "downgrade, replay and stale-directory interoperability tests"
+   ]
+  },
+  {
+   "id": "PROD-20",
+   "status": "NOT_MET",
+   "evidence": [
+    "docs/ADMISSION_AND_RATE_CONTROL.md (normative v1)",
+    "eclipse: TestNoRuntimeEventCanAddAPeer, TestPeerSetComesOnlyFromTheSignedTopology",
+    "sybil: TestUnsignedIdentitiesGainNothingByExisting",
+    "amplification: TestFloodFromAnAcceptedPeerNeitherAmplifiesNorInducesCatchUp (0.0003-0.0008)",
+    "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason"
+   ],
+   "blockers": [
+    "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
+    "the economic half of the analysis: costing an attack in money needs deployment parameters that do not exist yet",
+    "fair access under Sybil is bounded per session but not allocated fairly; availability under sustained flood is not claimed"
+   ]
+  },
+  {
+   "id": "PROD-21",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/nomad-testnet/blob/80b9f5c83e30114f6f749a39b89a6d77638abe4c/deploy/MULTI_OPERATOR.md"
+   ],
+   "blockers": [
+    "three independently administered operators and regions",
+    "WAN IPv4/IPv6, NAT, churn and partition evidence"
+   ]
+  },
+  {
+   "id": "PROD-22",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "Apple-provisioned App Group or independently reviewed production IPC boundary",
+    "independent browser/client assessment"
+   ]
+  },
+  {
+   "id": "PROD-23",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+    "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "release-binary packet and DNS capture matrix on every supported platform"
+   ]
+  },
+  {
+   "id": "PROD-24",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60"
+   ],
+   "blockers": [
+    "sandbox, authenticated IPC and model attestation"
+   ]
+  },
+  {
+   "id": "PROD-25",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30",
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "two independent matching builds",
+    "SBOM and signed provenance",
+    "continuous vulnerability gate"
+   ]
+  },
+  {
+   "id": "PROD-26",
+   "status": "PARTIAL",
+   "evidence": [
+    "https://github.com/Jtensetti/Nomad-browser/releases/tag/nomad-browser-macos-f5d1d6aa",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
+    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+   ],
+   "blockers": [
+    "Developer ID signing and Apple notarization",
+    "secure updater and rollback prevention",
+    "key storage, local-data deletion and clean-uninstall verification"
+   ]
+  },
+  {
+   "id": "PROD-27",
+   "status": "NOT_MET",
+   "evidence": [
+    "Jtensetti/nomad-testnet@068453f live/telemetry (schema allowlist + secret scanner)",
+    "live/node/telemetry_test.go: production node run with known secrets, every state file scanned"
+   ],
+   "blockers": [
+    "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
+    "operator-deployment retention controls and a privacy review, neither of which is a test"
+   ]
+  },
+  {
+   "id": "PROD-28",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "SLO, 30-day soak and incident exercises"
+   ]
+  },
+  {
+   "id": "PROD-29",
+   "status": "BLOCKED",
+   "evidence": [],
+   "blockers": [
+    "independent cryptographic, systems, browser and privacy assessors"
+   ]
+  },
+  {
+   "id": "PROD-30",
+   "status": "NOT_MET",
+   "evidence": [],
+   "blockers": [
+    "multi-operator beta and release red team"
+   ]
+  }
+ ]
 }

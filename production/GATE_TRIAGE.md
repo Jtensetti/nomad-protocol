@@ -15,9 +15,12 @@ GitHub Actions has assigned **no runner** to `nomad-testnet` since
 seconds with no logs and `runner_id: 0`. The usual cause is an Actions
 spending or minutes cap.
 
-**While that holds, no gate can reach MET, however good the evidence is.**
-This is the single highest-value thing to fix, ahead of the Scaleway work,
-because it gates every promotion rather than one workstream.
+**Correction (2026-08-21).** The rule reads "GitHub Actions **or external
+test report**", so the outage does not cap promotions: a complete, digested
+external run of the same suites satisfies item 4. The first such report is
+`production/reports/2026-08-21-full-suite/`, and PROD-08 was promoted on it.
+Restoring Actions remains worthwhile -- a hosted run is cheaper to audit than
+a maintainer-produced log -- but it no longer gates every promotion.
 
 ## Class A — evidence complete, waiting only on rule 4
 

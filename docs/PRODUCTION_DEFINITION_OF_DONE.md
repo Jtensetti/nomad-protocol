@@ -14,7 +14,7 @@ The release must fail closed. If cadence, verification, mix quorum, local model,
 cache integrity or browser isolation cannot be maintained, the client must stop
 the affected operation without falling back to ordinary networking.
 
-Current score: **0/30 production gates MET.**
+Current score: **1/30 production gates MET.**
 
 The machine-readable source of status and evidence is
 [`production/readiness.json`](../production/readiness.json). CI rejects missing
@@ -47,7 +47,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-05 | Mix committee keys are created with authenticated distributed key generation and threshold decryption; no machine ever holds a complete long-term decryption key. | At least five independently administered nodes, DKG transcript, threshold-decryption tests and compromise drill. | PARTIAL |
 | PROD-06 | Every mix hop preserves payload, proves its shuffle, binds proof to committee, epoch and batch, and rejects replayed or equivocated batches. | Verifiable multi-hop transcripts, negative proof tests and third-party verification tool. | PARTIAL |
 | PROD-07 | Drop, delay, duplication, replay, selective failure and malformed-input attacks are detected or bounded without private-dependent recovery traffic; accountable evidence can identify a faulty committee member where the protocol claims it can. | Active-adversary fault injection and signed blame/availability reports. | NOT_MET |
-| PROD-08 | Committee membership, epoch rotation, forward secrecy, key erasure and compromise recovery are specified and exercised. | Rotation/erasure tests and a completed key-compromise recovery drill. | PARTIAL |
+| PROD-08 | Committee membership, epoch rotation, forward secrecy, key erasure and compromise recovery are specified and exercised. | Rotation/erasure tests and a completed key-compromise recovery drill. | MET |
 | PROD-09 | The Selection Firewall is enforced in every shipping dependency graph and process boundary: private selection cannot reach network-control capabilities. | Build-time import/capability policy plus runtime process-boundary tests for release binaries. | PARTIAL |
 | PROD-10 | For equal public state, private reader activity does not change packet size, count, cadence, peers, retransmission, congestion response, cache maintenance or speculative networking. | Blind two-world packet/DNS captures across idle and diverse private workloads, including failures and congestion. | PARTIAL |
 | PROD-11 | Constant cadence is maintained on the actual wire across clock drift, suspend/resume, loss, congestion and process stalls without catch-up bursts. | At least 72 hours of WAN capture per supported platform with preregistered tolerances and zero unexplained violations. | PARTIAL |
