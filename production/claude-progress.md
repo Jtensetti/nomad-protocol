@@ -267,7 +267,7 @@ an earlier reading that the outage capped every promotion was wrong.
 
 **What a freeze still needs.** The formats are published and enforced: nine
 golden vectors identical on 32-bit and 64-bit, a compatibility matrix covering
-57 frozen labels that a test keeps honest, and the downgrade rule written down.
+58 frozen labels that a test keeps honest, and the downgrade rule written down.
 What is missing is a signature over it (EB-7, a custody problem), one normative
 document for state transitions and timeouts, and a schema a second
 implementation could validate against.
@@ -295,7 +295,7 @@ Work landed since the previous checkpoint:
   v1. Writing the drill corrected a wrong expectation: recovery invalidates
   the compromised key's back catalogue by design, which rotation does not, and
   the specification says so.
-- **Compatibility matrix** (PROD-01), 57 frozen labels, enforced by a test
+- **Compatibility matrix** (PROD-01), 58 frozen labels, enforced by a test
   that fails naming any version constant the matrix omits. Writing it settled
   the downgrade rule, which had been implicit in the code.
 - **Crash-output control** (PROD-27), after finding the obvious in-process fix

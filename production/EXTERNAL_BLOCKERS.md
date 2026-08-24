@@ -102,7 +102,7 @@ only the listed action. Never fabricate these.
   enforced. A nine-vector conformance corpus covers the hop cell, the uplink
   cell frame, the object manifest and signed topologies, sealed by a digest
   over the ordered set and identical on 32-bit and 64-bit builds;
-  `nomad-testnet/conformance/COMPATIBILITY.md` names all 57 frozen labels with
+  `nomad-testnet/conformance/COMPATIBILITY.md` names all 58 frozen labels with
   the refusal behaviour for each, enforced by a test that fails if the code
   gains a version the matrix omits. What remains for the second party is only
   to read them and disagree.

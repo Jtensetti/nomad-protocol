@@ -9,7 +9,7 @@
    "evidence": [
     "golden vectors: 9-vector conformance corpus (hop cell incl. batch-coordinate maximum, uplink cell frame, object manifest, three- and eight-operator signed topologies), sealed by a digest over the ordered set, checked in CI against its encoders",
     "cross-architecture: the corpus digest is identical on linux/amd64 and linux/386, so no vector depends on host word size; CI gates on both plus six supported build targets",
-    "compatibility matrix: nomad-testnet/conformance/COMPATIBILITY.md covers 57 frozen labels in three groups (document versions with stated refusal behaviour, signature/MAC/digest domain separators, and vendored component labels), enforced by TestCompatibilityMatrixCoversEveryWireVersion which fails naming any version constant the matrix omits",
+    "compatibility matrix: nomad-testnet/conformance/COMPATIBILITY.md covers 58 frozen labels in three groups (document versions with stated refusal behaviour, signature/MAC/digest domain separators, and vendored component labels), enforced by TestCompatibilityMatrixCoversEveryWireVersion which fails naming any version constant the matrix omits",
     "downgrade rule stated normatively: exactly one accepted version per format, an unrecognised version is refused rather than downgraded to, and a change forces a coordinated epoch change; six downgrade cases tested at the topology admission boundary",
     "ambiguity: duplicate JSON keys, trailing content and malformed encodings refused before decoding; mutation and truncation sweeps over every published vector",
     "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
