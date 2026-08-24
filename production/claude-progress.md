@@ -3,6 +3,84 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-24: four gates that were not gating, and the seal cost
+
+**What this checkpoint is mostly about.** A full sweep across every repository
+was run to verify the deposit-path work. It found that four of the gates this
+project counts as evidence were not doing their jobs. That is the material
+result, more than any feature added alongside it.
+
+- **`go test -race ./...` was failing outright in nomad-testnet**, timing out
+  at Go's ten-minute package default. Two statistical experiments were running
+  under a race detector that changes the cost of the thing they measure: the
+  publication campaign times emissions against an interval calibrated on the
+  real seal cost, and under `-race` a seal costs more than the interval, so the
+  loop falls off its ticker entirely. Both now run on a dedicated non-race CI
+  step; the race build keeps the concurrency coverage and discards its captures
+  so CI cannot apply a timing rule to them.
+- **The publication campaign logged its own precondition and returned**, while
+  CI went on to apply the full preregistered timing rule to whatever captures
+  the run had produced. Its two comments also contradicted each other about
+  whether a timing claim was being made. Both preconditions are now enforced,
+  each verified by setting its tolerance to an impossible value.
+- **`COMPONENTS.sha256` pinned 29 of 46 vendored files.** `sha256sum --check`
+  verifies what is listed and never asks whether everything shipped is listed.
+  Among the seventeen unpinned were `mix/blame.go` and `rlnc/bounded.go` — the
+  budget enforcement the materializer relies on to bound a pollution attack.
+  Either could have been edited in place with the gate green.
+- **The browser's entitlement check ran on no branch it was pushed to.** It
+  needs PlistBuddy and `swift`, so only a macOS runner can run it, and the only
+  macOS workflow triggered on push for `branches: [agent/macos-browser]`.
+  PROD-23 and F-01 both cited "entitlement gates in CI". The checks are now Go
+  tests that parse the plists directly and run everywhere, as an allowlist with
+  a written reason per entitlement rather than a denylist.
+
+Two defects in the code those gates watch: a fabric cadence test that failed
+when the scheduler *correctly* refused to burst on a stalled host, and topology
+admission comparing endpoint strings, so two operators could occupy one address
+under different spellings — sharpest as `127.0.0.1:4200` against
+`[::ffff:127.0.0.1]:4200` — and be counted as two independent operators. The
+same weakness applied to the HTTP endpoints via trailing slash, host case and
+scheme case.
+
+**The seal cost, halved.** The previous checkpoint recorded that a publisher
+cannot seal cells as fast as it must emit them, named the single-column fix,
+and deliberately did not make it. It is made. `mix.Encrypt` refuses fewer than
+two cells, correctly — a shuffle of one element is the identity — but that is a
+property of a mix input, and a publisher has one fragment. `mix.EncryptCell`
+halves the cost from 87 ms to 42 ms with the conformance corpus digest
+unchanged. The finding is reduced rather than closed: 42 ms fits inside the
+deployed 50 ms with no headroom and is far beyond the permitted 5 ms minimum,
+and what remains is the fragment's own encryption rather than waste, so the
+next reduction would be a protocol change.
+
+**Built alongside.** Availability accountability, the half of PROD-07 that did
+not exist: signed non-receipts bound to a deadline the public timetable fixes,
+a quorum of distinct certified operators, and a refutation that names the
+observers the transcript contradicts. It refuses to claim withholding, which
+asynchrony makes undecidable. Also B-08 (a vanished operator's share is not
+rerouted, and private activity during the outage changes nothing a surviving
+peer sees), H-08 (an update verifier that cannot fetch, refusing rollback,
+equivocation and substitution by name), and H-10 (uninstall plus a retention
+analysis covering what macOS keeps that no uninstaller can remove).
+
+**Method note.** Mutation testing earned its place twice. Four mutants against
+the availability suite let two live on the first pass, both because the tests
+checked something weaker than they claimed. And the browser's Swift symbol scan
+has a test that runs it over samples of each forbidden construct, which caught
+a word boundary I had added that made the `CFNetwork` pattern miss
+`CFNetworkCopySystemProxySettings`.
+
+**Risk.** Every one of these was found by a party that is not independent. The
+rate at which this project's own gates have turned out to be wrong is the
+strongest argument for PROD-04 and PROD-29 that exists, and it is an argument
+about what has not yet been looked at.
+
+**Next.** Gate counts are unchanged at 2 MET, 24 PARTIAL, 3 NOT_MET, 1 BLOCKED.
+All three NOT_MET remain non-engineering (a second implementer, thirty days of
+soak, a monitored beta). The largest remaining engineering item is F-11: the
+engine forks still carry integration contracts only.
+
 ## 2026-08-20 — C1 implemented and hardened; D1 implemented; A spike done
 
 **Completed**
