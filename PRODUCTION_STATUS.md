@@ -1,10 +1,10 @@
 # Nomad production status
 
-Last updated: 2026-08-20. Authoritative gate statuses live in
+Last updated: 2026-08-21. Authoritative gate statuses live in
 [`production/readiness.json`](production/readiness.json); this document
 explains them in prose. Where the two disagree, the registry wins.
 
-**Nomad is not production ready.** 0 of 30 production gates are MET. This
+**Nomad is not production ready.** 2 of 30 production gates are MET. This
 document says what exists, what it is evidenced to do, and what it does not
 do.
 
@@ -125,10 +125,44 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**None.** 0/30. The registry currently holds 18 PARTIAL, 11 NOT_MET and 1
-BLOCKED. Substantial protocol work has moved several criteria forward
-internally, but none has the boundary-level evidence its own rule demands,
-so none has been promoted.
+**Two.** 2/30: PROD-08 and PROD-12. The registry holds 17 PARTIAL, 10 NOT_MET
+and 1 BLOCKED besides them.
+
+- **PROD-08** (committee membership, rotation, forward secrecy, key erasure,
+  compromise recovery): on the production path, with a normative spec,
+  published descriptor vectors whose digest matches the registry byte for
+  byte, and all thirteen named boundary tests passing race-enabled inside a
+  53-test package — including a five-operator three-of-five recovery drill.
+- **PROD-12** (generation-bound, pollution-resistant network coding): source
+  commitments under the authority signature, a decoder that refuses polluted
+  systematic symbols before admission and enforces per-generation budgets, two
+  fuzz targets, and a Byzantine campaign of 72 trials from 0 to 100 per cent
+  pollution producing zero accepted corruptions.
+
+Both were promoted on external test reports rather than GitHub Actions, which
+the evidence rule permits in the same clause ("GitHub Actions **or** external
+test report"). An earlier reading of the Actions outage as capping every
+promotion was wrong, and the triage document is corrected.
+
+Neither promotion claims more than its criterion names. PROD-12 in particular
+does **not** claim pollution cannot deny a generation: a dense coded symbol
+cannot be verified before admission over GF(2^8), a third of the campaign's
+trials were denied, and the first version of the budget fuzzer asserted
+correctness under hostile input and was refuted within seconds.
+
+Defects found and fixed during this cycle, rather than assumed absent: a
+silent wrong-decode in the RLNC decoder that returned a mixture of source
+symbols as one symbol with a nil error, on the production materializer path;
+a signed topology carrying one key twice being accepted, where Go's last-wins
+rule differs from parsers that keep the first; and a stale topology being
+replayable because nothing remembered which epoch the node had already served.
+Each has a regression that fails against the pre-fix code.
+
+The structural defect behind the first was worse than the defect: the six
+vendored component modules in nomad-testnet, and the three pinned snapshots in
+Nomad-browser, carried no tests at all and were invisible to `go test ./...`.
+What shipped was untested by the repository that ships it. All nine now carry
+their standalone repositories' suites and are gated in CI.
 
 Three adversarial reviews during this work each found exploitable defects in
 code that looked finished, and had passing tests: a single-operator
