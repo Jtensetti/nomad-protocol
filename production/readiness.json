@@ -249,10 +249,11 @@
     "constant-rate ingress implemented: live/deposit Drain emits on every tick, taking work when there is work and cover otherwise, with the queue drained by a separate goroutine into a one-slot buffer so no disk I/O happens on the emission path",
     "threshold mixing and protocol-defined time separation: the airlock seals at a public schedule, the shuffle chain runs over the sealed batch, and release timing is a pure function of four public parameters",
     "multi-publisher campaign under all four named conditions -- success, timeout, restart part-way with a durable queue, adversarial loss -- plus two idle controls: every world emits exactly the same number of cells, all 1200 bytes, to one destination",
-    "captures written to runtime/evidence/publication-campaign/ in the same rendered form the preregistered rule reads"
+    "captures written to runtime/evidence/publication-campaign/ in the same rendered form the preregistered rule reads",
+    "the campaign is judged by the full preregistered rule including timing, in CI: success, timeout and loss against a steady control, and restart-with-work against restart-without-work, since a restart is externally observable by construction and only that pair isolates the private variable. All five pass; the noise floor between two idle publishers is 0.0003 to 0.0038 of the interval against a 0.02 tolerance"
    ],
    "blockers": [
-    "timing is not measured by this campaign and the campaign says so: two idle publishers differ in mean inter-arrival by 0.003 to 0.520 of the nominal interval across five runs against a 0.02 tolerance, so the in-process noise floor is both far too large and too unstable to license a timing claim. Emission timing evidence comes from the WAN campaign instead",
+    "a publisher cannot seal cells as fast as it must emit them: about 87 ms per cell against a 50 ms deployed interval and a 5 ms permitted minimum, half of it a discarded companion mix column. See the finding in EVIDENCE_INDEX. Constant-rate ingress is implemented and measured, but not demonstrated to be sustainable on the cadence the topology sets",
     "single process: publishers, entry operator and committee share one binary, so no packet capture on a real interface covers the publication path specifically",
     "replication is not exercised: the criterion names it and the campaign does not reach it"
    ]

@@ -682,3 +682,45 @@ repeating it.
   disabled) is in `nomad-testnet/deploy/OPERATOR_ONBOARDING.md`, together with
   the statement that this project's evidence does not cover an operator's own
   host settings.
+
+### FINDING: a publisher cannot seal cells as fast as it must emit them
+
+Measured while diagnosing why the publication campaign ran slowly, which is
+worth saying because it was not being looked for.
+
+Sealing one uplink cell takes about **87 ms** on the development hardware
+(`live/uplink` `BenchmarkSealCover`, `TestSealCostAgainstTheCadenceItMustHold`).
+The public traffic class permits cell intervals from 5 ms to 60 s, and the
+deployed testnet topology uses 50 ms. A publisher on hardware like this
+therefore cannot hold the cadence it is given, and falls further behind on
+every tick.
+
+**Why it costs that much.** `uplink.seal` performs a full ElGamal encryption
+of a **two-column** mix batch and then discards the second column, because
+`mix.Encrypt` requires at least two columns. Measured at 86 ms for two columns
+and 160 ms for four, the cost is linear in columns, so **half the per-cell
+cost is work that is thrown away**. A single-column encryption path would
+roughly halve it, to about 43 ms — still without headroom at 50 ms, and still
+impossible at 5 ms.
+
+**Why it is not a privacy leak, and why it matters anyway.** Work and cover
+pay exactly the same cost, so the expense does not distinguish them. What it
+does is make a publisher's emission timing a function of machine load rather
+than of the schedule, which is precisely the mechanism the standing timing
+finding (E-08) has been looking for. It is recorded here as a performance and
+viability defect with a privacy consequence, not as a leak.
+
+**It had already corrupted a measurement.** The publication campaign ticked at
+5 ms while each cell cost 87 ms, so its loop was not keeping a cadence at all
+and the "noise floor" it reported was seal-time variance, swinging between
+0.003 and 0.520 of the nominal interval across five runs. Raising the interval
+above the cost — rather than lowering the tolerance — produced a floor of
+0.0003 to 0.0038 across three runs, inside the registered 0.02, and the
+captures became judgeable by the whole preregistered rule.
+
+- Not fixed here. The single-column path touches `mix.Encrypt`, which is
+  security-critical, and the right change is a reviewed one rather than a late
+  one. Recorded as the next piece of work on the publication path.
+- The threshold assertion is deliberately weak (it fails only above the
+  longest permitted interval) because the number is hardware-dependent and a
+  CI runner is not a deployment. The log line carries the measurement.
