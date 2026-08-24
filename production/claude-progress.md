@@ -3,6 +3,46 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-24c: detached epoch ceremony and exact erasure binding
+
+**Implementation.** Draft PR #16 now points to exact head `5ac2bfa`. Directly
+callable descriptor approval/activation signing was removed from the exported
+production API. An operator now validates the complete unsigned draft against
+the pinned authority, predecessor, topology, DKG certificate, revocation set,
+transition and public boundaries before its durable anti-equivocation journal
+can be burned. It emits a strict detached artifact bound to network, epoch,
+descriptor digest, role and operator. Assembly verifies every artifact and
+requires the outgoing quorum plus every incoming activation. The lifecycle CLI
+and operator runbooks expose the four explicit ceremony steps.
+
+**Evaluator findings closed.** C-critical committee, DKG, ceremony and
+descriptor inputs now reject duplicate JSON keys. Operator erasure is bound to
+the exact retired verified chain entry and matching threshold share; authority,
+chain, evidence, pending state, duplicate paths and hard-link aliases are
+protected. The race build also exposed two false operator-replacement fixtures
+and a public/private authority-key mix-up; each was corrected with regression
+coverage. This is internal separation of implementation and evaluation, not an
+independent audit.
+
+**Verification.** Go 1.25.0 local checks passed: full root race suite, vet,
+module tidiness, formatting, all six component build/vet/fresh-race suites and
+six supported target builds. Targeted final-content race tests passed for
+epoch, rotation, committee, DKG, ceremony and operator commands. The operator
+ceremony shell E2E and both Python analyzer self-suites passed. Linux/386 builds
+but cannot execute in this kernel; Docker/Compose is unavailable. Exact-head
+Actions run `32746518775` again failed before checkout: `unit.steps` is null
+with no logs, and downstream jobs were skipped.
+
+**Gate boundary.** PROD-08 remains PARTIAL. Detached manual signing and safe
+assembly now exist; automatic public exchange/gathering, READY, import and
+scheduled activation do not. The forward-secrecy and independent/WAN gaps are
+unchanged. PR #16 stays draft and unmerged.
+
+**Next.** Build the automatic public lifecycle transport/state machine without
+creating private-state-dependent catch-up, then perform the later-credential-
+compromise drill. In parallel, correct the publication campaign defect found
+locally: an empty private queue could spin on disk and modulate cadence.
+
 ## Checkpoint 2026-08-24b: C2 reconciled; PROD-08 evidence boundary corrected
 
 **Repository reconciliation.** Main, the current production-readiness branches

@@ -107,18 +107,20 @@
       "status": "PARTIAL",
       "evidence": [
         "docs/EPOCH_LIFECYCLE.md (normative v1)",
-        "Jtensetti/nomad-testnet@5491caa draft PR #16 (unmerged C2 production-path integration: cmd/nomad-lifecycle, cmd/nomad-rotation-controller, cmd/nomad-operator, cmd/nomad-share, live/rotation, live/epoch)",
+        "Jtensetti/nomad-testnet@5ac2bfa draft PR #16 (unmerged C production-path integration: lifecycle/rotation controllers, detached descriptor ceremony, verified erasure, retirement-guarded share service)",
         "live/epoch/testdata/epoch-descriptor-vectors.json sha256:4591483a82b95e2d...",
         "membership: TestApprovalQuorumCannotBeForgedByOneOperator, TestMembershipTransitionRequiresPreviousCommittee, TestVerifyRejectsInsufficientApprovals, TestVerifyRejectsDuplicateApprovals",
         "rotation substrate: TestPlanIsDeterministicAndPublicOnly, TestPlanFollowsThePublicSchedule, TestInterruptedAttemptNeverRestartsSamePublicAttempt, TestCompletedAttemptScanAllowsDiscardEvidence",
+        "detached descriptor ceremony: TestIndependentDetachedSignatureAssembly, TestSignerValidatesDraftBeforeBurningJournalSlot, TestDetachedSignerRefusesPrefilledSignatureSets, TestDetachedSignatureCannotBeTransplantedToAnotherDraft, TestDetachedSignerJournalRefusesSecondValidDraft",
         "model-only forward-secrecy experiment: TestForwardSecrecyAfterErasure",
-        "key-erasure substrate: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations, TestInterruptedErasureResumesWithOriginalDigests",
+        "key-erasure substrate: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations, TestInterruptedErasureResumesWithOriginalDigests, TestDurableErasureRefusesWrongOperatorBeforeDestroyingAnything; official CLI verifies the exact retired share and protects authority/chain/evidence aliases",
         "compromise recovery drill: TestRecoveryDrill (5 operators, 3-of-5), TestCompromiseRevocationNeedsPeerQuorum, TestSelfRevocationRequiresTheRevokedOperator",
-        "external test report production/reports/2026-08-21-full-suite/ proves the older 19b1d6c epoch package race-clean; it does not verify draft integration head 5491caa"
+        "local Go 1.25.0 verification on the C-only tree: full root race suite, vet, module tidiness, formatting, six component build/vet/fresh-race suites and six supported target builds passed; targeted final-content C race suites and the operator ceremony E2E also passed",
+        "external test report production/reports/2026-08-21-full-suite/ proves the older 19b1d6c epoch package race-clean; it does not verify draft integration head 5ac2bfa"
       ],
       "blockers": [
-        "Draft PR #16 exact head 5491caa workflow run 32737789012 failed before checkout with zero job steps and no assigned runner; see EB-8",
-        "No automatic descriptor assembly, approval collection, READY transition, chain import and scheduled activation path",
+        "Draft PR #16 exact head 5ac2bfa workflow run 32746518775 failed before checkout with unit.steps null and no logs; downstream jobs were skipped; see EB-8",
+        "Safe manual descriptor signing and assembly exist, but there is no automatic public artifact exchange/gather, READY transition, chain import and scheduled activation path",
         "Forward-secrecy experiment deletes generated share files but does not test later compromise of the static DKG identity against retained live DKG state",
         "No independent-operator or WAN lifecycle/recovery drill"
       ]

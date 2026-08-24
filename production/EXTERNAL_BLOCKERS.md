@@ -154,8 +154,9 @@ only the listed action. Never fabricate these.
 ## EB-8: GitHub Actions runner availability
 
 - **Missing:** a runner that actually starts the required repository
-  workflows. Draft PR #16 run `32737789012` on exact head `5491caa` failed in
-  the `unit` job with zero steps; `live-compose` and `release` were skipped.
+  workflows. Draft PR #16 run `32746518775` on exact head `5ac2bfa` failed in
+  the `unit` job with `steps: null` and no logs; `live-compose` and `release`
+  were skipped. Earlier exact-head run `32737789012` has the same pattern.
   The same zero-step failure pattern affects the current Nomad repositories.
 - **Why not autonomous:** Actions enablement, billing/minutes budgets and
   self-hosted-runner registration are account/organization controls not
@@ -165,12 +166,12 @@ only the listed action. Never fabricate these.
   private repositories and restores hosted-runner capacity, or registers a
   trusted ephemeral self-hosted runner. No repository secret is required for
   the unit/Compose jobs.
-- **Verification afterward:** rerun workflow `32737789012`; `unit` must show an
+- **Verification afterward:** rerun workflow `32746518775`; `unit` must show an
   assigned runner and execute checkout, formatting, dependency gates, build,
   vet, race, component, conformance and platform steps; `live-compose` must
   then execute and pass. Preserve the run URL and artifact digests against
-  exact head `5491caa`.
-- **Alternative:** a complete external test report from exact head `5491caa`
+  exact head `5ac2bfa`.
+- **Alternative:** a complete external test report from exact head `5ac2bfa`
   may satisfy evidence rule item 4, but it must include every required command
   and immutable digests; the older 2026-08-21 report cannot be reused for this
   head.

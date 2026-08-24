@@ -2,6 +2,19 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-011 (2026-08-24): descriptor signing uses validated detached artifacts
+
+Production operators never receive a raw "sign this descriptor" primitive.
+They validate the complete unsigned draft against their independently held
+authority, chain and revocation state before recording its digest in a durable
+anti-equivocation journal, then export one context-bound detached artifact.
+Assembly accepts only strict artifacts for that exact digest, separates
+outgoing approvals from incoming activations, and performs full descriptor
+verification after insertion. This prevents an invalid draft from burning the
+only journal slot and prevents callers from bypassing chain, revocation,
+membership or role checks. Artifact transport remains public lifecycle work;
+the safe signing boundary is not itself automatic orchestration.
+
 ## DEC-010 (2026-08-24): PROD-08 requires the complete live lifecycle boundary
 
 PROD-08 is downgraded from MET to PARTIAL. A public-only planner, signed

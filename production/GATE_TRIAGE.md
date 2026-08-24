@@ -26,8 +26,10 @@ a maintainer-produced log -- but it no longer gates every promotion.
 older commit it ran, but inspection of the complete criterion found missing
 automatic descriptor assembly/activation and a forward-secrecy experiment
 that never attacks retained live DKG state after later static-key compromise.
-Draft PR #16 adds important lifecycle substrate but its exact head also needs
-its own successful run.
+Draft PR #16 now adds safe detached signing/assembly as well as lifecycle
+substrate, but public exchange/gathering, READY, automatic import/activation
+and the later-compromise experiment remain. Exact head `5ac2bfa` also needs its
+own successful run; Actions run `32746518775` had no executable steps.
 
 ## Class A — evidence complete, waiting only on rule 4
 
@@ -46,7 +48,7 @@ named) and PROD-09 (dependency gates plus the shaper process boundary).
 | Gate | What is missing |
 |---|---|
 | PROD-01 | conformance schema, remaining golden vectors, compatibility matrix, signed spec tag |
-| PROD-08 | automatic descriptor assembly/approval/READY/import/activation, exact-head lifecycle CI, and a live later-compromise forward-secrecy experiment |
+| PROD-08 | automatic public artifact exchange/gathering/READY/import/activation, exact-head lifecycle CI, and a live later-compromise forward-secrecy experiment |
 | PROD-07 | active-adversary fault injection; signed blame reports (the shuffle receipts already make a faulty mixer identifiable) |
 | PROD-15 | site recovery drill; the SiteID spec is still DRAFT |
 | PROD-16 | cross-platform vectors; mutation, truncation, rollback and parser-differential tests |

@@ -22,37 +22,37 @@
      "id": "C-01",
      "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)",
      "status": "PARTIAL",
-      "note": "implemented and internally evaluated (the evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); independent review and production-boundary evidence remain"
+      "note": "implemented and internally evaluated (the first evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed); draft PR #16 head 5ac2bfa adds validated detached signing and assembly so callers cannot bypass draft/role/journal checks; independent review and production-boundary evidence remain"
     },
     {
      "id": "C-02",
      "summary": "public epoch-descriptor test vectors",
      "status": "PARTIAL",
-      "note": "implemented and internally evaluated; vectors cover the current Go encoding, but independent consumption and production-boundary evidence remain"
+      "note": "implemented and internally evaluated; vectors cover the current Go encoding and the detached artifact version is in the compatibility matrix, but independent consumption and production-boundary evidence remain"
     },
     {
      "id": "C-03",
      "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants",
      "status": "PARTIAL",
-      "note": "internal audit covers DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys; draft PR #16 adds bound revocation, erasure-intent and discard statements with duplicate-key rejection; complete protocol-surface and independent review remain"
+      "note": "internal audit covers DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys; draft PR #16 head 5ac2bfa adds digest/role/operator-bound descriptor artifacts plus bound revocation, erasure-intent and discard statements, with duplicate-key rejection throughout C-critical JSON; complete protocol-surface and independent review remain"
     },
     {
      "id": "C-04",
      "summary": "automatic next-epoch DKG while epoch N active",
      "status": "PARTIAL",
-      "note": "draft PR #16 adds a public-schedule DKG controller with fresh retry attempts and durable discard, but descriptor assembly, approval collection, READY, chain import and activation are not one automatic path; exact head awaits full CI"
+      "note": "draft PR #16 head 5ac2bfa adds a public-schedule DKG controller with fresh retry attempts, durable discard and safe detached descriptor assembly, but public artifact exchange/gathering, READY, chain import and activation are not one automatic path; local race passed and hosted exact-head CI did not start"
     },
     {
      "id": "C-05",
      "summary": "activation only at public predetermined boundary, independent of private behavior",
      "status": "PARTIAL",
-      "note": "the descriptor enforces a public activation boundary; automatic production-path assembly/import/activation and independent boundary evidence remain"
+      "note": "the descriptor and detached signing ceremony enforce the public activation boundary; automatic production-path exchange/READY/import/activation and independent boundary evidence remain"
     },
     {
      "id": "C-06",
      "summary": "retired epoch shares rejected",
      "status": "PARTIAL",
-      "note": "draft PR #16 makes the share service refresh the persisted epoch chain before startup, work and HTTP delivery; exact head awaits CI and live/WAN retirement evidence"
+      "note": "draft PR #16 makes the share service refresh the persisted epoch chain before startup, work and HTTP delivery; local exact-content race tests pass, while hosted exact-head CI and live/WAN retirement evidence remain"
     },
     {
      "id": "C-07",
@@ -64,7 +64,7 @@
      "id": "C-08",
      "summary": "key-erasure procedure implemented, documented, tested with evidence",
      "status": "PARTIAL",
-      "note": "draft PR #16 adds a crash-recoverable signed erasure intent/acknowledgement and mandatory limitations text; CLI/runbook reconciliation, exact-head CI and live persisted-state evidence remain"
+      "note": "draft PR #16 head 5ac2bfa adds crash-recoverable signed erasure intent/acknowledgement, mandatory limitations text, exact retired-share/operator verification and protected evidence/authority/chain aliases; CLI and runbooks are reconciled, but hosted exact-head CI and live persisted-state evidence remain"
     },
     {
      "id": "C-09",
@@ -88,13 +88,13 @@
      "id": "C-12",
      "summary": "split-brain activation fails closed",
      "status": "PARTIAL",
-      "note": "implemented and internally evaluated; independent split-brain boundary evidence remains"
+      "note": "implemented and internally evaluated; detached artifact transplant and second-valid-draft journal regressions close bypasses at the signing boundary; independent split-brain boundary evidence remains"
     },
     {
      "id": "C-13",
      "summary": "two valid conflicting descriptors for one epoch cannot both silently activate",
      "status": "PARTIAL",
-      "note": "implemented and internally evaluated; independent multi-observer activation evidence remains"
+      "note": "implemented and internally evaluated; every incoming activation is verified and anti-equivocation journals refuse a second valid draft; independent multi-observer activation evidence remains"
     },
     {
      "id": "C-14",
@@ -112,13 +112,13 @@
      "id": "C-16",
      "summary": "recovery drill documented and executed in test environment",
      "status": "PARTIAL",
-      "note": "TestRecoveryDrill covers five in-process operators at 3-of-5; the runbook erasure command is stale relative to draft PR #16 and no independent/WAN execution exists"
+      "note": "TestRecoveryDrill covers five in-process operators at 3-of-5 and the operator/recovery runbooks match the exact-share verified erasure flow; no independent/WAN execution exists"
     },
     {
      "id": "C-17",
      "summary": "CI regression tests for the epoch lifecycle",
      "status": "PARTIAL",
-      "note": "draft PR #16 adds lifecycle binaries to the network-domain dependency gate and release bundle, with lifecycle regressions; the exact head must complete the required workflow before this can advance"
+      "note": "draft PR #16 adds lifecycle binaries to the network-domain dependency gate and release bundle, with lifecycle regressions; local full/targeted verification passed, but exact-head Actions run 32746518775 had no executable steps and the required hosted workflow must still complete"
     }
    ]
   },

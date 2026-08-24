@@ -59,25 +59,38 @@ actually demonstrates and, equally, what it does not.
 
 ## New evidence (2026-08-20 onward)
 
-### C2 lifecycle reconciliation (2026-08-24; draft, not immutable release evidence)
+### C lifecycle and detached descriptor ceremony (2026-08-24; draft, not immutable release evidence)
 
-- Implementation head: `Jtensetti/nomad-testnet@5491caa`, draft PR #16,
+- Implementation head: `Jtensetti/nomad-testnet@5ac2bfa`, draft PR #16,
   based on `claude/nomad-production-ready-dxv4ql`.
 - Adds: public-schedule DKG execution with fresh retry directories; durable
   failed-share discard; process lock; persisted, chain-revalidated
   revocations; crash-recoverable erasure acknowledgements; fresh epoch-chain
   guards at share-service startup, threshold work and HTTP delivery; Compose
-  epoch import; release inclusion of both lifecycle binaries.
+  epoch import; release inclusion of both lifecycle binaries; strict detached
+  approval/activation artifacts and checked assembly; four operator-facing
+  descriptor ceremony commands.
+- The signing boundary validates the whole unsigned draft against authority,
+  predecessor, topology, DKG certificate and revocations before a durable
+  journal slot is recorded. Artifacts bind network, epoch, digest, role and
+  operator; final assembly requires the outgoing quorum plus all incoming
+  activations and then re-runs full descriptor verification.
 - Internal evaluator findings fixed before the PR: discard evidence blocked
   later retry-state scans; the lifecycle binaries escaped the network-domain
-  dependency gate and release archive; lifecycle/controller JSON accepted
-  duplicate-key ambiguity. Each code finding has a regression or a CI-policy
-  change.
-- Locally verified here: the Python two-world analyzer self-suite passes; the
-  existing immutable report checksums remain valid.
-- Not demonstrated: the exact Go head has not yet completed build, vet, race,
-  cross-platform or Compose CI; automatic descriptor assembly, approval
-  collection, READY, chain import and activation remain absent; the existing
+  dependency gate and release archive; C-critical JSON accepted duplicate-key
+  ambiguity; two membership-change fixtures retained the same operator ID; a
+  controller test supplied a private authority key where a public key was
+  required. Each code finding has regression coverage or a CI-policy change.
+- Locally verified with Go 1.25.0: full root race suite, vet, module tidiness,
+  formatting, all six component build/vet/fresh-race suites and six supported
+  target builds passed. Targeted final-content C race tests, the operator
+  ceremony shell E2E and both Python analyzer self-suites passed. Linux/386
+  built but this kernel could not execute it; Docker/Compose was unavailable.
+- Exact-head Actions run `32746518775` did not execute: `unit.steps` is null
+  with no logs; downstream jobs were skipped. This is EB-8, not a green test.
+- Not demonstrated: safe manual descriptor assembly now exists, but automatic
+  public artifact exchange/gathering, READY, chain import and scheduled
+  activation remain absent; the existing
   forward-secrecy experiment does not attack retained live DKG state after a
   later compromise of the static DKG identity; no WAN or independently
   administered drill exists.
