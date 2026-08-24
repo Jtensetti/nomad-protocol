@@ -724,3 +724,129 @@ captures became judgeable by the whole preregistered rule.
 - The threshold assertion is deliberately weak (it fails only above the
   longest permitted interval) because the number is hardware-dependent and a
   CI runner is not a deployment. The log line carries the measurement.
+
+## Availability accountability: recording what cannot be proved
+
+`nomad-anytrust-mix-sim` 7556b09 (`mix/availability.go`),
+`nomad-testnet` 00cb9ec (`live/availability/`)
+
+Soundness accountability was already settled: a mixer that signs a receipt over
+a transformation whose proof does not verify has produced, with its own key, the
+complete evidence of its own fault, and `mix.VerifyFaultReport` lets a third
+party re-derive it. Availability had nothing, and PROD-07 recorded that as a
+blocker.
+
+**Why it needed a different shape.** A mixer that never sends its round signs
+nothing, so there is no artefact to check. In an asynchronous network no
+observer can distinguish withholding from a dropped packet or from its own
+receiver being partitioned. That is not an unimplemented feature; it is not
+decidable from the transcript, and code claiming otherwise would be smuggling in
+a synchrony assumption Nomad does not have.
+
+So the implementation records rather than proves, in a form that is checkable,
+bounded and reversible:
+
+- The deadline comes from `RoundSchedule`, which takes a **slot index rather
+  than a batch**, so a deadline cannot vary with what a batch contains.
+- Each observer signs its own non-receipt, bound to committee, epoch, batch,
+  round, deadline and accused.
+- A report is a quorum of statements from **distinct certified operators**.
+  Below quorum it establishes nothing.
+- The accused refutes by producing its round for that exact position, and
+  because every statement is individually signed, refutation **names the
+  observers the transcript contradicts**.
+
+**Mutation-tested, and the first pass was not good enough.** Four mutants were
+run against the suite. Two survived initially: a deadline outside the signed
+message, and a refutation that ignored the round position. Both survived for the
+same class of reason — the tests were checking a weaker thing than they claimed.
+The deadline case mutated the report and left its statements alone, so the
+report-level consistency check rejected it before any signature was examined;
+the refutation case answered with a round belonging to a *different mixer*, so
+the identity check fired instead of the position check. Rebuilt to rewrite
+statements consistently and to use a sound round the accused itself signed
+elsewhere, all four mutants now fail, each on a different test.
+
+**The privacy boundary is the reason the testnet package looks the way it
+does.** An availability report is externally observable, so whatever decides to
+emit one must be public. `live/availability` judges **every** certified operator
+at every deadline, not only the failures, because emitting only failures would
+make report volume a function of operator load, and load tracks what people are
+reading. Two observations of one position are byte-identical. The first version
+imported `live/batch` for the partial format, which drags in
+`nomad-local-reconstruction`; rather than widen the CI gate, `VerifiedPartials`
+now takes a decoder and verifier from its caller, and the package's transitive
+graph is held to `mix` and `topology`, enforced in CI.
+
+- What this does **not** establish: that an accused operator withheld anything.
+  The `FaultReport` it produces is deliberately non-attributable.
+- Not run against a live committee where an operator actually stops. That needs
+  the same live boundary PROD-17 does.
+- What a deployment *does* with a report is governance work that is not built.
+
+## FINDING: the supply-chain manifest pinned 29 of 46 vendored files
+
+`nomad-testnet` 00cb9ec (`COMPONENTS.sha256`, `supplychain/snapshot_test.go`)
+
+`components/*` are byte-for-byte snapshots of six repositories, wired in by
+replace directives, and `COMPONENTS.sha256` is what pins them. CI verified it
+with `sha256sum --check`, which answers only "does every listed file still hash
+to what it says". It cannot answer "is every shipped file listed", because a
+file absent from the manifest is a file `sha256sum` never looks at.
+
+Seventeen of forty-six vendored files were unlisted, including two production
+files: `mix/blame.go`, and **`rlnc/bounded.go`, the budget enforcement the
+materializer relies on to bound a pollution attack**. Either could have been
+edited in place with the supply-chain gate still green.
+
+The manifest now covers every file, and the check moved into `go test` so a
+developer adding a vendored file finds out immediately rather than at review.
+Both halves are verified to bite: an unlisted file planted under `components/`
+fails the completeness test, and a one-line edit to `rlnc/bounded.go` fails the
+digest test.
+
+- No drift was found in what *was* vendored: every vendored file is currently
+  byte-identical to its upstream repository. The gap was the pin, not the
+  contents.
+
+## FINDING: two CI gates on the deposit path were not doing their jobs
+
+`nomad-testnet` 00cb9ec (`live/deposit/`, `.github/workflows/ci.yml`)
+
+**The package could not finish under `-race`.** A full sweep with
+`go test -race -shuffle=on` panicked at Go's ten-minute default package timeout,
+which means `go test -race ./...` in CI was failing outright rather than passing.
+Two causes, and each says something about the test it belongs to:
+
+- The campaign times emissions against a 150 ms interval calibrated on the real
+  ~87 ms seal cost. Under `-race` a seal costs more than the interval, so the
+  loop falls off its ticker entirely and the capture measures the detector, not
+  the protocol.
+- The correlation experiment runs thirty-six full mixes and no goroutines of its
+  own, so the detector has nothing there to find, and costs about eight times as
+  much looking.
+
+Both now run on a dedicated non-race CI step. The race build keeps the
+concurrency coverage (a shortened campaign, plus the emission and close tests)
+and **discards its captures**, so CI cannot apply a timing rule to them. The
+race build is 4m31s against the 10m default; the non-race experiments run under
+their own 25m budget.
+
+**The campaign logged its own precondition instead of enforcing it.** It
+computed the control-pair drift, logged it, and returned — while CI went on to
+apply the full preregistered rule, timing included, to whatever captures the run
+had produced. A run that failed to keep its cadence would have handed CI captures
+the rule cannot interpret, and CI would have passed or failed them for reasons
+unrelated to the protocol. Its two comments also contradicted each other about
+whether a timing claim was being made.
+
+Both preconditions are now enforced and fail the run:
+
+- every world's mean inter-arrival must sit within 10% of the nominal interval,
+  which catches a loop that has fallen off its ticker;
+- the control pair must sit within the registered 0.02, or the run has no usable
+  baseline and establishes nothing about the treatments.
+
+Verified by setting each tolerance to an impossible value in turn and confirming
+the run fails on that specific check. With the real tolerances, all seven worlds
+pass and the five preregistered comparisons return no findings.

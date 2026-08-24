@@ -382,7 +382,7 @@
      "id": "B-13",
      "summary": "active-adversary accountability (PROD-07): signed blame/availability reports identifying faulty committee members, built on DKG journals and mix receipts; fault-injection campaign",
      "status": "PARTIAL",
-     "note": "receipts, receipt tracker and DKG equivocation journals exist; blame report format, availability evidence and campaign missing"
+     "note": "both halves of accountability now exist. Soundness: mix.AttributeFault names the mixer that signed an unsound round and mix.VerifyFaultReport lets a third party re-derive it. Availability: signed non-receipts bound to a deadline the public timetable fixes, a quorum of distinct certified observers, and a refutation that names the observers the transcript contradicts; four mutants killed by four distinct tests. live/availability holds the privacy boundary (every operator judged every deadline, graph limited to mix and topology, enforced in CI). Not yet run against a live committee where an operator actually stops, and what a deployment does with a report is governance work that is not built"
     }
    ]
   },

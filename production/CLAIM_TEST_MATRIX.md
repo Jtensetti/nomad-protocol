@@ -110,9 +110,14 @@ Levels, weakest first:
 | Blame cannot be moved onto an honest mixer | negative test | a genuine report re-pointed at a neighbour fails verification | adversarial |
 | An impersonated mixer is not blamed for the forgery | negative test | a receipt failing under the key it names marks that mixer a victim | adversarial |
 | Broken linkage is not pinned on one neighbour | negative test | charged to the chain assembler; linkage checked before soundness so a mixer handed the wrong input is not accused | adversarial |
-| A stopped mixer can be reported | availability report | **none — not implemented; a stopped mixer is indistinguishable from a network drop in the transcript** | none |
+| A stopped mixer can be reported | availability report | a quorum of distinct certified observers each sign a non-receipt bound to a deadline the public timetable fixes | adversarial |
+| An availability report cannot evict an honest operator | negative tests | below quorum establishes nothing; a repeated signer, an uncertified key and self-accusation do not count; an accusation cannot be re-pointed | adversarial |
+| Statements cannot be moved to another round or deadline | negative tests | the round context and deadline are inside the signed message; verified by rewriting a report *and* every statement in it consistently, which the report-level consistency check alone does not catch | adversarial |
+| A falsely accused operator can answer, and the answer names its accusers | refutation | the accused produces its own sound round for that exact position; a round from another position, another mixer's round and an unsound round are all refused | adversarial |
+| A stopped mixer can be shown to have *withheld* | — | **not decidable: asynchrony makes withholding and a dropped packet indistinguishable, so the report is deliberately non-attributable** | n/a |
+| Reporting availability does not leak reader activity | privacy boundary | every certified operator is judged at every deadline so report volume cannot track load; two observations of one position are byte-identical; CI holds the observer's graph to mix and topology | adversarial |
 | Selective failure is detected | serving some peers and not others | **none** | none |
-| Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts only; needs the distributed deposit path** | none |
+| Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts and a unit-tested delivery source only; needs a running committee where an operator actually stops** | none |
 
 ## Network coding and resources
 
