@@ -5,10 +5,18 @@
  "criteria": [
   {
    "id": "PROD-01",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "golden vectors: 9-vector conformance corpus (hop cell incl. batch-coordinate maximum, uplink cell frame, object manifest, three- and eight-operator signed topologies), sealed by a digest over the ordered set, checked in CI against its encoders",
+    "cross-architecture: the corpus digest is identical on linux/amd64 and linux/386, so no vector depends on host word size; CI gates on both plus six supported build targets",
+    "compatibility matrix: nomad-testnet/conformance/COMPATIBILITY.md covers 57 frozen labels in three groups (document versions with stated refusal behaviour, signature/MAC/digest domain separators, and vendored component labels), enforced by TestCompatibilityMatrixCoversEveryWireVersion which fails naming any version constant the matrix omits",
+    "downgrade rule stated normatively: exactly one accepted version per format, an unrecognised version is refused rather than downgraded to, and a change forces a coordinated epoch change; six downgrade cases tested at the topology admission boundary",
+    "ambiguity: duplicate JSON keys, trailing content and malformed encodings refused before decoding; mutation and truncation sweeps over every published vector"
+   ],
    "blockers": [
-    "protocol freeze and conformance suite"
+    "the specification is not frozen: docs/PROTOCOL.md describes the protocol but no signed specification tag exists, and tagging needs a project release key that must not be created or held by an agent (see EXTERNAL_BLOCKERS)",
+    "state transitions, errors and timeouts are specified per subsystem rather than in one normative document; the matrix covers formats and the downgrade rule, not the full state machine",
+    "no conformance schema: the corpus is a JSON file with a fixed shape enforced by its own encoder, not a published schema a second implementation could validate against"
    ]
   },
   {
@@ -232,7 +240,7 @@
   },
   {
    "id": "PROD-20",
-   "status": "NOT_MET",
+   "status": "PARTIAL",
    "evidence": [
     "docs/ADMISSION_AND_RATE_CONTROL.md (normative v1)",
     "eclipse: TestNoRuntimeEventCanAddAPeer, TestPeerSetComesOnlyFromTheSignedTopology",
@@ -241,9 +249,9 @@
     "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason"
    ],
    "blockers": [
-    "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
     "the economic half of the analysis: costing an attack in money needs deployment parameters that do not exist yet",
-    "fair access under Sybil is bounded per session but not allocated fairly; availability under sustained flood is not claimed"
+    "fair access under Sybil is bounded per session but not allocated fairly; availability under sustained flood is not claimed and a flood can push a small node past its lateness budget",
+    "red-team saturation by a party other than the implementer; the eclipse, Sybil, amplification and abusive-peer tests are all authored here"
    ]
   },
   {

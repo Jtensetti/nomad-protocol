@@ -98,8 +98,14 @@ only the listed action. Never fabricate these.
   specification and conformance vectors from PROD-01 work.
 - **Verification afterward:** cross-implementation transcript corpus and a
   successful conformance run in CI.
-- **Already complete / in progress:** PROD-01 conformance schema and golden
-  vectors are prerequisites and are on the Phase 5 plan.
+- **Already complete:** the formats an implementer needs are published and
+  enforced. A nine-vector conformance corpus covers the hop cell, the uplink
+  cell frame, the object manifest and signed topologies, sealed by a digest
+  over the ordered set and identical on 32-bit and 64-bit builds;
+  `nomad-testnet/conformance/COMPATIBILITY.md` names all 57 frozen labels with
+  the refusal behaviour for each, enforced by a test that fails if the code
+  gains a version the matrix omits. What remains for the second party is only
+  to read them and disagree.
 
 ## EB-6: Two-person release decision (PROD-30)
 
@@ -109,3 +115,42 @@ only the listed action. Never fabricate these.
 - **Where obtained:** project owner designates a second maintainer.
 - **Verification afterward:** signed release decision recorded in the release
   evidence with two distinct identities.
+
+## EB-7: Project release key for the signed specification tag (PROD-01)
+
+- **Missing:** a signing key under project control, and a signed tag on the
+  frozen specification.
+- **Why not autonomous:** a release key is long-lived signing authority over
+  what the project asserts the protocol *is*. An agent must not create or hold
+  one, and a key generated here would prove only that this session signed
+  something. This is not an independence requirement -- the maintainer may
+  sign their own specification -- it is a custody one.
+- **Where obtained:** the project owner generates the key on hardware they
+  control (a hardware token is preferable to a file), publishes the public
+  half in the repository, and keeps the private half off any machine an agent
+  can reach.
+- **Where configured:** `git config user.signingkey`, then
+  `git tag -s protocol-v1 -m "..."` on the commit that freezes the
+  specification. The public key belongs in the repository so a verifier needs
+  nothing but the clone.
+- **Verification afterward:** `git tag -v protocol-v1` succeeds against the
+  published public key, and the tagged tree's conformance corpus digest
+  matches the one recorded in the evidence index.
+- **Already complete:** everything the tag would cover. The corpus, the
+  compatibility matrix, the downgrade rule and the cross-architecture check
+  are in place and enforced; the specification content is written. What is
+  missing is a signature over it, and only custody prevents that.
+
+## What none of these are
+
+None of these seven is a design problem, and none is waiting on further
+engineering here. Each names a person, a credential, a machine or an elapsed
+duration. Where a blocker sits between "the work is done" and "the gate is
+MET", the work is described above as already complete so that the external
+party performs exactly one action and no more.
+
+Two further gates are held by the same principle without appearing here,
+because they need a second party rather than an external one: PROD-02 (a
+reviewed threat model) and PROD-27 (a privacy review). Both artifacts are
+finished; in each case the author must not also be the judge. A maintainer who
+did not write them can close either without any external dependency at all.
