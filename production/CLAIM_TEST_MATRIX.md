@@ -159,7 +159,13 @@ Levels, weakest first:
 | Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |
 | Dependencies are scanned and gated | CI | govulncheck reachability gate | integration |
 | Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
-| Update cannot roll back | updater tests | **no updater** | none |
+| Update cannot roll back | updater tests | a persisted watermark refuses anything not strictly newer, pre-release ordering included, so a signed 1.2.0-alpha.1 cannot install over 1.2.0 | adversarial |
+| Two signed artefacts for one version are refused, not resolved | negative test | equivocation is an error rather than a choice, because resolving it silently is how a build made for one person reaches them | adversarial |
+| A genuine manifest does not authorise a different file | negative test | size checked before hash, so a padded artefact fails on length | adversarial |
+| Corrupting the watermark does not disable rollback protection | negative test | an unreadable watermark refuses the install rather than reading as absent | adversarial |
+| The updater cannot give the browser network access | dependency direction | the update package fetches nothing, and a test fails if its graph gains net, net/http, net/url or os/exec | adversarial |
+| Updates are verified against a genuine release key | release key custody | **none — no release key exists (EB-7); the mechanism is exercised against test keys only** | none |
+| A user is protected without doing this manually | installer integration | **none — nothing invokes the verifier when a disk image is mounted** | none |
 
 ## Long-horizon correlation
 

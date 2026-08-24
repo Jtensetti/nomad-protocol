@@ -384,14 +384,17 @@
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
     "uninstall and retention: macos/scripts/uninstall.sh removes the sandbox container, which under com.apple.security.app-sandbox holds every path the app can write, plus the unsandboxed locations a development build would use. It refuses to run while the app is open and supports --dry-run (Nomad-browser 77d632c)",
     "docs/DATA_RETENTION.md documents what macOS retains outside the app's control, with the command to clear each where one exists: crash reports (which record thread stacks as raw machine words and so can carry object fragments, written outside the container and surviving uninstall), local APFS snapshots and Time Machine, the Spotlight index, unified log entries, and swap",
-    "the uninstaller is cross-checked against the source rather than trusted: every directory name the Swift sources construct must appear in the script, the bundle identifier must match Info.plist, and the retained-data list must stay in both the script and the document. Each check was verified by introducing the drift it exists to catch"
+    "the uninstaller is cross-checked against the source rather than trusted: every directory name the Swift sources construct must appear in the script, the bundle identifier must match Info.plist, and the retained-data list must stay in both the script and the document. Each check was verified by introducing the drift it exists to catch",
+    "update verification with anti-rollback implemented and adversarially tested (Nomad-browser/update, 9121eca): rollback, equivocation and substitution each refused by name; unknown manifest versions refused rather than downgraded; a manifest signed by an untrusted key refused although it verifies under its own; an unreadable watermark refuses the install rather than being treated as absent, which is what stops anyone who can corrupt one file from switching rollback protection off",
+    "the updater is architecturally unable to grant the networkless browser network access: it verifies bytes the user already has and fetches nothing, and a dependency test fails if its transitive graph gains net, net/http, net/url or os/exec -- verified by adding an http import and confirming the test fires"
    ],
    "blockers": [
     "Developer ID signing and Apple notarization",
     "secure updater and rollback prevention",
     "key storage, local-data deletion and clean-uninstall verification",
     "the uninstall script has never been executed against a real installed bundle on macOS, and the retention lists are derived from documented platform behaviour rather than observed empirically. That needs the same macOS host with a signed bundle that H-01 and F-09 need",
-    "no authenticated updater, anti-rollback or OS-backed key storage exists (H-08, H-09): this criterion names install, update, rollback prevention and key storage as well as removal"
+    "the update mechanism has no release key and no installer integration: cmd/nomad-browser-verify refuses to run without a compiled-in key rather than pretending, and nothing invokes it automatically when a user mounts a disk image, so updating is a manual step. See EB-7",
+    "OS-backed key storage (H-09) does not exist: the trusted release public key is a build constant, which is correct for a public key, but its private half has no documented custody"
    ]
   },
   {

@@ -685,12 +685,14 @@
     {
      "id": "H-08",
      "summary": "authenticated updater, anti-rollback, fail closed, recovery; architecturally unable to grant the networkless browser web capability (separate constrained component); update-check cadence private-state-independent",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "Nomad-browser/update verifies a release the user already has and downloads nothing: an updater that fetches is a network client inside the binary that is supposed to have none, so the division is enforced by a dependency test rather than intended. Rollback (including a pre-release of the installed version), equivocation (two signed artefacts for one version, refused rather than resolved) and substitution are each refused by name. Fails closed throughout: unknown manifest version refused rather than downgraded, untrusted signer refused although internally consistent, unreadable watermark refuses the install rather than being read as absent. cmd/nomad-browser-verify has no compiled-in release key and says so (EB-7). No installer integration, so this is a manual step (Nomad-browser 9121eca)"
     },
     {
      "id": "H-09",
      "summary": "OS-backed key storage (Keychain), no plaintext secrets",
-     "status": "NOT_STARTED"
+     "status": "NOT_STARTED",
+     "note": "the trusted release *public* key is a build constant, which is where a public key belongs -- a trusted key an attacker can replace alongside the manifest authenticates nothing. Its private half has no documented custody and no Keychain integration exists; the browser itself holds no secrets at rest, since it only reads signed objects"
     },
     {
      "id": "H-10",

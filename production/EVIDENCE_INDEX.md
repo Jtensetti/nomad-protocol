@@ -948,3 +948,60 @@ A missed deadline now means the test could not run, and it skips loudly saying
 so, in the same discipline the timing campaigns already use. Every other error
 is still a failure, and the burst assertion is unchanged: removing the
 scheduler's wait still fails it, at a 14 µs span.
+
+## An update verifier that cannot fetch
+
+`Nomad-browser` 9121eca (`update/`, `cmd/nomad-browser-verify`, `docs/UPDATING.md`)
+
+H-08 asks for an authenticated updater with anti-rollback that is
+"architecturally unable to grant the networkless browser network access". That
+last clause is the whole design, not a footnote to it.
+
+Every other browser ships a background updater that polls a server. This one
+cannot, because the security story rests on one sentence — this process cannot
+open a socket — and an auto-updater puts a deliberate exception inside it. From
+then on the guarantee reads "cannot open a socket, except this component, which
+we believe behaves", and exceptions of that shape are how networkless designs
+stop being networkless.
+
+So updates arrive out of band and the package answers a narrower question: may
+what the user already has be installed over what is running? It downloads
+nothing, and a dependency test fails if its transitive graph gains `net`,
+`net/http`, `net/url` or `os/exec`. That was verified by adding an `http`
+import and watching the test fire.
+
+**Three attacks, refused by name rather than by accident:**
+
+- **Rollback** — a validly signed *older* release, replayed to return a user to
+  a version whose flaws are known. Pre-release ordering is part of this: a
+  signed `1.2.0-alpha.1` cannot install over `1.2.0`, which is the case an
+  ordering that ignored pre-release labels would miss.
+- **Equivocation** — two validly signed releases, same version, different
+  artefacts. Refused rather than resolved. Resolving it silently, by taking the
+  newer file or the one that arrived last, is exactly how a build made for one
+  person reaches that person.
+- **Substitution** — a genuine manifest paired with a different file. Size is
+  checked before the hash, so a padded artefact fails on length.
+
+**Everything fails closed.** An unknown manifest version is refused rather than
+downgraded to one this build understands. A manifest signed by an untrusted key
+is refused although its own signature is internally consistent — the test
+confirms it verifies under its own key, so that case is about trust rather than
+about a broken signature. Trust comes from the build; a manifest naming its own
+key authenticates nothing.
+
+**The watermark is the interesting failure mode.** An unreadable one refuses the
+install rather than being treated as absent, because the alternative hands
+anyone who can corrupt a single file a way to switch rollback protection off. A
+refused install never rewrites it, so one rejection cannot wedge future updates,
+and it is written by rename so an interrupted write leaves the previous
+watermark intact rather than a truncated one that would block everything after.
+
+- `cmd/nomad-browser-verify` has **no compiled-in release key** and refuses to
+  run rather than pretending. `-release-key` exercises the mechanism against a
+  test key and warns that doing so establishes nothing about who signed
+  anything. See EB-7.
+- No installer integration: nothing invokes the verifier when a user mounts a
+  disk image, so this is a manual step today.
+- H-09 remains: the trusted *public* key is a build constant, which is correct,
+  but its private half has no documented custody.
