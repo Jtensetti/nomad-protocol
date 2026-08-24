@@ -1005,3 +1005,47 @@ watermark intact rather than a truncated one that would block everything after.
   disk image, so this is a manual step today.
 - H-09 remains: the trusted *public* key is a build constant, which is correct,
   but its private half has no documented custody.
+
+## UPDATE: the seal cost finding, halved but not resolved
+
+`nomad-anytrust-mix-sim` 6a1324e, `nomad-testnet` 970cc0e
+
+The finding recorded above — a publisher cannot seal cells as fast as it must
+emit them, at about 87 ms per cell against a 50 ms deployed interval, half of
+it a discarded companion mix column — named the fix and deliberately did not
+make it, because the single-column path touches `mix.Encrypt` and the right
+change is a reviewed one rather than a late one. It has now been made.
+
+**What was actually wrong.** `mix.Encrypt` refuses fewer than two cells, and
+that refusal is correct: a `Batch` is a mix input, a shuffle of one element is
+the identity, and a batch of one would mix nothing. But a publisher has one
+fragment and needs a ciphertext, not a mix. The two-cell minimum is a property
+of a mix input that was being paid by something that is not one.
+
+`mix.EncryptCell` produces a single cell in exactly the wire form
+`MarshalWire` produces for one column. `ParseWire` already assembles
+individually encrypted cells into the batch the committee shuffles — that is
+how the share service rebuilds a batch from its cache — so nothing about the
+format changes and `Encrypt`'s minimum stays where it belongs.
+
+**Measured.** 46 ms for one cell against 103 ms for the two-column path in the
+mix package; 86.8 ms to 42.4 ms per uplink seal. The airlock suite fell from
+375 s to 52 s and the deposit suite from 280 s to 182 s alongside it.
+
+**Evidence that this is the same wire.** The published conformance corpus
+digest is unchanged: `44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45`.
+Interchangeability is asserted at three levels, because a cell that decrypted
+correctly but sat differently under a shuffle proof would be worse than
+useless: the wire shape, the batch `ParseWire` builds, and a full signed
+shuffle round plus threshold decryption over four individually encrypted
+cells. A batch mixing both encryption paths also decrypts, which is what a
+deployment migrating one publisher at a time will produce.
+
+**The finding is reduced, not closed.** 42 ms fits inside the deployed 50 ms
+interval with no useful headroom and remains far beyond the 5 ms the topology
+permits as its shortest interval. A publisher's emission timing therefore still
+tracks machine load rather than schedule at anything but slow cadences, which
+is the mechanism the standing E-08 timing finding has been looking for. What
+remains is the fragment's own ElGamal encryption rather than waste, so the next
+reduction is not a refactor: it would mean changing the group or the cell
+geometry, which is a protocol change.

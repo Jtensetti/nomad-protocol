@@ -261,7 +261,7 @@
     "the timing experiments run off the race detector, which was distorting what they measure: a seal under -race costs more than the 150 ms interval, so the loop fell off its ticker; the package also could not finish inside Go's ten-minute default, so `go test -race ./...` was failing outright. Both experiments now run on a dedicated non-race CI step and the race build keeps the concurrency coverage"
    ],
    "blockers": [
-    "a publisher cannot seal cells as fast as it must emit them: about 87 ms per cell against a 50 ms deployed interval and a 5 ms permitted minimum, half of it a discarded companion mix column. See the finding in EVIDENCE_INDEX. Constant-rate ingress is implemented and measured, but not demonstrated to be sustainable on the cadence the topology sets",
+    "a publisher's per-cell sealing cost still exceeds most permitted cadences: about 42 ms against a 50 ms deployed interval with no useful headroom, and far beyond the 5 ms the topology permits as its shortest. Halved from 87 ms by removing a discarded companion mix column (mix.EncryptCell); what remains is the fragment's own ElGamal encryption, so the next reduction would be a protocol change rather than a refactor",
     "single process: publishers, entry operator and committee share one binary, so no packet capture on a real interface covers the publication path specifically",
     "replication is not exercised: the criterion names it and the campaign does not reach it"
    ]
