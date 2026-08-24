@@ -227,3 +227,52 @@ sample, not the screening.
 E-01 moves BLOCKED to PARTIAL; E-02, E-06 and E-11 stay PARTIAL with WAN
 evidence attached. Still **0 of 30 PROD gates MET**. Nothing here promotes a
 gate, and PROD-28's 30-day soak is untouched.
+
+## Checkpoint 2026-08-21b: defects, gates, and what a freeze needs
+
+**Three defects found and fixed, each of which had passing tests around it.**
+
+1. *A silent wrong-decode on the production path.* A flaky RLNC round-trip
+   test (~1 run in 14) was a real defect: `Decoder.Add` inserted a symbol
+   without reducing it against pivots discovered at later columns, after which
+   the basis reported full rank and `Decode` returned a mixture of source
+   symbols as one symbol, with a nil error. The materializer uses this decoder.
+2. *A duplicate JSON key accepted in a signed topology.* Go keeps the last
+   occurrence; other parsers keep the first. A signature cannot catch it, since
+   each implementation verifies against whatever it parsed, so one accepts a
+   document another refuses. Refused outright now.
+3. *A replayable stale topology.* A signature and an unexpired window do not
+   make a topology current, and nothing remembered which epoch had been
+   served. A persisted watermark now refuses to move backwards.
+
+**The structural defect was worse than any of them.** `components/*` in
+nomad-testnet and the pinned snapshots in Nomad-browser are separate modules
+behind replace directives, invisible to `go test ./...`, and none of the nine
+carried a single test file. What ships was untested by the repository that
+ships it. All nine now carry their standalone suites and are gated in CI.
+
+**A control that did nothing.** `debug.SetTraceback("none")` reads like it
+turns off crash dumps and does not: measured on two Go versions, a process
+calling it still prints goroutine stacks with frame arguments as raw machine
+words. Only `GOTRACEBACK=none` works, and the runtime reads it at startup, so
+it is a deployment control the program can verify but not impose. Setting it on
+the compose anchor was not enough either -- a YAML merge key replaces a mapping
+rather than deep-merging it, so the three DKG services silently dropped it.
+
+**Gates: 0/30 to 2/30, with five more moved off NOT_MET.** PROD-08 and PROD-12
+are MET. PROD-01, PROD-16, PROD-19, PROD-20 and PROD-27 moved to PARTIAL with
+specific blockers rather than general ones. The promotions rest on external
+test reports, which the evidence rule permits in the same clause as Actions --
+an earlier reading that the outage capped every promotion was wrong.
+
+**What a freeze still needs.** The formats are published and enforced: nine
+golden vectors identical on 32-bit and 64-bit, a compatibility matrix covering
+57 frozen labels that a test keeps honest, and the downgrade rule written down.
+What is missing is a signature over it (EB-7, a custody problem), one normative
+document for state transitions and timeouts, and a schema a second
+implementation could validate against.
+
+**Not promoted, deliberately.** PROD-02 and PROD-27 both need a review, and I
+wrote the artifacts under review in each case. A maintainer who did not write
+them can close either with no external dependency; the implementer must not be
+the only judge of its own change.
