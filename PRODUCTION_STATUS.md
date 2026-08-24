@@ -1,6 +1,6 @@
 # Nomad production status
 
-Last updated: 2026-08-21. Authoritative gate statuses live in
+Last updated: 2026-08-24. Authoritative gate statuses live in
 [`production/readiness.json`](production/readiness.json); this document
 explains them in prose. Where the two disagree, the registry wins.
 
@@ -34,8 +34,12 @@ core and no production deployment. Concretely:
   are pure functions of public parameters, whose batch size does not vary
   with how many people published, and which requires a full shuffle chain
   authenticated to the certified committee before per-column threshold
-  release. The distributed form of that chain does not exist, and two
-  deposit-ID findings from the review are still open.
+  release. A publisher-side deposit path now drives that chain end to end in
+  one process, campaigned under success, timeout, restart and loss against two
+  idle controls, and judged in CI by the whole preregistered rule. It is one
+  process on one host: replication is not exercised, and a measured finding
+  stands that a publisher cannot seal cells as fast as the deployed cadence
+  requires.
 - **Bounded network coding** (Workstream G): enforced per-generation CPU,
   memory, byte, symbol and lifetime budgets, with pre-admission verification
   of systematic symbols.
@@ -66,6 +70,10 @@ Only these, and only at the level stated:
 | A partial or reordered shuffle chain is refused | adversarial, ten deviations |
 | One operator cannot link ingress to release | measured at chance against a positive control, in-process |
 | A failed browser load never falls back to ordinary networking | adversarial, thirteen failure modes |
+| A vanished operator's share is not rerouted, and private activity during the outage changes nothing a peer sees | adversarial at a real socket, loopback; mutation-verified |
+| An unavailable operator can be reported by a quorum, and answer | adversarial, protocol level; **never claims withholding, which asynchrony makes undecidable** |
+| A signed release cannot roll the browser back, and the updater cannot fetch | adversarial + dependency gate; **no release key exists** |
+| Two operators cannot occupy one address under different spellings | adversarial, admission boundary |
 
 ## Against which threat model?
 
@@ -214,6 +222,44 @@ reviewed threat model) and PROD-27 (a privacy review) have finished artifacts
 and need someone who did not write them to judge them. Neither requires
 independence in the sense PROD-04 and PROD-29 do; a maintainer can close
 either without any outside dependency.
+
+## How much are the gates themselves worth?
+
+This is the question a reader should ask before believing any row above, and
+the honest answer got worse on inspection rather than better.
+
+A sweep across every repository, run because the registry claimed things CI
+was supposedly enforcing, found four gates that were not gating:
+
+- **The browser's entitlement check ran on no branch it was pushed to.** It
+  needs PlistBuddy and `swift`, so it runs only on a macOS runner, and the
+  only macOS workflow triggered on push for one branch that is not the branch
+  the work is on. PROD-23 and F-01 both cited "entitlement gates in CI".
+- **The supply-chain manifest pinned 29 of 46 vendored files.**
+  `sha256sum --check` verifies what is listed and never asks whether
+  everything shipped is listed. `rlnc/bounded.go` — the budget enforcement
+  the materializer relies on to bound a pollution attack — was among the
+  seventeen that could have been edited in place with the gate still green.
+- **The publication campaign logged its own precondition and returned**,
+  while CI went on to apply the full preregistered timing rule to whatever
+  captures the run produced. A run that failed to keep its cadence would have
+  handed CI captures the rule cannot interpret.
+- **`go test -race ./...` was failing outright** in nomad-testnet, timing out
+  at Go's ten-minute package default, because two statistical experiments ran
+  under a race detector that changes the cost of the thing they measure.
+
+Two more defects were found in code the gates were supposed to be watching: a
+cadence test that failed when the scheduler *correctly* refused to burst on a
+stalled host, and a topology admission check that compared endpoint strings,
+so two operators could occupy one address under different spellings and still
+be counted as two independent operators.
+
+All six are fixed and each fix was verified by reintroducing the regression it
+exists to catch. The reason to record them here rather than only in the
+evidence index is that they are evidence about the evidence: this project's
+gates have been wrong at a rate that should inform how much weight the table
+above carries, and every one of them was found by a party that is not
+independent. PROD-04 and PROD-29 exist for what that party cannot see.
 
 ## What exact external action is most urgent?
 
