@@ -41,6 +41,18 @@ Levels, weakest first:
 | Compromise recovery works end to end | drill | `TestRecoveryDrill` (5-operator, 3-of-5) | integration |
 | No machine holds a complete decryption key | process + host separation | Compose share isolation | integration, single host |
 
+## Admission and directory
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| A topology must be attested by every operator it lists | negative tests | stripped attestation and dropped operator both refused; each survivor's attestation covers the whole document | adversarial |
+| A superseded topology version is refused | negative test | version-downgrade case | adversarial |
+| Traffic class and threshold cannot be weakened below the profile | negative tests | off-profile cell size, sub-floor threshold, sub-floor operator count | adversarial |
+| A node will not accept a topology older than one it has served | rollback across restart | persisted per-network watermark; refusal verified at the binary boundary | adversarial |
+| Two topologies for one network epoch fail closed | negative test | equivocation refused rather than last-writer-wins | adversarial |
+| A watermark the node cannot parse is not permission to proceed | negative tests | truncated, wrong-version, zero-epoch, short-digest and unknown-field states all refuse | adversarial |
+| The admission format is described well enough to interoperate | a consumer that is not this codebase | signed-topology golden vectors exist; **nothing outside this repository has parsed them** | none |
+
 ## Publisher identity
 
 | Claim | Boundary required | Tests | Level |

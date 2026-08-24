@@ -398,20 +398,20 @@
     {
      "id": "G-01",
      "summary": "cheap pollution validation before decoder admission (established construction)",
-     "status": "PARTIAL",
-     "note": "systematic symbols verified against signed per-source commitments before admission; coded symbols cannot be checked pre-admission and the reason is documented in docs/POLLUTION_AND_RESOURCES.md"
+     "status": "VERIFIED",
+     "note": "per-source-symbol commitments carried under the authority signature in batch descriptor v3; the materializer's decoder verifies systematic symbols before admission. Dense coded symbols are not verifiable over GF(2^8) and that limitation is documented rather than papered over. Adversarial tests at the descriptor and decoder boundaries; PROD-12 MET."
     },
     {
      "id": "G-02",
      "summary": "per-generation bounds: symbols, bytes, rank attempts, CPU budget, memory, lifetime, malformed/duplicate handling",
-     "status": "PARTIAL",
-     "note": "symbols, bytes, rank attempts, deterministic work units, basis memory and lifetime all enforced per generation (nomad-rlnc bounded.go)"
+     "status": "VERIFIED",
+     "note": "symbol, byte, rank-attempt, elimination-work, memory and lifetime budgets enforced per generation, duplicates deduplicated before any budget is charged; on the shipping path since the materializer stopped constructing the raw decoder. Asserted in the library campaign and by FuzzBoundedDecoderStaysWithinBudget (134,125 executions)."
     },
     {
      "id": "G-03",
      "summary": "Byzantine pollution campaign incl. 100% malicious symbols; no OOM/unbounded CPU",
-     "status": "PARTIAL",
-     "note": "Byzantine campaign at 50/90/100 percent malicious: every budget holds, heap growth bounded, generation terminates"
+     "status": "VERIFIED",
+     "note": "two campaigns: the library one at 50/90/100% malicious over 100k attempts with every budget asserted, and a materializer-boundary one over 72 trials from 0-100% pollution producing 39 exact reconstructions, 33 denials and 0 accepted corruptions"
     },
     {
      "id": "G-04",
@@ -422,7 +422,8 @@
     {
      "id": "G-05",
      "summary": "explicit documented admission/rate model",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "docs/ADMISSION_AND_RATE_CONTROL.md documents the model, and topology admission is now adversarially tested (six downgrade cases, rollback watermark, equivocation). The economic half needs deployment parameters that do not exist yet; fair allocation under Sybil is bounded per session but not allocated fairly."
     },
     {
      "id": "G-06",
@@ -438,12 +439,14 @@
     {
      "id": "G-08",
      "summary": "eclipse tests",
-     "status": "NOT_STARTED"
+     "status": "VERIFIED",
+     "note": "eclipse is structurally impossible rather than merely resisted: no peer discovery exists anywhere, the peer set is a function of the signed topology, and it is byte-identical after a flood from unnamed addresses and after correctly sealed cells arrive from the wrong socket"
     },
     {
      "id": "G-09",
      "summary": "amplification measured and bounded",
-     "status": "NOT_STARTED"
+     "status": "VERIFIED",
+     "note": "amplification 0.00030-0.00079 outbound/inbound across four flood types, up to 396 MB in for 118 KB out, with cadence unaffected and a check that the flood is not a private-state oracle"
     },
     {
      "id": "G-10",

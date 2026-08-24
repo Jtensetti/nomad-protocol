@@ -15,10 +15,12 @@
    "id": "PROD-02",
    "status": "PARTIAL",
    "evidence": [
-    "docs/THREAT_MODEL.md"
+    "docs/THREAT_MODEL.md: every one of the ten capabilities the criterion names now carries an explicit position (targeted / bounded / not defended), its exclusions, and a pointer to evidence",
+    "production/CLAIM_TEST_MATRIX.md supplies claim-to-test traceability, including a long-horizon correlation section whose three rows are honestly `none`",
+    "exclusions stated rather than implied: majority-compromised committee, dense coded pollution, availability under sustained loss, fair allocation under Sybil, whole-binary egress, long-horizon intersection"
    ],
    "blockers": [
-    "production claim-to-test traceability"
+    "review by a party that did not author the document. The artifact is complete; what is missing is the word 'reviewed' in the criterion. The author of THREAT_MODEL.md and CLAIM_TEST_MATRIX.md must not be the one who judges them adequate, per the project's implementer/evaluator rule. This does not require external independence (PROD-04 and PROD-29 are the criteria that do), only a second party."
    ]
   },
   {
@@ -219,13 +221,14 @@
    "id": "PROD-19",
    "status": "PARTIAL",
    "evidence": [
-    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+    "admission authenticates protocol state: topology carries an authority signature over a document every listed operator attested; TestVerifyRefusesDowngradedTopologies covers six weakenings (superseded version, stripped attestation, dropped operator, off-profile cell size, sub-floor threshold, sub-floor operator count), each signed by a genuine authority key so only the property under test is wrong",
+    "stale directory: live/topology/watermark.go persists a per-network topology high-water mark; a node refuses an older epoch and fails closed on two topologies signed for the same network epoch. Wired into cmd/nomad-node and verified at the binary boundary, not only in unit tests",
+    "replay: TestReceiveRejectsInvalidSourcesAuthenticationAndReplay (node) and TestReplayWindowAllowsReorderingButRejectsDuplicates (hop)",
+    "no dependence on private content: TestPeerSetComesOnlyFromTheSignedTopology, TestNoRuntimeEventCanAddAPeer (249 unknown-peer datagrams, 0 stored, peer set unchanged), TestUnsignedIdentitiesGainNothingByExisting",
+    "interoperability format published: conformance corpus now carries signed-topology vectors (three- and eight-operator rings), each verified through topology.Verify as it is generated"
    ],
    "blockers": [
-    "private-independent peer discovery",
-    "authenticated session handshake",
-    "downgrade, replay and stale-directory interoperability tests"
+    "interoperability evidence needs a consumer of the corpus that is not this codebase. The admission format is now described by golden vectors, but nothing outside this repository has parsed them, and a corpus checked only by the encoder that produced it does not demonstrate interoperability. Same external dependency as PROD-03 (EB-5)."
    ]
   },
   {
