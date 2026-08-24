@@ -125,7 +125,7 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**Two.** 2/30: PROD-08 and PROD-12. The registry holds 22 PARTIAL, 5 NOT_MET
+**Two.** 2/30: PROD-08 and PROD-12. The registry holds 23 PARTIAL, 4 NOT_MET
 and 1 BLOCKED besides them.
 
 - **PROD-08** (committee membership, rotation, forward secrecy, key erasure,

@@ -228,10 +228,18 @@
   },
   {
    "id": "PROD-17",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "end-to-end deposit path implemented: live/deposit joins the publication queue to the airlock across the uplink. Nothing previously called Queue.Next or Airlock.Deposit, so publication had no distributed form; the sizes had been designed to fit (fragment 504 = uplink payload = mix plaintext; uplink inner 1152 = airlock deposit) and had never met",
+    "the entry operator cannot separate work from cover: the inner layer is a committee encryption either way, only threshold decryption reveals the reserved empty fragment, and by then the shuffle chain has destroyed the link to the depositor. TestEntryOperatorCannotTellWorkFromCover",
+    "deposits the airlock silently drops return success, so occupancy is not probeable through the ingress",
+    "controlled correlation experiment with a positive control: a no-defence batch is recovered at 1.00 by the same matcher that scores 0.18 against seal-only and 0.21 against the full path, chance 0.25, over 25 trials of 4 publishers",
+    "architecture: the deposit package may not import net directly and may not reach peer selection, the node scheduler, hop routing or basin classification; both guards verified to fail when deliberately violated"
+   ],
    "blockers": [
-    "publication airlock"
+    "the correlation experiment models one adversary -- an entry operator matching arrival order to release position -- and that adversary is defeated by the seal alone. It does not measure an adversary who observes the batch between hops, controls some mixers, correlates across epochs, or knows which publisher submits when, and the shuffle chain exists chiefly for the first two. The chain's own contribution is therefore not measured by this experiment",
+    "single process: publishers, entry operator and committee all run in one test binary. A distributed correlation experiment across real hosts has not been run",
+    "no independent review of the deposit design"
    ]
   },
   {

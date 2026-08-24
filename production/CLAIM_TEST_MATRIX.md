@@ -92,6 +92,12 @@ Levels, weakest first:
 | One session cannot occupy the whole batch | quota test | per-session bound enforced silently, other sessions unaffected | adversarial |
 | The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
 | Failure and retry add no traffic | capture under failure | **none** | none |
+| A queued object reaches a sealed batch across the uplink | end-to-end path | queue to drain to ingress to airlock to seal, with the fixed batch size preserved | integration |
+| Emission count does not depend on having work | busy versus idle publisher | a full queue and no queue at all emit the same number of identically sized cells over the same ticks; the test fails if either run was not actually mixed | adversarial, in-process |
+| The queue is never read on the emission path | design + package graph | a filling goroutine holds a one-slot buffer; the tick does a non-blocking receive and touches no disk | structural |
+| The entry operator cannot separate work from cover | cell inspection | one cell size, one inner-layer size, only threshold decryption distinguishes them | adversarial |
+| Deposit order does not predict release position | correlation experiment with positive control | no defence 1.00, seal only 0.18, full path 0.21, chance 0.25 over 25 trials | adversarial, in-process |
+| The shuffle chain's own contribution to unlinkability | adversary observing between hops or controlling mixers | **none — the experiment above defeats its adversary with the seal alone and does not reach the chain's purpose** | none |
 
 ## Accountability
 
