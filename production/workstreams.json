@@ -354,7 +354,8 @@
     {
      "id": "B-08",
      "summary": "operator disappearance: private reader activity does not influence peer replacement",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "three worlds against a two-peer rotation, observed at the peer that stays up: both peers up and idle, one peer gone and idle, one peer gone and busy. The survivor receives exactly its half in all three, the node counts every scheduled emission as sent including those addressed into the void, and the idle and busy outage worlds are identical. Two mutants confirm the assertions bite (a collapsed rotation, and cover not emitted). Loopback and one host: not WAN evidence, and peer *replacement* -- a new signed topology -- is governance work covered by C-09 rather than exercised here (nomad-testnet a4cdb09)"
     },
     {
      "id": "B-09",

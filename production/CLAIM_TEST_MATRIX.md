@@ -118,6 +118,9 @@ Levels, weakest first:
 | Reporting availability does not leak reader activity | privacy boundary | every certified operator is judged at every deadline so report volume cannot track load; two observations of one position are byte-identical; CI holds the observer's graph to mix and topology | adversarial |
 | Selective failure is detected | serving some peers and not others | **none** | none |
 | Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts and a unit-tested delivery source only; needs a running committee where an operator actually stops** | none |
+| A vanished operator's share is not rerouted to a survivor | two-world at the surviving peer | the survivor receives exactly its half of a two-peer rotation with the other operator absent, and the sender counts every scheduled emission as sent | adversarial |
+| Private activity during an outage does not change what a peer sees | two-world at the surviving peer | idle and busy outage worlds deliver identical counts, sizes and destinations | adversarial |
+| An outage is survivable across regions | regional outage test | **none — B-09 NOT_STARTED; loopback only** | none |
 
 ## Network coding and resources
 
