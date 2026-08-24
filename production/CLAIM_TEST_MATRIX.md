@@ -93,6 +93,19 @@ Levels, weakest first:
 | The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
 | Failure and retry add no traffic | capture under failure | **none** | none |
 
+## Accountability
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| A mixer that signs an unsound round can be named | forgery + attribution tests | `AttributeFault` names the signer; the receipt covers context, input, output and proof digests together | adversarial |
+| Blame is verifiable by a third party, not testimony | independent re-derivation | `VerifyFaultReport` re-derives the fault from the transcript; a fabricated report against an honest chain is refused | adversarial |
+| Blame cannot be moved onto an honest mixer | negative test | a genuine report re-pointed at a neighbour fails verification | adversarial |
+| An impersonated mixer is not blamed for the forgery | negative test | a receipt failing under the key it names marks that mixer a victim | adversarial |
+| Broken linkage is not pinned on one neighbour | negative test | charged to the chain assembler; linkage checked before soundness so a mixer handed the wrong input is not accused | adversarial |
+| A stopped mixer can be reported | availability report | **none — not implemented; a stopped mixer is indistinguishable from a network drop in the transcript** | none |
+| Selective failure is detected | serving some peers and not others | **none** | none |
+| Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts only; needs the distributed deposit path** | none |
+
 ## Network coding and resources
 
 | Claim | Boundary required | Tests | Level |

@@ -81,10 +81,19 @@
   },
   {
    "id": "PROD-07",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "accountable evidence: mix.AttributeFault walks a signed shuffle chain and names the mixer that signed an unsound round; mix.VerifyFaultReport re-derives the fault from the transcript so a third party confirms it without trusting the reporter",
+    "blame soundness: an honest three-round chain produces no report, a fabricated report against it does not verify, and a genuine report re-pointed at an innocent neighbour is rejected",
+    "non-attribution where the protocol cannot attribute: a forged receipt marks the impersonated mixer as a victim rather than a culprit; broken linkage is charged to the chain assembler because either neighbour could cause it, and is checked before soundness so a mixer handed the wrong input is not accused of an unsound round; an empty transcript is a fault with no one to blame",
+    "malformed input: TestHostileDatagramsAreRejectedForTheRightReason; strictjson refuses ambiguous encodings before decoding; mutation and truncation sweeps over every published conformance vector",
+    "replay and duplication: chain replay across epoch and committee refused, hop replay window, decoder duplicate deduplication before any budget is charged",
+    "drop and delay without private-dependent recovery: the one-second burst ceiling is asserted on every captured world, and the WAN campaign's emission counts are exactly equal across worlds on every host"
+   ],
    "blockers": [
-    "active-adversary accountability"
+    "no active-adversary fault injection at the live boundary: the fault attribution is exercised against constructed transcripts, not against a running committee where a mixer misbehaves mid-session. That needs the distributed deposit path (PROD-17) to exist first",
+    "availability reports are not implemented: a mixer that simply stops producing rounds is indistinguishable from a network drop in the transcript, and nothing yet records or signs that observation",
+    "selective failure -- a mixer serving some peers and not others -- is not tested at all"
    ]
   },
   {
