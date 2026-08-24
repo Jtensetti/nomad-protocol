@@ -182,7 +182,7 @@ independent assessment would find than about what has been fixed.
 
 ## Which remain blocked, and on what?
 
-Six external dependencies, detailed in
+Seven external dependencies, detailed in
 [`production/EXTERNAL_BLOCKERS.md`](production/EXTERNAL_BLOCKERS.md):
 
 | ID | Blocked on | Gates |
@@ -193,6 +193,27 @@ Six external dependencies, detailed in
 | EB-4 | Independent assessors and red team | PROD-04, PROD-29, PROD-30 |
 | EB-5 | A second implementation by another author | PROD-03 |
 | EB-6 | A second human release approver | PROD-30 |
+| EB-7 | A project release key for the signed specification tag | PROD-01 |
+
+**No gate is still NOT_MET for want of engineering.** Three are: PROD-03
+needs an implementer who is not this project, PROD-28 needs thirty days of
+soak to elapse, and PROD-30 needs a monitored beta and a second approver.
+PROD-29 is BLOCKED on an external assessor. Everything else has moved to
+PARTIAL with a specific blocker recorded against it.
+
+That is a statement about the NOT_MET column and not about readiness. Most of
+the twenty-four PARTIAL criteria are substantially incomplete, and the pattern
+across their blockers is worth reading as one thing rather than twenty-four:
+nothing here has been reviewed by anyone who did not build it, no experiment
+has run across genuinely separate administrative domains, and the largest
+claimed property — that repeated use does not accumulate into an
+identification — has never been measured at all.
+
+**Two gates need a second party rather than an external one.** PROD-02 (a
+reviewed threat model) and PROD-27 (a privacy review) have finished artifacts
+and need someone who did not write them to judge them. Neither requires
+independence in the sense PROD-04 and PROD-29 do; a maintainer can close
+either without any outside dependency.
 
 ## What exact external action is most urgent?
 
