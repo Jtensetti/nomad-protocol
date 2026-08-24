@@ -276,3 +276,46 @@ implementation could validate against.
 wrote the artifacts under review in each case. A maintainer who did not write
 them can close either with no external dependency; the implementer must not be
 the only judge of its own change.
+
+## Checkpoint 2026-08-21c: what is left, and why
+
+Gates: **2 MET, 22 PARTIAL, 5 NOT_MET, 1 BLOCKED**, from 0/30 with 18 PARTIAL
+and 11 NOT_MET at the start of the day. Six criteria moved off NOT_MET
+(PROD-01, 07, 15, 16, 20, 27), two were promoted (PROD-08, PROD-12).
+
+Work landed since the previous checkpoint:
+
+- **Fault attribution** (PROD-07). A mixer's receipt already signed context,
+  input, output and proof digests together; nothing used it. `AttributeFault`
+  names the signer of an unsound round and `VerifyFaultReport` re-derives the
+  fault so a third party confirms it rather than trusting the reporter. Three
+  of the four fault kinds are deliberately *not* attributable, because
+  attributing them would let one mixer frame another.
+- **Site recovery drill** (PROD-15), and SITE_IDENTITY promoted to normative
+  v1. Writing the drill corrected a wrong expectation: recovery invalidates
+  the compromised key's back catalogue by design, which rotation does not, and
+  the specification says so.
+- **Compatibility matrix** (PROD-01), 57 frozen labels, enforced by a test
+  that fails naming any version constant the matrix omits. Writing it settled
+  the downgrade rule, which had been implicit in the code.
+- **Crash-output control** (PROD-27), after finding the obvious in-process fix
+  measurably does nothing.
+
+**The five NOT_MET, and what each actually needs.** PROD-03 needs a second
+implementer (EB-5). PROD-30 needs a second release approver and a monitored
+beta (EB-6). PROD-28 needs thirty days to pass. PROD-17 and PROD-18 need the
+distributed deposit path, which is the one substantial piece of engineering
+left in this list; PROD-07's live fault-injection blocker and PROD-18's
+multi-publisher capture both sit behind it.
+
+**Two gates are held by a second party rather than an external one.** PROD-02
+and PROD-27 each need a review, and in both cases this session wrote the
+artifact under review. A maintainer who did not write them can close either
+with no external dependency at all. Recording that distinction matters,
+because it is the difference between "waiting on the world" and "waiting on a
+second pair of eyes in this project".
+
+**30/30 is not reachable from here.** PROD-28 alone puts it at least thirty
+days out, and four more gates need people this session cannot be. What is
+reachable is that every gate is honestly marked with a specific blocker rather
+than a general one, and that is now true of all thirty.
