@@ -11,7 +11,8 @@
     "cross-architecture: the corpus digest is identical on linux/amd64 and linux/386, so no vector depends on host word size; CI gates on both plus six supported build targets",
     "compatibility matrix: nomad-testnet/conformance/COMPATIBILITY.md covers 57 frozen labels in three groups (document versions with stated refusal behaviour, signature/MAC/digest domain separators, and vendored component labels), enforced by TestCompatibilityMatrixCoversEveryWireVersion which fails naming any version constant the matrix omits",
     "downgrade rule stated normatively: exactly one accepted version per format, an unrecognised version is refused rather than downgraded to, and a change forces a coordinated epoch change; six downgrade cases tested at the topology admission boundary",
-    "ambiguity: duplicate JSON keys, trailing content and malformed encodings refused before decoding; mutation and truncation sweeps over every published vector"
+    "ambiguity: duplicate JSON keys, trailing content and malformed encodings refused before decoding; mutation and truncation sweeps over every published vector",
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
    ],
    "blockers": [
     "the specification is not frozen: docs/PROTOCOL.md describes the protocol but no signed specification tag exists, and tagging needs a project release key that must not be created or held by an agent (see EXTERNAL_BLOCKERS)",
@@ -201,7 +202,8 @@
     "mutation and truncation: every sampled prefix and every sampled single-bit flip of every published vector must be refused (live/conformance/differential_test.go)",
     "rollback/stale: live/topology/watermark.go refuses a topology older than one already accepted and fails closed on equivocation; verified at the binary boundary",
     "cross-platform vectors: the 7-vector corpus produces the identical digest 44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45 on linux/amd64 and linux/386 (64-bit and 32-bit int), with the full 18-package suite green on both; CI now gates on the 386 run and on six supported build targets",
-    "external test report production/reports/2026-08-21-pollution-resistance/ plus the cross-architecture run recorded above"
+    "external test report production/reports/2026-08-21-pollution-resistance/ plus the cross-architecture run recorded above",
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
    ],
    "blockers": [
     "executable MIME decisions are covered by the browser adapter's own tests (scheme, traversal, encoding and data: media-type table) but not by a corpus vector, so the MIME half of this criterion rests on adapter tests rather than on published vectors",
@@ -232,7 +234,8 @@
     "stale directory: live/topology/watermark.go persists a per-network topology high-water mark; a node refuses an older epoch and fails closed on two topologies signed for the same network epoch. Wired into cmd/nomad-node and verified at the binary boundary, not only in unit tests",
     "replay: TestReceiveRejectsInvalidSourcesAuthenticationAndReplay (node) and TestReplayWindowAllowsReorderingButRejectsDuplicates (hop)",
     "no dependence on private content: TestPeerSetComesOnlyFromTheSignedTopology, TestNoRuntimeEventCanAddAPeer (249 unknown-peer datagrams, 0 stored, peer set unchanged), TestUnsignedIdentitiesGainNothingByExisting",
-    "interoperability format published: conformance corpus now carries signed-topology vectors (three- and eight-operator rings), each verified through topology.Verify as it is generated"
+    "interoperability format published: conformance corpus now carries signed-topology vectors (three- and eight-operator rings), each verified through topology.Verify as it is generated",
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
    ],
    "blockers": [
     "interoperability evidence needs a consumer of the corpus that is not this codebase. The admission format is now described by golden vectors, but nothing outside this repository has parsed them, and a corpus checked only by the encoder that produced it does not demonstrate interoperability. Same external dependency as PROD-03 (EB-5)."
@@ -246,7 +249,8 @@
     "eclipse: TestNoRuntimeEventCanAddAPeer, TestPeerSetComesOnlyFromTheSignedTopology",
     "sybil: TestUnsignedIdentitiesGainNothingByExisting",
     "amplification: TestFloodFromAnAcceptedPeerNeitherAmplifiesNorInducesCatchUp (0.0003-0.0008)",
-    "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason"
+    "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason",
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
    ],
    "blockers": [
     "the economic half of the analysis: costing an attack in money needs deployment parameters that do not exist yet",
@@ -350,7 +354,8 @@
     "log scraping: a production node runs with known secrets and every file under its state directory is scanned in raw, hex, upper hex and three base64 forms, with the instrument rehearsed against all five secrets first",
     "crash data: GOTRACEBACK=none on every compose service, verified against a real panicking process built under testdata -- no goroutine dump, no frame arguments, no secret. The in-process debug.SetTraceback(\"none\") was measured to be inert and replaced; see the finding in EVIDENCE_INDEX",
     "a compose test fails any service that declares its own environment without repeating GOTRACEBACK, which is how the three DKG services were caught silently dropping it via YAML merge semantics",
-    "retention: output is bounded rather than accumulating (health file rewritten in place, no append-only log); operator-side journal caps, no central shipping and disabled core dumps are documented in deploy/OPERATOR_ONBOARDING.md"
+    "retention: output is bounded rather than accumulating (health file rewritten in place, no append-only log); operator-side journal caps, no central shipping and disabled core dumps are documented in deploy/OPERATOR_ONBOARDING.md",
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
    ],
    "blockers": [
     "privacy review by a party that did not build the instrumentation. The allowlist, the scanner and the crash control are all authored here, and the criterion names a review; the implementer must not be the only judge of its own change. Does not require external independence (PROD-04 and PROD-29 are the criteria that do), only a second party.",
