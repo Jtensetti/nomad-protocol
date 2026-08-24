@@ -599,3 +599,46 @@ second.
 - Boundary: single machine, maintainer-produced report, Go 1.25.0. Not
   independent review. Availability under a hostile relay is not claimed and is
   not part of this criterion.
+
+### FINDING: a signed document carrying one key twice was accepted (PROD-16)
+
+A parser-differential pass over the conformance corpus found that
+`topology.Verify` accepted a signed topology whose top-level `document` key
+appeared twice. Go's `encoding/json` keeps the last occurrence. Other parsers
+keep the first, reject outright, or error.
+
+**Why a signature does not catch it.** Verification re-serialises what *this*
+implementation parsed and checks the signature over that. An implementation
+that keeps the first occurrence therefore verifies a different document from
+the same bytes — and, finding it does not match the signature, refuses. So the
+two implementations disagree about a signed artifact: one accepts, one
+refuses, neither can tell the other is wrong from the bytes alone. It is not a
+forgery vector, and no claim is made that it was one; it is the ambiguity a
+frozen wire format must not permit, and it is precisely what a second
+implementation would hit first.
+
+**Fix.** `live/strictjson` walks the token stream and refuses a duplicate key
+at any depth, a malformed document, and a second document riding after the
+first. It runs before anything is decoded, in both `topology.Verify` and
+`batch.VerifyDescriptor`.
+
+**Two apparent ambiguities that are not.** The same pass established that
+reordered keys and re-indentation verify and produce the *identical* topology
+digest, because a document's identity here is its canonical re-serialisation
+rather than the bytes it arrived in. Those are left alone deliberately. The
+test asserts that property directly — a variant must be refused, or accepted
+with the same identity — rather than demanding byte equality. An earlier draft
+required every trailing byte to be refused, which would have broken a topology
+file a text editor added a newline to, for no security gain.
+
+**Cross-platform vectors.** The 7-vector corpus produces the identical digest
+`44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45` on
+linux/amd64 and linux/386 — 64-bit and 32-bit `int` — with the full
+18-package suite green on both. An encoder that leaked host word size into a
+golden vector would diverge here. CI now gates on the 386 run and on six
+supported build targets.
+
+**Recorded gap, not fixed.** `windows/amd64` does not build:
+`live/epoch/lock.go` uses `unix.Flock`. Windows is not a supported platform
+today, so this is recorded rather than repaired, but the criterion says
+cross-platform and the gap should not be discovered later by someone else.

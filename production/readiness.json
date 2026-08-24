@@ -188,17 +188,16 @@
    "id": "PROD-16",
    "status": "PARTIAL",
    "evidence": [
-    "https://github.com/Jtensetti/nomad-local-reconstruction/commit/032f6f1ad3984e86d5812bd6ae07143d7a806a24",
-    "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-    "https://github.com/Jtensetti/Nomad-browser/commit/f5d1d6aaca487d84c005a60b6518e1133c72c997",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-    "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
-    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+    "canonical encodings: signed documents are verified by re-serialising what was parsed, so identity is the canonical form rather than the received bytes; TestAmbiguousJSONRepresentationsAreRefusedOrCanonical asserts that reordering, re-indentation and trailing whitespace either fail or map to the identical digest",
+    "ambiguity fails closed: live/strictjson refuses a duplicate JSON key at any depth, plus malformed input and a second document after the first, and runs before decoding in both topology.Verify and batch.VerifyDescriptor. Found by a parser-differential pass: a signed topology carrying one key twice was accepted, and Go's last-wins differs from parsers that keep the first",
+    "mutation and truncation: every sampled prefix and every sampled single-bit flip of every published vector must be refused (live/conformance/differential_test.go)",
+    "rollback/stale: live/topology/watermark.go refuses a topology older than one already accepted and fails closed on equivocation; verified at the binary boundary",
+    "cross-platform vectors: the 7-vector corpus produces the identical digest 44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45 on linux/amd64 and linux/386 (64-bit and 32-bit int), with the full 18-package suite green on both; CI now gates on the 386 run and on six supported build targets",
+    "external test report production/reports/2026-08-21-pollution-resistance/ plus the cross-architecture run recorded above"
    ],
    "blockers": [
-    "cross-platform parser differential tests",
-    "rollback and stale-representation campaign"
+    "executable MIME decisions are covered by the browser adapter's own tests (scheme, traversal, encoding and data: media-type table) but not by a corpus vector, so the MIME half of this criterion rests on adapter tests rather than on published vectors",
+    "windows/amd64 does not build (live/epoch/lock.go uses unix.Flock). Not a supported platform today, but the criterion says cross-platform and the gap is recorded rather than left to be discovered"
    ]
   },
   {
