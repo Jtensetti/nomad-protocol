@@ -91,7 +91,8 @@ Levels, weakest first:
 | One depositor cannot name or squat another's slot | derivation + negative tests | IDs derived from (session, sequence); a foreign session cannot collide across 16 sequences | adversarial |
 | One session cannot occupy the whole batch | quota test | per-session bound enforced silently, other sessions unaffected | adversarial |
 | The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
-| Failure and retry add no traffic | capture under failure | **none** | none |
+| Failure and retry add no traffic | capture under failure, four conditions | success, timeout, restart with a durable queue, adversarial loss: every world emits the same cell count, size and destination as an idle publisher | adversarial, in-process |
+| Failure and retry do not shift emission timing | capture under failure, real interface | **none — the in-process noise floor is 0.003 to 0.520 of the interval across runs against a 0.02 tolerance, so that campaign cannot judge timing; the WAN campaign measures timing but does not exercise publication failure** | none |
 | A queued object reaches a sealed batch across the uplink | end-to-end path | queue to drain to ingress to airlock to seal, with the fixed batch size preserved | integration |
 | Emission count does not depend on having work | busy versus idle publisher | a full queue and no queue at all emit the same number of identically sized cells over the same ticks; the test fails if either run was not actually mixed | adversarial, in-process |
 | The queue is never read on the emission path | design + package graph | a filling goroutine holds a one-slot buffer; the tick does a non-blocking receive and touches no disk | structural |
