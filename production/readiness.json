@@ -336,14 +336,17 @@
   },
   {
    "id": "PROD-27",
-   "status": "NOT_MET",
+   "status": "PARTIAL",
    "evidence": [
-    "Jtensetti/nomad-testnet@068453f live/telemetry (schema allowlist + secret scanner)",
-    "live/node/telemetry_test.go: production node run with known secrets, every state file scanned"
+    "schema allowlist: live/telemetry fails closed on any field without a written public rationale; fourteen counters are named forbidden with the reason each is forbidden",
+    "log scraping: a production node runs with known secrets and every file under its state directory is scanned in raw, hex, upper hex and three base64 forms, with the instrument rehearsed against all five secrets first",
+    "crash data: GOTRACEBACK=none on every compose service, verified against a real panicking process built under testdata -- no goroutine dump, no frame arguments, no secret. The in-process debug.SetTraceback(\"none\") was measured to be inert and replaced; see the finding in EVIDENCE_INDEX",
+    "a compose test fails any service that declares its own environment without repeating GOTRACEBACK, which is how the three DKG services were caught silently dropping it via YAML merge semantics",
+    "retention: output is bounded rather than accumulating (health file rewritten in place, no append-only log); operator-side journal caps, no central shipping and disabled core dumps are documented in deploy/OPERATOR_ONBOARDING.md"
    ],
    "blockers": [
-    "evidence rule item 4: no successful Actions run is possible (no runners assigned since 2026-08-20T18:21Z)",
-    "operator-deployment retention controls and a privacy review, neither of which is a test"
+    "privacy review by a party that did not build the instrumentation. The allowlist, the scanner and the crash control are all authored here, and the criterion names a review; the implementer must not be the only judge of its own change. Does not require external independence (PROD-04 and PROD-29 are the criteria that do), only a second party.",
+    "operator host settings cannot be verified from here. The crash-data property holds for the shipped deployment; on an operator's own platform it depends on their journald and coredump configuration, which this project's evidence does not cover and does not claim to."
    ]
   },
   {

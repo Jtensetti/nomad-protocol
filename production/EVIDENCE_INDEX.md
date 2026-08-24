@@ -642,3 +642,43 @@ supported build targets.
 `live/epoch/lock.go` uses `unix.Flock`. Windows is not a supported platform
 today, so this is recorded rather than repaired, but the criterion says
 cross-platform and the gap should not be discovered later by someone else.
+
+### FINDING: the in-process crash-output control does nothing (PROD-27)
+
+PROD-27 requires that crash data cannot contain secret keys. Nothing in the
+repository controlled crash output at all, so the first fix called
+`debug.SetTraceback("none")` at the start of every key-holding binary.
+
+**It does not work.** Measured on go1.24.7 and go1.25.0: a process that calls
+`debug.SetTraceback("none")` and then panics still prints `goroutine 1
+[running]` and each frame's arguments as raw machine words. The same binary run
+under `GOTRACEBACK=none` prints the panic value and nothing else. The runtime
+reads the variable at startup, so no in-process call substitutes for it. Had
+this not been measured against a real crashing process, the result would have
+been a control that was present, plausible, documented — and inert.
+
+It could not be measured from a test binary either: the testing framework wraps
+a panic in its own recover-and-repanic path and prints a dump regardless. The
+evidence comes from a helper program under `testdata` that the test compiles
+and runs.
+
+**What the control actually is.** A deployment setting the program verifies
+but cannot impose. Every compose service sets `GOTRACEBACK=none`; each of the
+seven key-holding binaries warns on stderr at startup when its crash output is
+unprotected. It warns rather than refusing to start, because a node that exits
+over a missing environment variable is a node not carrying cover traffic.
+
+**Setting it once was not enough.** A YAML merge key replaces a mapping rather
+than deep-merging it, so the three DKG services — which declare
+`SSL_CERT_FILE`, and which hold the DKG private identities — silently dropped
+the anchor's value. A test requires every service to inherit or declare it, and
+fails specifically any service that declares its own environment without
+repeating it.
+
+- Both directions pinned: under the setting, no dump and no secret; without it,
+  the dump and the frame arguments appear. The protected case is therefore
+  evidence rather than a property of the helper's shape.
+- Operator retention guidance (journal caps, no central shipping, core dumps
+  disabled) is in `nomad-testnet/deploy/OPERATOR_ONBOARDING.md`, together with
+  the statement that this project's evidence does not cover an operator's own
+  host settings.
