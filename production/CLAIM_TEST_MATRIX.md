@@ -36,11 +36,11 @@ Levels, weakest first:
 | Split-brain fails closed, halt survives persistence failure | negative tests | equivocation, halt-fails-open, cross-process regressions | adversarial |
 | Rollback to a burned epoch is rejected | negative tests | high-water-mark regression | adversarial |
 | Rotation timing takes no private input | determinism test | `TestPlanIsDeterministicAndPublicOnly` | unit |
-| Next-epoch DKG, descriptor assembly and activation complete automatically | production lifecycle across restart/failure | public-schedule DKG controller and fail-closed detached signing/assembly exist in draft PR #16; public artifact exchange/gathering, READY, chain import and scheduled activation are **not implemented as one automatic path** | partial structural |
+| Next-epoch DKG, descriptor assembly and activation complete automatically | production lifecycle across restart/failure | draft PR #16 head `74c830c` joins public-schedule DKG to immutable GET-only artifact exchange, outgoing quorum plus all incoming activations, READY import and boundary-only activation; missing-certificate, restart, invalid-artifact and crossed-boundary cases fail closed | adversarial, local multi-process mailboxes; hosted exact-head CI and independent/WAN run absent |
 | An operator signs only one fully validated descriptor in its exact role | independent operator ceremony and hostile drafts | detached assembly, invalid-draft-before-journal, prefilled-signature, transplant and second-valid-draft regressions | adversarial, local exact-content; hosted exact-head CI blocked |
 | Public DKG retry state cannot be confused by durable discard evidence | restart after failed attempt | `TestCompletedAttemptScanAllowsDiscardEvidence`; malformed evidence-name negative test | adversarial, unit; local race passed, hosted exact-head CI blocked |
 | Retired shares are refused | production path | share service refreshes the persisted chain before startup, work and HTTP delivery; retirement tests | integration code in draft PR #16; local race passed, hosted exact-head CI blocked |
-| Retired epoch material is unrecoverable after later credential compromise | live operator persistence + adversarial compromise after retirement | `TestForwardSecrecyAfterErasure` deletes generated share files only; it does **not** attack retained DKG state with a later-compromised static DKG identity | model adversarial; production claim unproved |
+| Retired epoch material is unrecoverable after later credential compromise | live operator persistence + adversarial compromise after retirement | `TestForwardSecrecyAfterErasure` removes threshold shares; `TestRetainedDealResistsLaterEpochCredentialCompromise` persists the production DKG store's canonical deal envelope, proves the retired key decrypts it as a control, then proves the complete next-epoch secret cannot decrypt or join retired membership; non-adjacent historical key reuse is rejected | adversarial, local production-store boundary; independent witnessed erasure/WAN run absent |
 | Compromise recovery works end to end | independent multi-operator drill | `TestRecoveryDrill` (five in-process operators, 3-of-5) | protocol integration; no independent administration/WAN |
 | No machine holds a complete decryption key | process + host separation | Compose share isolation | integration, single host |
 
@@ -194,6 +194,7 @@ long-horizon section — are gated on external resources (EB-1, EB-3, EB-4) or
 on unstarted work rather than on further design.
 
 They are also why the great majority of PROD gates are not MET. PROD-12 is the
-only MET gate. PROD-08 was downgraded because unit/model evidence for erasure
-and a public retry planner do not demonstrate the complete automatic lifecycle
-or live forward-secrecy boundary its criterion names.
+only MET gate. PROD-08 now has the complete local automatic lifecycle and live
+later-compromise boundaries its earlier review found missing, but remains
+PARTIAL because exact-head hosted/external evidence and an independently
+administered WAN recovery/erasure drill do not exist.

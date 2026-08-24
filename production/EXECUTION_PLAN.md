@@ -26,15 +26,18 @@ Existing hard-won assets to preserve, not rewrite:
 ## Current phase gate (2026-08-24)
 
 Registry state is 1 MET, 25 PARTIAL, 3 NOT_MET and 1 BLOCKED. Phase 1 remains
-in C. Draft PR #16 (`nomad-testnet@5ac2bfa`) integrates the public-schedule DKG
-controller, retirement/revocation state, fresh share-service epoch guard and a
-fail-closed detached descriptor-signature ceremony. It is not mergeable
-evidence until EB-8 is resolved and exact-head CI is green. C is not complete
-until public artifact exchange/gathering, READY, automatic chain
-import/activation and a live later-compromise forward-secrecy experiment exist
-on one production path. D and A artifacts
-already built may be maintained, but no new phase is promoted past C on the
-strength of protocol-level tests alone.
+in C at the evidence boundary. Draft PR #16 (`nomad-testnet@74c830c`) now joins
+public-schedule DKG to immutable public artifact exchange, detached quorum and
+all-member signatures, READY import, public-boundary activation and
+fail-closed retirement without late catch-up. It also rotates exact per-epoch
+KEX/DKG material, rejects reuse from any earlier accepted epoch, erases the
+verified retired secret with its share, and exercises later compromise against
+retained live DKG state. Local exact-content verification is green, but Actions
+run `32757136789` again started zero steps. C therefore remains PARTIAL pending
+EB-8 and an independently administered WAN lifecycle/recovery drill with
+witnessed erasure. Those are external boundaries, so technically achievable D
+and A work may continue while they are arranged; no gate is promoted on local
+protocol tests alone.
 
 Known understatements the plan must not repeat (evaluator findings 1-2):
 the publisher-facing constant-rate **client uplink does not exist** (the

@@ -21,11 +21,14 @@ core and no production deployment. Concretely:
   macOS browser with no network entitlement.
 - **A partial epoch and key lifecycle substrate** (Workstream C): canonical
   descriptors with published vectors, chained membership transitions,
-  fail-closed retirement guards, revocation and erasure primitives, and a
-  public-schedule DKG controller in draft PR #16. Descriptor assembly,
-  approval collection, READY, automatic chain import/activation, live
-  static-key forward-secrecy evidence and independent-operator execution are
-  still missing. The exact draft head has not yet passed CI.
+  fail-closed retirement guards, revocation and transactional erasure, and a
+  public-schedule DKG controller in draft PR #16 head `74c830c`. The draft now
+  automatically exchanges immutable public artifacts, gathers the outgoing
+  quorum and every incoming activation, imports READY before the public
+  boundary, rotates exact epoch-secret files and rejects reuse from any earlier
+  epoch. A retained-live-DKG later-compromise test passes locally. Independent
+  operator/WAN execution and a successful exact-head CI/external report are
+  still missing; the draft remains unmerged.
 - **A publisher identity system** (Workstream D): self-certifying SiteIDs,
   rotation, offline recovery authority, rollback and equivocation handling,
   and four explicit client identity states.
@@ -96,9 +99,11 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
   seizure of plaintext is outside the claim.
 - **Erasure substrate.** The implemented overwrite-and-unlink primitive can
   claim only filesystem-visible destruction inside an encrypted volume, not
-  physical-media destruction. The existing experiment does not establish
-  forward secrecy after later compromise of a static DKG identity against
-  retained live DKG state.
+  physical-media destruction. Local adversarial evidence now shows that the
+  complete next-epoch secret cannot decrypt a retained production-store DKG
+  deal for the retired epoch, with retired-key decryption as its positive
+  control. It does not substitute for independently witnessed erasure or a WAN
+  compromise drill.
 
 ## What is NOT protected?
 

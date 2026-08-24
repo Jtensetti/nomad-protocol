@@ -137,7 +137,42 @@ active epoch. An interrupted DKG never resumes (existing journal rule).
 
 All state transitions are pure functions of (persisted chain, wall clock).
 Private user activity, queue depth, publication state and reader state are
-never inputs, and a missed boundary defers work rather than accelerating it.
+never inputs. A missed control tick is skipped. A successor not imported as
+READY before the activation boundary is never imported later as catch-up; the
+outgoing epoch retires and the network is unavailable.
+
+## Automatic public coordination
+
+The normal N to N+1 path is one continuously running controller per operator:
+
+1. The controller reads the public chain and retry policy at the current wall
+   clock. It starts only the exact N+1 attempt selected by that schedule.
+2. Every attempt topology is independently attested. Attempt 2 and later must
+   differ from all earlier attempts only in a fresh 32-byte DKG session and a
+   strictly later public start. Membership, endpoints, keys, peer plans,
+   traffic, validity, threshold and phase duration are invariant.
+3. A completed local DKG is independently reverified from its topology,
+   certificate, share and durable `COMPLETE` marker before publication.
+4. Each operator exposes immutable public artifacts at exact GET-only paths on
+   a lifecycle endpoint derived from its signed DKG endpoint by adding one to
+   the TCP port. Scheme and host are unchanged. There is no upload or listing.
+5. A fetch is one direct request to the signed endpoint. The client ignores
+   proxy environment variables, refuses redirects, disables keepalive, uses
+   TLS 1.3 or later for HTTPS, and performs no immediate retry, alternate-peer
+   lookup, ordinary-network fallback or catch-up request. Another round occurs
+   only at the next future UTC-aligned public tick.
+6. Every operator deterministically derives the same descriptor draft, signs
+   through its durable anti-equivocation journal, verifies each detached
+   artifact, requires the outgoing approval quorum and every incoming
+   activation, assembles the descriptor and imports it locally as READY.
+7. The round is bounded by N's signed retirement time. Crossing that boundary
+   cancels in-flight requests and forbids draft signing, publication and chain
+   import. Activation itself is the chain-and-clock state change at the public
+   boundary; no private event triggers a service handoff.
+
+The corresponding detached commands remain an offline inspection and recovery
+surface. They perform the same verification but are not a parallel normal
+transport and must not run concurrently with the automatic controller.
 
 ## Rotation-failure policy (public, fail-closed)
 
@@ -146,7 +181,9 @@ policy, all timings public:
 
 1. The N+1 draft topology carries the primary DKG session and schedule.
 2. On ceremony failure, replacement drafts with fresh sessions are issued at
-   public retry offsets. Retries reuse the same membership.
+   public retry offsets. Retries reuse the same membership, KEX/DKG keys,
+   endpoints, peer plans, traffic policy, validity envelope, threshold and
+   phase duration. Only session and later start change.
 3. After three failed sessions with the same membership, the sanctioned path
    is a membership transition excluding the non-completing operator(s),
    under the approval quorum, as either a `scheduled` replacement (if time
@@ -173,31 +210,37 @@ persisted epoch chain store with these rules:
 1. **Chaining**: a non-genesis descriptor's `previous_epoch_digest` must
    equal the stored digest for epoch N-1; its epoch number must be exactly
    previous+1 on the same `network_id`.
-2. **Monotonicity / rollback rejection**: a descriptor for an epoch number
+2. **Fresh epoch-private keys**: no N+1 operator may reuse any KEX or DKG
+   public key present in any earlier accepted epoch, including after an
+   intervening epoch or under a different operator ID. Verifiers carry the
+   cumulative key set in their verified chain state. Stable Ed25519 operator
+   identities may continue because they authorize the cross-epoch transition.
+   A retry inside N+1 must reuse N+1's keys.
+3. **Monotonicity / rollback rejection**: a descriptor for an epoch number
    at or below the highest locally RETIRED epoch is rejected permanently.
    Epoch numbers of failed (never-activated) ceremonies are not reused; a
    retry keeps the same epoch number only until a descriptor for it
    activates, after which that number is burned.
-3. **Equivocation fail-closed**: two distinct valid descriptor digests for
+4. **Equivocation fail-closed**: two distinct valid descriptor digests for
    the same `(network_id, epoch)` is fatal: the verifier records both
    digests as an equivocation proof, refuses to activate either, and halts
    epoch progression until a manually authorized re-bootstrap. Conflicting
    descriptors can never both (or either) silently become active.
-4. **Operator single-signature rule**: an operator must refuse to sign
+5. **Operator single-signature rule**: an operator must refuse to sign
    activation or approval for a second distinct descriptor digest for the
    same epoch; its local signature journal enforces this and the refusal is
    itself evidence. Signing must go through the journal rather than merely
-   consulting it: because rule 3 makes any second valid descriptor halt every
+   consulting it: because rule 4 makes any second valid descriptor halt every
    verifier that sees it, an unjournalled signer turns a routine operational
    mistake into a network-wide outage.
 
-Rule 3's halt is in-memory first and persisted second. A verifier that has
+Rule 4's halt is in-memory first and persisted second. A verifier that has
 observed two valid descriptors for one epoch stops serving epochs even if it
 cannot write the evidence (full disk, read-only mount, a marker another
 instance already wrote); a persistence failure is reported alongside the
 halt, never in place of it.
 
-Rule 2 is enforced against a persisted high-water mark, not merely against
+Rule 3 is enforced against a persisted high-water mark, not merely against
 the descriptors still present in the store, so removing a descriptor file
 cannot silently re-open a burned epoch number for a different successor.
 
@@ -228,6 +271,13 @@ digest and session, no share, partial decryption, shuffle proof, receipt,
 DKG message, attestation or session key can be transplanted between epochs
 or committees.
 
+Operator secret storage is also epoch-scoped. For N+1, a continuing operator
+copies only its stable Ed25519 identity into a new file and generates fresh
+X25519 and DKG private keys. The automatic controller resolves canonical
+`epoch-%020d.secrets.json` names under a private, real (non-symlink)
+directory. It loads N for an outgoing approval and N+1 for DKG and incoming
+activation. It never overwrites N or falls back to another file.
+
 New lifecycle domains, all versioned:
 
 - `nomad-epoch-descriptor-digest-v1`
@@ -252,8 +302,9 @@ When epoch N retires:
 - Share services and materializers refuse partial-decryption work for
   committee N by policy (retirement), even though N's shares remain
   cryptographically bound to N's ciphertext only.
-- Each operator runs the erasure procedure: overwrite-and-unlink of the
-  epoch's private share file and DKG journal, followed by a signed erasure
+- Each operator runs the erasure procedure: cryptographic verification then
+  overwrite-and-unlink of the epoch's private share file and exact retired
+  epoch secret file, followed by a signed erasure
   statement in the `nomad-epoch-erasure-v1` domain containing operator ID,
   epoch, descriptor digest, the SHA-256 of each erased file, method,
   filesystem type and timestamp.
@@ -263,11 +314,16 @@ When epoch N retires:
   and no share-directory backups; the recorded claim is file destruction
   within an encrypted volume, not physical-media erasure.
 
-Forward-secrecy adversarial experiment (required evidence): capture epoch-N
-wire ciphertext; retire N and run erasure on every operator; hand an
-evaluator the complete post-erasure persisted state of all operators; the
-evaluator must fail to decrypt the captured epoch-N batch, while a control
-run with pre-erasure state succeeds.
+Forward-secrecy adversarial evidence has two local boundaries. The
+threshold-share experiment encrypts an epoch-N batch, proves pre-erasure
+threshold recovery, retires N, erases every generated share and proves the
+remaining files cannot produce usable shares. The live-DKG experiment persists
+the exact canonical deal envelope through the production store, proves the
+addressed retired DKG identity decrypts its deal as a positive control, then
+gives the evaluator the same operator's complete N+1 secret file; it cannot
+decrypt the retained deal or enter N's DKG membership. Independent witnessed
+erasure and WAN execution remain deployment evidence rather than claims of
+these local experiments.
 
 ## Revocation and compromise recovery
 

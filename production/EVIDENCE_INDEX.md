@@ -59,9 +59,9 @@ actually demonstrates and, equally, what it does not.
 
 ## New evidence (2026-08-20 onward)
 
-### C lifecycle and detached descriptor ceremony (2026-08-24; draft, not immutable release evidence)
+### C automatic lifecycle and epoch-key rotation (2026-08-24; draft, not release evidence)
 
-- Implementation head: `Jtensetti/nomad-testnet@5ac2bfa`, draft PR #16,
+- Implementation head: `Jtensetti/nomad-testnet@74c830c`, draft PR #16,
   based on `claude/nomad-production-ready-dxv4ql`.
 - Adds: public-schedule DKG execution with fresh retry directories; durable
   failed-share discard; process lock; persisted, chain-revalidated
@@ -69,7 +69,11 @@ actually demonstrates and, equally, what it does not.
   guards at share-service startup, threshold work and HTTP delivery; Compose
   epoch import; release inclusion of both lifecycle binaries; strict detached
   approval/activation artifacts and checked assembly; four operator-facing
-  descriptor ceremony commands.
+  descriptor ceremony commands; immutable GET-only public artifact exchange;
+  automatic outgoing-quorum/all-incoming signature gathering and READY import;
+  exact per-epoch secrets with KEX/DKG rotation; cumulative rejection of old
+  epoch-private keys; retirement of node/share network boundaries; mandatory
+  erasure of the retired secret with its share.
 - The signing boundary validates the whole unsigned draft against authority,
   predecessor, topology, DKG certificate and revocations before a durable
   journal slot is recorded. Artifacts bind network, epoch, digest, role and
@@ -81,19 +85,29 @@ actually demonstrates and, equally, what it does not.
   ambiguity; two membership-change fixtures retained the same operator ID; a
   controller test supplied a private authority key where a public key was
   required. Each code finding has regression coverage or a CI-policy change.
-- Locally verified with Go 1.25.0: full root race suite, vet, module tidiness,
+- The automatic coordinator derives endpoints only from signed topology,
+  issues one direct request per peer and aligned public tick, ignores proxy
+  settings, rejects redirects and alternate paths, cancels at the signed
+  boundary and never imports late. It deterministically assembles the same
+  draft, requires the previous-committee quorum and all incoming activations,
+  then appends it as READY.
+- The later-compromise evaluator persists a canonical encrypted deal envelope
+  through the production DKG store. The retired DKG identity decrypts the
+  addressed deal as a positive control; the complete next-epoch secret cannot
+  decrypt it or join the retired membership. A separate three-epoch regression
+  rejects reintroduction of an epoch-1 KEX/DKG key in epoch 3.
+- Locally verified on the exact `74c830c` content with Go 1.25.0: full root
+  race suite, vet, module tidiness,
   formatting, all six component build/vet/fresh-race suites and six supported
-  target builds passed. Targeted final-content C race tests, the operator
-  ceremony shell E2E and both Python analyzer self-suites passed. Linux/386
-  built but this kernel could not execute it; Docker/Compose was unavailable.
-- Exact-head Actions run `32746518775` did not execute: `unit.steps` is null
+  target builds passed. Dependency-direction gates, conformance corpus,
+  targeted C race tests, operator ceremony shell E2E and both Python analyzer
+  self-suites passed. Linux/386 built but this kernel could not execute it;
+  Docker/Compose was unavailable.
+- Exact-head Actions run `32757136789` did not execute: `unit.steps` is null
   with no logs; downstream jobs were skipped. This is EB-8, not a green test.
-- Not demonstrated: safe manual descriptor assembly now exists, but automatic
-  public artifact exchange/gathering, READY, chain import and scheduled
-  activation remain absent; the existing
-  forward-secrecy experiment does not attack retained live DKG state after a
-  later compromise of the static DKG identity; no WAN or independently
-  administered drill exists.
+- Not demonstrated: no independently administered WAN lifecycle/recovery
+  campaign or witnessed erasure exists, and the draft head has no successful
+  immutable CI/external report.
 - Consequence: PROD-08 is PARTIAL. The 2026-08-21 report remains valid evidence
   for the older code it ran, but cannot verify this head or fill these boundary
   gaps.

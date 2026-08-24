@@ -3,6 +3,53 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-24d: automatic lifecycle, epoch keys and later-compromise boundary
+
+**Implementation.** Draft PR #16 now points to exact head `74c830c`. The
+public-schedule controller joins a completed, independently reverified DKG to
+immutable GET-only certificate, draft, approval, activation and descriptor
+mailboxes. Each aligned round makes at most one direct request to each signed
+endpoint, ignores proxy configuration, rejects redirects and performs no
+immediate retry or alternate-peer lookup. It requires the outgoing approval
+quorum and every incoming activation, imports the assembled descriptor as
+READY, and cancels/refuses import at the signed retirement boundary rather
+than generating late catch-up traffic.
+
+**Epoch-private material.** `nomad-operator rotate` preserves only the stable
+Ed25519 operator identity and generates fresh X25519 and DKG keys into a new
+canonical epoch file. The verified chain carries cumulative key history and
+rejects reuse from any earlier epoch, including epoch-1 material reintroduced
+in epoch 3. The controller loads N for approval and N+1 for DKG/activation.
+Retirement erases the verified N secret together with its exact share through
+the existing crash-recoverable signed transaction.
+
+**Adversarial evidence.** `TestRetainedDealResistsLaterEpochCredentialCompromise`
+stores the exact canonical encrypted deal envelope through the production DKG
+store. The retired key decrypts its addressed deal as a positive control; the
+complete next-epoch secret cannot decrypt it or join retired membership. The
+fresh internal evaluator pass found and fixed non-adjacent historical key
+reuse before publication. This is internal QA, not an independent audit.
+
+**Verification.** Exact-content local Go 1.25 checks passed: full root
+`go test -race -count=1 ./...`, vet, formatting/tidiness, all six component
+build/vet/race suites, six supported target builds, dependency gates,
+conformance corpus, analyzer self-tests and the operator ceremony. Linux/386
+cross-builds but cannot execute in this kernel; Docker/Compose is unavailable.
+The publication campaign correctly deleted captures and produced no timing
+evidence when the host's control cadence exceeded tolerance. Exact-head
+Actions run `32757136789` failed before checkout with `unit.steps = null`;
+downstream jobs were skipped.
+
+**Gate boundary.** PROD-08 remains PARTIAL and the registry remains 1 MET, 25
+PARTIAL, 3 NOT_MET, 1 BLOCKED. The missing automatic lifecycle and live
+later-compromise blockers are closed. Remaining blockers are exact-head
+immutable CI/external evidence plus an independently administered WAN
+lifecycle/key-compromise recovery drill with witnessed erasure. PR #16 remains
+draft and unmerged.
+
+**Next.** Continue technically achievable D/A work while EB-2 and EB-8 are
+handled externally. Do not promote PROD-08 on local evidence alone.
+
 ## Checkpoint 2026-08-24c: detached epoch ceremony and exact erasure binding
 
 **Implementation.** Draft PR #16 now points to exact head `5ac2bfa`. Directly

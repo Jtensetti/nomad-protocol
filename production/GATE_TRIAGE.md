@@ -31,6 +31,13 @@ substrate, but public exchange/gathering, READY, automatic import/activation
 and the later-compromise experiment remain. Exact head `5ac2bfa` also needs its
 own successful run; Actions run `32746518775` had no executable steps.
 
+**Update (2026-08-24).** Draft head `74c830c` closes those two engineering
+gaps: automatic public exchange/signature gathering/READY import and the
+retained-live-DKG later-compromise experiment now pass locally, including
+non-adjacent historical key-reuse rejection. PROD-08 remains PARTIAL because
+exact-head run `32757136789` again executed zero steps and no independently
+administered WAN recovery/erasure drill exists.
+
 ## Class A — evidence complete, waiting only on rule 4
 
 No criterion is currently in this class.
@@ -48,7 +55,7 @@ named) and PROD-09 (dependency gates plus the shaper process boundary).
 | Gate | What is missing |
 |---|---|
 | PROD-01 | conformance schema, remaining golden vectors, compatibility matrix, signed spec tag |
-| PROD-08 | automatic public artifact exchange/gathering/READY/import/activation, exact-head lifecycle CI, and a live later-compromise forward-secrecy experiment |
+| PROD-08 | exact-head lifecycle CI or external report, plus an independently administered WAN lifecycle/key-compromise recovery drill with witnessed erasure |
 | PROD-07 | active-adversary fault injection; signed blame reports (the shuffle receipts already make a faulty mixer identifiable) |
 | PROD-15 | site recovery drill; the SiteID spec is still DRAFT |
 | PROD-16 | cross-platform vectors; mutation, truncation, rollback and parser-differential tests |

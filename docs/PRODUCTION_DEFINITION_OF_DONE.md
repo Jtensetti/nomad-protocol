@@ -1,6 +1,6 @@
 # Definition of Done: production Nomad anonymity network
 
-Last reviewed: 2026-08-19.
+Last reviewed: 2026-08-24.
 
 ## Meaning of production-ready
 

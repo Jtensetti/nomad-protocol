@@ -22,7 +22,7 @@
      "id": "C-01",
      "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)",
      "status": "PARTIAL",
-      "note": "implemented and internally evaluated (the first evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed); draft PR #16 head 5ac2bfa adds validated detached signing and assembly so callers cannot bypass draft/role/journal checks; independent review and production-boundary evidence remain"
+      "note": "implemented and internally evaluated (the first evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed); draft PR #16 head 74c830c adds validated detached signing/assembly and automatic public artifact coordination; independent review and production-boundary evidence remain"
     },
     {
      "id": "C-02",
@@ -34,19 +34,19 @@
      "id": "C-03",
      "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants",
      "status": "PARTIAL",
-      "note": "internal audit covers DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys; draft PR #16 head 5ac2bfa adds digest/role/operator-bound descriptor artifacts plus bound revocation, erasure-intent and discard statements, with duplicate-key rejection throughout C-critical JSON; complete protocol-surface and independent review remain"
+      "note": "internal audit covers DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys; draft PR #16 head 74c830c adds digest/role/operator-bound descriptor artifacts, bound revocation/erasure/discard statements, strict C-critical JSON and cumulative rejection of historical KEX/DKG reuse; complete protocol-surface and independent review remain"
     },
     {
      "id": "C-04",
      "summary": "automatic next-epoch DKG while epoch N active",
      "status": "PARTIAL",
-      "note": "draft PR #16 head 5ac2bfa adds a public-schedule DKG controller with fresh retry attempts, durable discard and safe detached descriptor assembly, but public artifact exchange/gathering, READY, chain import and activation are not one automatic path; local race passed and hosted exact-head CI did not start"
+      "note": "draft PR #16 head 74c830c joins public-schedule DKG, immutable one-request-per-tick artifact exchange, detached signature gathering and READY chain import as one automatic fail-closed path; local exact-content race passed, but Actions run 32757136789 started zero steps and no independent/WAN execution exists"
     },
     {
      "id": "C-05",
      "summary": "activation only at public predetermined boundary, independent of private behavior",
      "status": "PARTIAL",
-      "note": "the descriptor and detached signing ceremony enforce the public activation boundary; automatic production-path exchange/READY/import/activation and independent boundary evidence remain"
+      "note": "the automatic coordinator imports READY only before the signed boundary, cancels in-flight rounds there and never performs late catch-up; local boundary tests pass, while exact-head hosted/external and independent WAN evidence remain"
     },
     {
      "id": "C-06",
@@ -64,7 +64,7 @@
      "id": "C-08",
      "summary": "key-erasure procedure implemented, documented, tested with evidence",
      "status": "PARTIAL",
-      "note": "draft PR #16 head 5ac2bfa adds crash-recoverable signed erasure intent/acknowledgement, mandatory limitations text, exact retired-share/operator verification and protected evidence/authority/chain aliases; CLI and runbooks are reconciled, but hosted exact-head CI and live persisted-state evidence remain"
+      "note": "draft PR #16 head 74c830c adds crash-recoverable signed erasure intent/acknowledgement, mandatory limitations text, exact retired-share and epoch-secret verification/erasure, and protected evidence/authority/chain aliases; CLI and runbooks are reconciled, but hosted exact-head CI and independently witnessed erasure remain"
     },
     {
      "id": "C-09",
@@ -106,7 +106,7 @@
      "id": "C-15",
      "summary": "forward-secrecy adversarial experiment",
      "status": "PARTIAL",
-      "note": "the existing experiment deletes generated share files and proves that model state no longer decrypts; it does not attack retained live DKG state after later compromise of the static DKG identity, so the production forward-secrecy claim remains unproved"
+      "note": "TestForwardSecrecyAfterErasure removes threshold shares; TestRetainedDealResistsLaterEpochCredentialCompromise persists a production-store DKG deal, proves retired-key decryption as a control and rejects the complete next-epoch secret; a three-epoch regression rejects historical key reintroduction, but independent witnessed/WAN evidence remains"
     },
     {
      "id": "C-16",
@@ -118,7 +118,7 @@
      "id": "C-17",
      "summary": "CI regression tests for the epoch lifecycle",
      "status": "PARTIAL",
-      "note": "draft PR #16 adds lifecycle binaries to the network-domain dependency gate and release bundle, with lifecycle regressions; local full/targeted verification passed, but exact-head Actions run 32746518775 had no executable steps and the required hosted workflow must still complete"
+      "note": "draft PR #16 adds lifecycle binaries to the network-domain dependency gate and release bundle, with automatic coordination, key rotation and later-compromise regressions; local exact-content full/targeted verification passed, but exact-head Actions run 32757136789 had no executable steps and the required hosted workflow or equivalent external report must still complete"
     }
    ]
   },

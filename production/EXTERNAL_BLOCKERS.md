@@ -41,14 +41,14 @@ only the listed action. Never fabricate these.
   activated epoch descriptor, and (for PROD-05) witnessed key custody/erasure
   statements from each administrator.
 - **Engineering boundary before evidence collection:** onboarding and
-  recovery documents exist, and draft PR #16 adds the lifecycle controller,
-  persisted chains, retirement guards and revocation/erasure tooling. That PR
-  is unmerged and its exact head still needs full CI. Descriptor assembly,
-  approval collection, READY, automatic import/activation and a live
-  forward-secrecy experiment are still engineering work. The onboarding
-  erasure example must also be reconciled with the actual CLI before it is
-  handed to an operator. Recruiting may start now, but no independent-operator
-  evidence may be claimed until that boundary is complete.
+  recovery documents exist, and draft PR #16 head `74c830c` implements the
+  automatic public lifecycle, persisted chains, retirement guards,
+  revocation, exact epoch-key rotation/erasure and live later-compromise test.
+  The CLI examples match the mandatory retired share and secret flow. The PR
+  is unmerged and exact-head Actions still needs to execute, but the remaining
+  evidence action here genuinely requires independent operators. Recruiting
+  may start now; no independent-operator evidence may be claimed before those
+  administrators execute it themselves.
 - **Exact external handoff after that boundary:** each administrator generates
   its private material locally, returns only the signed enrollment and public
   endpoint, follows the versioned runbook on its own host, and publishes the
@@ -154,9 +154,9 @@ only the listed action. Never fabricate these.
 ## EB-8: GitHub Actions runner availability
 
 - **Missing:** a runner that actually starts the required repository
-  workflows. Draft PR #16 run `32746518775` on exact head `5ac2bfa` failed in
+  workflows. Draft PR #16 run `32757136789` on exact head `74c830c` failed in
   the `unit` job with `steps: null` and no logs; `live-compose` and `release`
-  were skipped. Earlier exact-head run `32737789012` has the same pattern.
+  were skipped. Earlier runs `32746518775` and `32737789012` have the same pattern.
   The same zero-step failure pattern affects the current Nomad repositories.
 - **Why not autonomous:** Actions enablement, billing/minutes budgets and
   self-hosted-runner registration are account/organization controls not
@@ -166,12 +166,12 @@ only the listed action. Never fabricate these.
   private repositories and restores hosted-runner capacity, or registers a
   trusted ephemeral self-hosted runner. No repository secret is required for
   the unit/Compose jobs.
-- **Verification afterward:** rerun workflow `32746518775`; `unit` must show an
+- **Verification afterward:** rerun workflow `32757136789`; `unit` must show an
   assigned runner and execute checkout, formatting, dependency gates, build,
   vet, race, component, conformance and platform steps; `live-compose` must
   then execute and pass. Preserve the run URL and artifact digests against
-  exact head `5ac2bfa`.
-- **Alternative:** a complete external test report from exact head `5ac2bfa`
+  exact head `74c830c`.
+- **Alternative:** a complete external test report from exact head `74c830c`
   may satisfy evidence rule item 4, but it must include every required command
   and immutable digests; the older 2026-08-21 report cannot be reused for this
   head.
