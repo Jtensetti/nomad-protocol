@@ -499,3 +499,47 @@ Analysis reports and per-host campaign logs are held with the run. The campaign 
 reproducible from `scripts/wan/run-campaign.sh` plus Scaleway credentials; the
 decision path is `scripts/wan/wan-verdict.py` over `scripts/two-world-analysis.py`,
 which is the same code and the same exit statuses CI uses.
+
+### FINDING: RLNC decoder returned wrong bytes with a nil error (Workstream G)
+
+A flaky test was the only symptom: `TestRandomCodedRoundTrip` in nomad-rlnc
+failed roughly one run in fourteen with "round-trip mismatch". Chasing the
+flake instead of re-running it found a decoder defect: `Decoder.Add` inserted
+an incoming symbol at its first non-eliminable column without first reducing
+it against pivots at later columns. Pivots are not always discovered in column
+order -- a row's entry at the next missing column can cancel to zero during
+reduction -- and a row inserted with a residue at a later pivot column breaks
+the reduced-row-echelon invariant silently. The decoder then reports full rank
+and `Decode` returns a mixture of source symbols as one symbol, with a nil
+error. The deterministic regression decodes `source[0] XOR source[1]` labelled
+as `source[0]`.
+
+**Why it matters beyond correctness.** The materializer uses this decoder on
+the production path. Decoded objects are hash- and signature-checked
+afterwards, so the wrong bytes do not reach a caller as verified content; the
+cost is a spurious verification failure and the wasted work -- an availability
+defect, not an integrity breach. No unverified-content path was found.
+
+**The deeper defect was structural.** The vendored copy in
+`nomad-testnet/components/nomad-rlnc` is what ships, and nomad-testnet's CI
+never tested any vendored module: `components/*` are separate Go modules
+behind replace directives, invisible to `go test ./...` at the root, and none
+of the six carried one test file. The fix would have existed only in the
+standalone repository's suite while the copy CI actually builds went
+untested. All six components are now byte-identical with their standalone
+repos, carry those repos' full test suites, and a CI step builds, vets and
+race-tests each one so the next divergence fails the build.
+
+- Fix + regression: `Jtensetti/nomad-rlnc` branch
+  `claude/nomad-production-ready-dxv4ql` (`rlnc/decoder.go`,
+  `rlnc/pivot_order_test.go`); same change vendored in `Jtensetti/nomad-testnet`.
+- Mix reconciliation (both directions, task long outstanding): authenticated
+  DKG, exported share validation and the networked protocol runner adopted
+  into `Jtensetti/nomad-anytrust-mix-sim`; its four test files (incl.
+  hardening and production suites) now also run inside nomad-testnet.
+- Evidence: 40 consecutive `-race -shuffle=on` full-suite runs pass where the
+  flake previously appeared within fourteen; deterministic regression fails on
+  the pre-fix decoder.
+- Residual gap (tracked): the materializer constructs the raw `Decoder`; the
+  budget-enforcing `BoundedDecoder` from Workstream G exists in the library
+  but nothing on the shipping path uses it yet.
