@@ -120,10 +120,29 @@ Levels, weakest first:
 | Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
 | Update cannot roll back | updater tests | **no updater** | none |
 
+## Long-horizon correlation
+
+The threat model assumes an adversary that correlates observations over long
+periods. Nothing here bounds it.
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| Repeated sessions do not intersect to identify a reader | long-horizon campaign over many sessions | **none — E-10 NOT_STARTED** | none |
+| Repeated publications do not intersect to identify a publisher | long-horizon campaign across epochs | **none — E-10 NOT_STARTED** | none |
+| Cover traffic bounds aggregate leakage, not just per-observation leakage | analysis + campaign | **none; no analysis exists** | none |
+
+Fixed-rate cover bounds what one observation reveals. It says nothing about
+what many reveal in aggregate. This is the largest unmeasured area in the
+project and the easiest to over-read from the per-observation results above.
+
 ## How to read the gaps
 
 Every row at `none` is a claim the project must not make. Several of them —
 publish/no-publish equivalence, browser egress capture, reproducibility with
-a second builder, blind two-world classification — are the specific reasons
-no PROD gate is MET, and they are gated on external resources (EB-1, EB-3,
-EB-4) rather than on further design.
+a second builder, blind two-world classification, and every row in the
+long-horizon section — are gated on external resources (EB-1, EB-3, EB-4) or
+on unstarted work rather than on further design.
+
+They are also why the great majority of PROD gates are not MET. Two gates
+(PROD-08, PROD-12) are MET because their criteria name harms this matrix has
+rows for at `adversarial` level; that is not a statement about the others.
