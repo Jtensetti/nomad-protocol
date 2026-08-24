@@ -134,13 +134,19 @@
   },
   {
    "id": "PROD-12",
-   "status": "PARTIAL",
+   "status": "MET",
    "evidence": [
-    "https://github.com/Jtensetti/nomad-rlnc/commit/b395aa0b0dbd129a2820dbe02ee96d2a87f87273"
+    "https://github.com/Jtensetti/nomad-rlnc/commit/b395aa0b0dbd129a2820dbe02ee96d2a87f87273",
+    "authenticated coding: per-source-symbol SHA-256 commitments carried under the authority signature in batch descriptor v3 (nomad-testnet 99a80c1 live/batch/descriptor.go); VerifyDescriptor requires exactly K and rejects missing, short, non-hex or tampered sets",
+    "production path: live/materialize/materializer.go constructs rlnc.BoundedDecoder with DefaultLimits and the descriptor's commitments (not nil)",
+    "generation binding: TestDecoderRefusesForeignGenerationSymbols; cache-side stream commitment TestLoadRejectsCacheContentThatIsNotTheCommittedStream (both non-vacuous: disabling the checked code makes them fail)",
+    "Byzantine campaign at the materializer boundary: TestByzantinePollutionNeverYieldsAcceptedCorruption, 72 trials over 0-100% pollution, 39 exact reconstructions, 33 denials, 0 accepted corruptions; fails if no trial succeeds or none is denied",
+    "library campaign: TestByzantineCampaignStaysBounded (100k attempts at 50/90/100% malicious, every budget respected)",
+    "fuzz/property: FuzzBoundedDecoderStaysWithinBudget (134,125 execs) and FuzzHonestGenerationDecodesExactly; the latter fails within 0.5s against the pre-fix decoder, so it detects the wrong-decode defect rather than passing beside it",
+    "wrong-decode defect found and fixed this cycle (nomad-rlnc 70fc47c rlnc/decoder.go + pivot_order_test.go); no open Sev1/Sev2 contradicts this criterion",
+    "external test report production/reports/2026-08-21-pollution-resistance/ (logs digested in SHA256SUMS) satisfying evidence rule item 4"
    ],
-   "blockers": [
-    "pollution authentication and Byzantine campaign"
-   ]
+   "blockers": []
   },
   {
    "id": "PROD-13",

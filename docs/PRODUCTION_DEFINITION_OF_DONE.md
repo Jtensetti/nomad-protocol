@@ -14,7 +14,7 @@ The release must fail closed. If cadence, verification, mix quorum, local model,
 cache integrity or browser isolation cannot be maintained, the client must stop
 the affected operation without falling back to ordinary networking.
 
-Current score: **1/30 production gates MET.**
+Current score: **2/30 production gates MET.**
 
 The machine-readable source of status and evidence is
 [`production/readiness.json`](../production/readiness.json). CI rejects missing
@@ -51,7 +51,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-09 | The Selection Firewall is enforced in every shipping dependency graph and process boundary: private selection cannot reach network-control capabilities. | Build-time import/capability policy plus runtime process-boundary tests for release binaries. | PARTIAL |
 | PROD-10 | For equal public state, private reader activity does not change packet size, count, cadence, peers, retransmission, congestion response, cache maintenance or speculative networking. | Blind two-world packet/DNS captures across idle and diverse private workloads, including failures and congestion. | PARTIAL |
 | PROD-11 | Constant cadence is maintained on the actual wire across clock drift, suspend/resume, loss, congestion and process stalls without catch-up bursts. | At least 72 hours of WAN capture per supported platform with preregistered tolerances and zero unexplained violations. | PARTIAL |
-| PROD-12 | Network coding is generation-bound and pollution-resistant; malicious innovative symbols cannot cause accepted corruption or unbounded resource use. | Authenticated coding design, fuzz/property tests and Byzantine pollution campaign. | PARTIAL |
+| PROD-12 | Network coding is generation-bound and pollution-resistant; malicious innovative symbols cannot cause accepted corruption or unbounded resource use. | Authenticated coding design, fuzz/property tests and Byzantine pollution campaign. | MET |
 | PROD-13 | Distributed storage meets measured availability and durability targets while replication, eviction, repair and cache warming remain independent of private reads. | Multi-region churn/partition tests, repair traces and private-state non-interference comparison. | PARTIAL |
 | PROD-14 | All queues, batches, generations and caches have explicit resource limits and safe backpressure that does not create private-dependent wire behavior. | Load tests at every limit, OOM/disk-full tests and wire-trace comparisons. | PARTIAL |
 | PROD-15 | SiteID and publisher-key discovery, binding, rotation, expiry, revocation and recovery are authenticated and resistant to rollback/equivocation. | Normative specification, transparency/equivocation tests and recovery drill. | NOT_MET |

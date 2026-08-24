@@ -543,3 +543,59 @@ race-tests each one so the next divergence fails the build.
 - Residual gap (tracked): the materializer constructs the raw `Decoder`; the
   budget-enforcing `BoundedDecoder` from Workstream G exists in the library
   but nothing on the shipping path uses it yet.
+
+### Pollution resistance closed to MET (PROD-12)
+
+The criterion names two harms — accepted corruption and unbounded resource use
+— and three forms of evidence. All three now exist, and the harms are tested
+at the production boundary rather than in the library alone.
+
+**Authenticated coding.** Batch descriptor v3 carries one SHA-256 commitment
+per source symbol under the authority signature. `VerifyDescriptor` requires
+exactly K of them and rejects a descriptor that omits, truncates, malformes or
+tampers with the set; being under the signature is what stops a relay
+re-pointing the check at different data. The materializer builds its decoder
+with those commitments, so a systematic symbol whose data does not match is
+refused for the cost of one hash, before it can enter the basis.
+
+**What is deliberately not claimed.** A dense coded symbol — one mixing
+several sources — cannot be verified before admission. A hash is not
+homomorphic over the code's linear structure, and the constructions that would
+allow it need a large prime field, a shared secret a re-encoding broadcast
+network cannot have, or pairings. Nomad codes over GF(2^8). So a hostile
+source can still *deny* a generation at bounded cost, and 33 of the campaign's
+72 trials were denied. Denial is not one of the two harms this criterion
+names, and no claim is made that pollution cannot deny reconstruction. The
+first draft of the budget fuzzer asserted correctness under hostile input and
+was refuted within seconds — the documented limitation appearing as a
+measurement rather than an assertion.
+
+**Accepted corruption: none observed.** The boundary campaign runs 72 trials
+from 0 to 100 per cent pollution through the materializer's own decoder and
+verifier: 39 exact reconstructions, 33 denials, zero cases where a caller was
+handed bytes differing from the signed content hash. The test fails if no
+trial succeeds or none is denied, so it cannot pass by proving nothing.
+
+**Bounded resource use.** Every generation enforces symbol, byte,
+rank-attempt, elimination-work, memory and lifetime budgets, with duplicates
+deduplicated before any budget is charged. Verified in the library campaign at
+50/90/100 per cent malicious over 100k attempts, and by the fuzzer across
+134,125 executions.
+
+**Generation binding.** A symbol with correct dimensions but a foreign
+generation is refused and does not advance the decoder. Separately,
+`rawcache.Load` re-derives the stream commitment from the bytes it read, so a
+cache altered outside `Put` cannot feed uncommitted ciphertext to the
+materializer — a check that was on the production read path with no test until
+now. Both tests fail when the code they exercise is disabled.
+
+**A defect was found and fixed in this cycle, not assumed absent.** The
+decoder returned a mixture of source symbols as one symbol, with a nil error,
+whenever pivots were discovered out of column order. See the RLNC finding
+above. The honest-exactness fuzzer fails against the pre-fix decoder in half a
+second.
+
+- Evidence rule item 4: `production/reports/2026-08-21-pollution-resistance/`.
+- Boundary: single machine, maintainer-produced report, Go 1.25.0. Not
+  independent review. Availability under a hostile relay is not claimed and is
+  not part of this criterion.
