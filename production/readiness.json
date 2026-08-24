@@ -187,10 +187,17 @@
   },
   {
    "id": "PROD-15",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "docs/SITE_IDENTITY.md is normative v1 as of 2026-08-21; the draft header's own condition (implementation, vectors and tests) is met",
+    "implementation: Jtensetti/nomad-local-reconstruction package site -- self-certifying SiteIDs derived from genesis, descriptor chain, rotation, recovery, revocation, equivocation proofs, four client identity states",
+    "30 tests including adversarial: foreign-genesis bricking, forged and genuine equivocation proofs, a stolen signing majority failing to seize recovery, base64 non-malleability, revocation budget exhaustion, absorbing revocation, unbounded authorizations, possession proofs for new keys, failed claims reported invalid rather than unknown, race freedom",
+    "recovery drill: TestSiteKeyCompromiseRecoveryDrill rehearses the full sequence end to end -- publish, total signing-key theft, the attacker publishing indistinguishably, offline recovery through the recovery quorum, the attacker's later publications refused, the operator resuming under a rescued key, the compromised back catalogue correctly invalidated, and re-publication under the new key",
+    "the drill records the propagation window explicitly: a reader who has not yet seen the recovery still accepts the attacker, bounded by descriptor distribution rather than by the protocol"
+   ],
    "blockers": [
-    "SiteID and publisher key lifecycle"
+    "descriptor distribution is not specified or implemented: the drill's step 6 shows a reader who has not seen a recovery still accepting the attacker, and nothing here bounds how long that lasts. Transparency-log or gossip distribution of descriptors is the missing half of rollback and equivocation resistance",
+    "no independent review of the identity design; the specification, implementation and drill are all authored here"
    ]
   },
   {

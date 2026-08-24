@@ -1,7 +1,13 @@
-# SiteID and publisher identity (draft v1)
+# SiteID and publisher identity (normative v1)
 
-Status: DRAFT. Nothing here is active protocol until the implementation,
-vectors and tests land and this header changes.
+Status: NORMATIVE v1 as of 2026-08-21. The implementation
+(`Jtensetti/nomad-local-reconstruction`, package `site`), its published
+vectors and its adversarial tests are in place, including a full
+key-compromise recovery drill. The condition this header carried while it was
+a draft has been met.
+
+Changing anything here now is a protocol change: it needs a version bump and
+the compatibility matrix updated, not an edit.
 
 Object integrity and publisher identity are separate claims. The existing
 signed manifest (`nomad-object-v1` / `nomad-manifest-v1`, 228 bytes) proves
