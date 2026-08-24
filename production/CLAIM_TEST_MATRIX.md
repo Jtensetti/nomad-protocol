@@ -36,9 +36,11 @@ Levels, weakest first:
 | Split-brain fails closed, halt survives persistence failure | negative tests | equivocation, halt-fails-open, cross-process regressions | adversarial |
 | Rollback to a burned epoch is rejected | negative tests | high-water-mark regression | adversarial |
 | Rotation timing takes no private input | determinism test | `TestPlanIsDeterministicAndPublicOnly` | unit |
-| Retired shares are refused | production path | share-service guard tests; `Chain.ServesEpoch` | unit |
-| Retired epoch material is unrecoverable after erasure | adversarial experiment | `TestForwardSecrecyAfterErasure` | adversarial |
-| Compromise recovery works end to end | drill | `TestRecoveryDrill` (5-operator, 3-of-5) | integration |
+| Next-epoch DKG, descriptor assembly and activation complete automatically | production lifecycle across restart/failure | public-schedule DKG controller exists in draft PR #16; descriptor assembly, approval collection, READY, chain import and activation are **not implemented as one automatic path** | partial structural |
+| Public DKG retry state cannot be confused by durable discard evidence | restart after failed attempt | `TestCompletedAttemptScanAllowsDiscardEvidence`; malformed evidence-name negative test | adversarial, unit; exact draft head awaits CI |
+| Retired shares are refused | production path | share service refreshes the persisted chain before startup, work and HTTP delivery; retirement tests | integration code in draft PR #16; exact head awaits CI |
+| Retired epoch material is unrecoverable after later credential compromise | live operator persistence + adversarial compromise after retirement | `TestForwardSecrecyAfterErasure` deletes generated share files only; it does **not** attack retained DKG state with a later-compromised static DKG identity | model adversarial; production claim unproved |
+| Compromise recovery works end to end | independent multi-operator drill | `TestRecoveryDrill` (five in-process operators, 3-of-5) | protocol integration; no independent administration/WAN |
 | No machine holds a complete decryption key | process + host separation | Compose share isolation | integration, single host |
 
 ## Admission and directory
@@ -190,6 +192,7 @@ a second builder, blind two-world classification, and every row in the
 long-horizon section — are gated on external resources (EB-1, EB-3, EB-4) or
 on unstarted work rather than on further design.
 
-They are also why the great majority of PROD gates are not MET. Two gates
-(PROD-08, PROD-12) are MET because their criteria name harms this matrix has
-rows for at `adversarial` level; that is not a statement about the others.
+They are also why the great majority of PROD gates are not MET. PROD-12 is the
+only MET gate. PROD-08 was downgraded because unit/model evidence for erasure
+and a public retry planner do not demonstrate the complete automatic lifecycle
+or live forward-secrecy boundary its criterion names.

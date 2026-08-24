@@ -3,6 +3,58 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-24b: C2 reconciled; PROD-08 evidence boundary corrected
+
+**Repository reconciliation.** Main, the current production-readiness branches
+and the stranded specialist branches were compared across all Nomad
+repositories before security-sensitive edits. The C2 retirement/rotation work
+was then three-way merged onto the current `nomad-testnet` branch rather than
+replacing later Claude changes. The result is exact head `5491caa`, draft PR
+#16; it is not merged.
+
+**Implemented.** The draft adds the public-schedule DKG controller, fresh retry
+directories, kernel-backed process lock, crash-recoverable failed-share
+discard, persisted and chain-revalidated revocations, signed retirement
+acknowledgements, fresh persisted-chain guards at share-service startup/work/
+HTTP delivery, per-operator chain import in Compose, and release inclusion for
+both lifecycle binaries. Lifecycle/controller JSON now rejects duplicate keys
+before semantic or signature verification.
+
+**Internal evaluator pass.** Three concrete defects were fixed before the PR:
+
+1. A canonical discard-evidence filename shared the attempt-directory prefix,
+   so the completed-attempt scan parsed `01.discard.json` as an integer and
+   blocked later retries. Positive and malformed-name regressions now pin the
+   fix.
+2. `nomad-lifecycle` and `nomad-rotation-controller` were built into the image
+   but escaped both the network-domain dependency gate and the gated release
+   archive. Both are now enforced.
+3. The new persisted lifecycle artifacts accepted duplicate JSON keys under
+   Go's last-key-wins parser. Descriptor, revocation, erasure intent/statement,
+   DKG result marker and discard evidence now fail on that ambiguity.
+
+This evaluator was not independent and is not recorded as an audit.
+
+**Verification.** The local Python two-world analyzer self-suite passes and
+all previously committed report checksums remain valid. This environment has
+no Go toolchain or container runtime. PR #16 triggered workflow run
+`32737789012`, but the `unit` job failed with zero steps and no runner;
+downstream jobs were skipped. That is EB-8. No build, vet, race,
+cross-platform or Compose claim is made for `5491caa`.
+
+**Gate correction.** PROD-08 is downgraded from MET to PARTIAL. The existing
+report proves the older commit it ran, not this integrated head. More
+importantly, the production criterion still lacks automatic descriptor
+assembly, approval collection, READY, chain import and activation, and the
+forward-secrecy experiment does not test a later compromise of the static DKG
+identity against retained live ceremony state. Counts are now 1 MET, 25
+PARTIAL, 3 NOT_MET, 1 BLOCKED.
+
+**Next.** Keep phase order: complete the automatic C lifecycle and live
+forward-secrecy experiment, then re-evaluate C before D and A. Do not merge PR
+#16 or promote PROD-08 until exact-head verification and the named boundary
+gaps are closed.
+
 ## Checkpoint 2026-08-24: four gates that were not gating, and the seal cost
 
 **What this checkpoint is mostly about.** A full sweep across every repository
@@ -90,7 +142,7 @@ engine forks still carry integration contracts only.
   binary encoding with published vectors, chained approval quorum,
   activation signatures, envelope-vs-active windows, persisted fail-closed
   chain store, enforced signature journal, 3-of-5 profile tests.
-- **Independent review of C1 found five must-fix defects, each with a
+- **An internal evaluator review of C1 found five must-fix defects, each with a
   working exploit.** The most serious: `Approval.Index` was narrowed to
   uint16 for lookup but deduplicated on the full uint32, and the approval
   message bound nothing about the approver, so ONE previous-epoch operator

@@ -4,7 +4,7 @@ Last updated: 2026-08-24. Authoritative gate statuses live in
 [`production/readiness.json`](production/readiness.json); this document
 explains them in prose. Where the two disagree, the registry wins.
 
-**Nomad is not production ready.** 2 of 30 production gates are MET. This
+**Nomad is not production ready.** 1 of 30 production gates are MET. This
 document says what exists, what it is evidenced to do, and what it does not
 do.
 
@@ -19,11 +19,13 @@ core and no production deployment. Concretely:
   created through authenticated Pedersen DKG, bounded immutable caches, and
   a networkless materializer that hands verified objects to a sandboxed
   macOS browser with no network entitlement.
-- **A complete epoch and key lifecycle** (Workstream C): canonical
-  descriptors with published vectors, chained membership transitions
-  authorized by a quorum of the previous committee, automatic rotation on a
-  public schedule, retirement, key erasure with a forward-secrecy
-  experiment, revocation, and a recovery drill that runs in CI.
+- **A partial epoch and key lifecycle substrate** (Workstream C): canonical
+  descriptors with published vectors, chained membership transitions,
+  fail-closed retirement guards, revocation and erasure primitives, and a
+  public-schedule DKG controller in draft PR #16. Descriptor assembly,
+  approval collection, READY, automatic chain import/activation, live
+  static-key forward-secrecy evidence and independent-operator execution are
+  still missing. The exact draft head has not yet passed CI.
 - **A publisher identity system** (Workstream D): self-certifying SiteIDs,
   rotation, offline recovery authority, rollback and equivocation handling,
   and four explicit client identity states.
@@ -92,8 +94,11 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
   verifies the wrong site correctly.
 - **Endpoint security.** A compromised OS, malware in the browser domain, or
   seizure of plaintext is outside the claim.
-- **Erasure substrate.** Key erasure guarantees file destruction within an
-  encrypted volume, not physical media destruction.
+- **Erasure substrate.** The implemented overwrite-and-unlink primitive can
+  claim only filesystem-visible destruction inside an encrypted volume, not
+  physical-media destruction. The existing experiment does not establish
+  forward secrecy after later compromise of a static DKG identity against
+  retained live DKG state.
 
 ## What is NOT protected?
 
@@ -133,26 +138,18 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**Two.** 2/30: PROD-08 and PROD-12. The registry holds 24 PARTIAL, 3 NOT_MET
-and 1 BLOCKED besides them.
+**One.** 1/30: PROD-12. The registry holds 25 PARTIAL, 3 NOT_MET and 1
+BLOCKED besides it.
 
-- **PROD-08** (committee membership, rotation, forward secrecy, key erasure,
-  compromise recovery): on the production path, with a normative spec,
-  published descriptor vectors whose digest matches the registry byte for
-  byte, and all thirteen named boundary tests passing race-enabled inside a
-  53-test package — including a five-operator three-of-five recovery drill.
 - **PROD-12** (generation-bound, pollution-resistant network coding): source
   commitments under the authority signature, a decoder that refuses polluted
   systematic symbols before admission and enforces per-generation budgets, two
   fuzz targets, and a Byzantine campaign of 72 trials from 0 to 100 per cent
   pollution producing zero accepted corruptions.
 
-Both were promoted on external test reports rather than GitHub Actions, which
-the evidence rule permits in the same clause ("GitHub Actions **or** external
-test report"). An earlier reading of the Actions outage as capping every
-promotion was wrong, and the triage document is corrected.
-
-Neither promotion claims more than its criterion names. PROD-12 in particular
+PROD-12 was promoted on an external test report rather than GitHub Actions,
+which the evidence rule permits in the same clause ("GitHub Actions **or**
+external test report"). It
 does **not** claim pollution cannot deny a generation: a dense coded symbol
 cannot be verified before admission over GF(2^8), a third of the campaign's
 trials were denied, and the first version of the budget fuzzer asserted
@@ -190,7 +187,7 @@ independent assessment would find than about what has been fixed.
 
 ## Which remain blocked, and on what?
 
-Seven external dependencies, detailed in
+Eight external dependencies, detailed in
 [`production/EXTERNAL_BLOCKERS.md`](production/EXTERNAL_BLOCKERS.md):
 
 | ID | Blocked on | Gates |
@@ -202,6 +199,7 @@ Seven external dependencies, detailed in
 | EB-5 | A second implementation by another author | PROD-03 |
 | EB-6 | A second human release approver | PROD-30 |
 | EB-7 | A project release key for the signed specification tag | PROD-01 |
+| EB-8 | Working GitHub Actions runner capacity (or exact-head external report) | evidence rule 4 across active gates |
 
 **No gate is still NOT_MET for want of engineering.** Three are: PROD-03
 needs an implementer who is not this project, PROD-28 needs thirty days of
@@ -210,8 +208,8 @@ PROD-29 is BLOCKED on an external assessor. Everything else has moved to
 PARTIAL with a specific blocker recorded against it.
 
 That is a statement about the NOT_MET column and not about readiness. Most of
-the twenty-four PARTIAL criteria are substantially incomplete, and the pattern
-across their blockers is worth reading as one thing rather than twenty-four:
+the twenty-five PARTIAL criteria are substantially incomplete, and the pattern
+across their blockers is worth reading as one thing rather than twenty-five:
 nothing here has been reviewed by anyone who did not build it, no experiment
 has run across genuinely separate administrative domains, and the largest
 claimed property — that repeated use does not accumulate into an

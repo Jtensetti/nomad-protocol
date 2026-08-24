@@ -23,6 +23,18 @@ Existing hard-won assets to preserve, not rewrite:
   fail-closed notarization workflow (uncredentialed).
 - Selection Firewall dependency gates in CI.
 
+## Current phase gate (2026-08-24)
+
+Registry state is 1 MET, 25 PARTIAL, 3 NOT_MET and 1 BLOCKED. Phase 1 remains
+in C. Draft PR #16 (`nomad-testnet@5491caa`) integrates the public-schedule DKG
+controller, retirement/revocation state and fresh share-service epoch guard,
+but it is not mergeable evidence until EB-8 is resolved and exact-head CI is
+green. C is not complete until descriptor assembly, approval collection,
+READY, automatic chain import/activation and a live later-compromise
+forward-secrecy experiment exist on one production path. D and A artifacts
+already built may be maintained, but no new phase is promoted past C on the
+strength of protocol-level tests alone.
+
 Known understatements the plan must not repeat (evaluator findings 1-2):
 the publisher-facing constant-rate **client uplink does not exist** (the
 fixed-cadence fabric is operator-to-operator; clients only have a downlink

@@ -59,6 +59,32 @@ actually demonstrates and, equally, what it does not.
 
 ## New evidence (2026-08-20 onward)
 
+### C2 lifecycle reconciliation (2026-08-24; draft, not immutable release evidence)
+
+- Implementation head: `Jtensetti/nomad-testnet@5491caa`, draft PR #16,
+  based on `claude/nomad-production-ready-dxv4ql`.
+- Adds: public-schedule DKG execution with fresh retry directories; durable
+  failed-share discard; process lock; persisted, chain-revalidated
+  revocations; crash-recoverable erasure acknowledgements; fresh epoch-chain
+  guards at share-service startup, threshold work and HTTP delivery; Compose
+  epoch import; release inclusion of both lifecycle binaries.
+- Internal evaluator findings fixed before the PR: discard evidence blocked
+  later retry-state scans; the lifecycle binaries escaped the network-domain
+  dependency gate and release archive; lifecycle/controller JSON accepted
+  duplicate-key ambiguity. Each code finding has a regression or a CI-policy
+  change.
+- Locally verified here: the Python two-world analyzer self-suite passes; the
+  existing immutable report checksums remain valid.
+- Not demonstrated: the exact Go head has not yet completed build, vet, race,
+  cross-platform or Compose CI; automatic descriptor assembly, approval
+  collection, READY, chain import and activation remain absent; the existing
+  forward-secrecy experiment does not attack retained live DKG state after a
+  later compromise of the static DKG identity; no WAN or independently
+  administered drill exists.
+- Consequence: PROD-08 is PARTIAL. The 2026-08-21 report remains valid evidence
+  for the older code it ran, but cannot verify this head or fill these boundary
+  gaps.
+
 ### Baseline 2026-08-20
 
 - All eight Go repos pass `go build`, `go vet`, `go test -race` at branch
@@ -68,7 +94,7 @@ actually demonstrates and, equally, what it does not.
 ### Epoch lifecycle core (Workstream C, sprint C1)
 
 - Implementation: `Jtensetti/nomad-testnet@2f2e3a6` (`live/epoch`).
-- Security fixes after independent review: `@318845a`, `@0ad1e35`.
+- Security fixes after an internal evaluator pass: `@318845a`, `@0ad1e35`.
 - Specification: `nomad-protocol/docs/EPOCH_LIFECYCLE.md`.
 - Demonstrates: canonical binary encoding with published vectors that pin
   preimages, digests and real signatures from a published test key;

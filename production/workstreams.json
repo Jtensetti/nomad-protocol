@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated": "2026-08-21",
+ "updated": "2026-08-24",
  "status_values": [
   "NOT_STARTED",
   "PARTIAL",
@@ -22,103 +22,103 @@
      "id": "C-01",
      "summary": "canonical versioned EpochDescriptor (network, epoch, validity window, operator set, threshold, traffic class, committee key, topology digest, previous-epoch digest, protocol version, attestations)",
      "status": "PARTIAL",
-     "note": "implemented and independently reviewed (evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); awaiting integration and boundary evidence"
+      "note": "implemented and internally evaluated (the evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); independent review and production-boundary evidence remain"
     },
     {
      "id": "C-02",
      "summary": "public epoch-descriptor test vectors",
      "status": "PARTIAL",
-     "note": "implemented and independently reviewed (evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); awaiting integration and boundary evidence"
+      "note": "implemented and internally evaluated; vectors cover the current Go encoding, but independent consumption and production-boundary evidence remain"
     },
     {
      "id": "C-03",
      "summary": "all security-sensitive protocol objects context-bound (network, version, epoch, committee, batch, round, sender, role, purpose); no cross-epoch transplants",
      "status": "PARTIAL",
-     "note": "audited 2026-08-20: DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys bind epoch+committee correctly; lifecycle objects now bind approver identity, role and epoch (318845a); revocation/erasure statements still unimplemented"
+      "note": "internal audit covers DKG packets, committee IDs, shuffle proofs/receipts, partial decryptions and hop keys; draft PR #16 adds bound revocation, erasure-intent and discard statements with duplicate-key rejection; complete protocol-surface and independent review remain"
     },
     {
      "id": "C-04",
      "summary": "automatic next-epoch DKG while epoch N active",
      "status": "PARTIAL",
-     "note": "rotation planner implemented as a pure function of chain, clock and public policy, with a determinism test proving no private input path (nomad-testnet live/epoch); protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 adds a public-schedule DKG controller with fresh retry attempts and durable discard, but descriptor assembly, approval collection, READY, chain import and activation are not one automatic path; exact head awaits full CI"
     },
     {
      "id": "C-05",
      "summary": "activation only at public predetermined boundary, independent of private behavior",
      "status": "PARTIAL",
-     "note": "implemented and independently reviewed (evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); awaiting integration and boundary evidence"
+      "note": "the descriptor enforces a public activation boundary; automatic production-path assembly/import/activation and independent boundary evidence remain"
     },
     {
      "id": "C-06",
      "summary": "retired epoch shares rejected",
      "status": "PARTIAL",
-     "note": "share service refuses threshold work outside the serving window and requires an explicit guard; TopologyWindowGuard for current deployments, Chain.ServesEpoch for chain-carrying ones; protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 makes the share service refresh the persisted epoch chain before startup, work and HTTP delivery; exact head awaits CI and live/WAN retirement evidence"
     },
     {
      "id": "C-07",
      "summary": "stale proof/share/session replay rejected",
      "status": "PARTIAL",
-     "note": "cross-epoch binding audited as strong; descriptor-level rollback and retirement now implemented (2f2e3a6); retired-share refusal at the share service still missing"
+      "note": "cross-epoch binding, descriptor rollback and retirement guards exist; draft PR #16 adds a fresh persisted-chain guard to the share service, but exact-head CI and live stale-session replay evidence remain"
     },
     {
      "id": "C-08",
      "summary": "key-erasure procedure implemented, documented, tested with evidence",
      "status": "PARTIAL",
-     "note": "EraseEpochMaterial overwrites, syncs and unlinks, and emits a signed statement carrying mandatory limitations text; canonical encoding rejects a statement that understates them; protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 adds a crash-recoverable signed erasure intent/acknowledgement and mandatory limitations text; CLI/runbook reconciliation, exact-head CI and live persisted-state evidence remain"
     },
     {
      "id": "C-09",
      "summary": "operator replacement via signed protocol transition (membership-transition primitive defined here, DEC-006; B consumes it)",
      "status": "PARTIAL",
-     "note": "membership transition implemented and drilled (approval quorum of the previous committee; a revoked operator cannot approve its own replacement); protocol-level only, no live/WAN integration or independent review"
+      "note": "membership transition is implemented and drilled in-process (previous-committee quorum; revoked operator excluded); no automatic end-to-end transition or independent/WAN execution exists"
     },
     {
      "id": "C-10",
      "summary": "compromise recovery flow (credential compromise, lost operator, emergency transition)",
      "status": "PARTIAL",
-     "note": "compromise recovery drilled end to end: peer-quorum revocation, emergency transition, retired-epoch refusal, erasure; protocol-level only, no live/WAN integration or independent review"
+      "note": "peer-quorum revocation, emergency transition, retired-epoch refusal and erasure are drilled in-process; automatic orchestration, credential-rotation boundary, independent administration and WAN evidence remain"
     },
     {
      "id": "C-11",
      "summary": "signing-identity revocation",
      "status": "PARTIAL",
-     "note": "revocation statements with self and peer-quorum authorization, persisted store feeding chain admission; protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 adds self/peer-quorum revocations and a persisted store revalidated against the historical chain before future admission; exact-head CI and multi-operator execution remain"
     },
     {
      "id": "C-12",
      "summary": "split-brain activation fails closed",
      "status": "PARTIAL",
-     "note": "implemented and independently reviewed (evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); awaiting integration and boundary evidence"
+      "note": "implemented and internally evaluated; independent split-brain boundary evidence remains"
     },
     {
      "id": "C-13",
      "summary": "two valid conflicting descriptors for one epoch cannot both silently activate",
      "status": "PARTIAL",
-     "note": "implemented and independently reviewed (evaluator found 5 must-fix defects incl. a confirmed single-operator quorum forgery; all fixed with regressions in nomad-testnet 318845a); awaiting integration and boundary evidence"
+      "note": "implemented and internally evaluated; independent multi-observer activation evidence remains"
     },
     {
      "id": "C-14",
      "summary": "interrupted DKG never resumes from unsafe ambiguous state",
      "status": "PARTIAL",
-     "note": "DKG journal refuses to resume an interrupted session; the rotation planner supplies the public retry ladder and escalation offset; protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 refuses same-attempt resume, uses public retry offsets, durably discards failed shares and fixes a retry scan blocked by discard evidence; exact-head CI and crash/fault boundary execution remain"
     },
     {
      "id": "C-15",
      "summary": "forward-secrecy adversarial experiment",
      "status": "PARTIAL",
-     "note": "forward-secrecy experiment: captured epoch ciphertext, control decryption before erasure, then the complete post-erasure state of every operator yields no usable share; protocol-level only, no live/WAN integration or independent review"
+      "note": "the existing experiment deletes generated share files and proves that model state no longer decrypts; it does not attack retained live DKG state after later compromise of the static DKG identity, so the production forward-secrecy claim remains unproved"
     },
     {
      "id": "C-16",
      "summary": "recovery drill documented and executed in test environment",
      "status": "PARTIAL",
-     "note": "deploy/RECOVERY_RUNBOOK.md with TestRecoveryDrill executing procedures 1-5 on a five-operator 3-of-5 network; protocol-level only, no live/WAN integration or independent review"
+      "note": "TestRecoveryDrill covers five in-process operators at 3-of-5; the runbook erasure command is stale relative to draft PR #16 and no independent/WAN execution exists"
     },
     {
      "id": "C-17",
      "summary": "CI regression tests for the epoch lifecycle",
      "status": "PARTIAL",
-     "note": "epoch package in the Selection Firewall CI graph plus a transitive no-network-capability gate on the publication API; protocol-level only, no live/WAN integration or independent review"
+      "note": "draft PR #16 adds lifecycle binaries to the network-domain dependency gate and release bundle, with lifecycle regressions; the exact head must complete the required workflow before this can advance"
     }
    ]
   },
@@ -135,13 +135,13 @@
      "id": "D-01",
      "summary": "canonical versioned SiteDescriptor (SiteID, sequence, signing keys, recovery policy, validity, previous-descriptor commitment, transition signatures, revocation)",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-02",
      "summary": "domain-separated deterministic SiteID derivation from defined genesis; public vectors",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-03",
@@ -153,31 +153,31 @@
      "id": "D-04",
      "summary": "rotation authorized by previous valid chain; rollback to superseded descriptor prevented",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-05",
      "summary": "expiry and revocation",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-06",
      "summary": "offline recovery keys; recovery stricter than rotation",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-07",
      "summary": "split-view/equivocation detection model implemented",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-08",
      "summary": "malformed descriptors fail closed",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-09",
@@ -194,13 +194,13 @@
      "id": "D-11",
      "summary": "genesis/first-key trust policy explicitly defined",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     },
     {
      "id": "D-12",
      "summary": "adversarial tests: theft, stale descriptor, fork, rollback, replay, invalid recovery, conflicting chains",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "implemented and internally evaluator-reviewed (4 HIGH exploits found and fixed with regressions), vectors published; independent review and browser integration remain"
     }
    ]
   },

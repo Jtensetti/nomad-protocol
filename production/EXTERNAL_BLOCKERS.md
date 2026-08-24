@@ -40,15 +40,20 @@ only the listed action. Never fabricate these.
   WAN DKG transcript across their hosts, per-operator attestations of the
   activated epoch descriptor, and (for PROD-05) witnessed key custody/erasure
   statements from each administrator.
-- **Already complete:** the onboarding package is written and the lifecycle
-  tooling exists. `nomad-testnet/deploy/OPERATOR_ONBOARDING.md` is addressed
-  to an external administrator and needs no other project knowledge; it
-  covers identity generation, reading and attesting the draft, verifying the
-  signed topology, the DKG, serving, rotation and erasure, and states what
-  an operator will never be asked for. `nomad-operator` provides init,
-  inspect, attest, verify and erase; `deploy/RECOVERY_RUNBOOK.md` covers the
-  failure cases and is exercised by TestRecoveryDrill. **The only remaining
-  action is recruiting the people.**
+- **Engineering boundary before evidence collection:** onboarding and
+  recovery documents exist, and draft PR #16 adds the lifecycle controller,
+  persisted chains, retirement guards and revocation/erasure tooling. That PR
+  is unmerged and its exact head still needs full CI. Descriptor assembly,
+  approval collection, READY, automatic import/activation and a live
+  forward-secrecy experiment are still engineering work. The onboarding
+  erasure example must also be reconciled with the actual CLI before it is
+  handed to an operator. Recruiting may start now, but no independent-operator
+  evidence may be claimed until that boundary is complete.
+- **Exact external handoff after that boundary:** each administrator generates
+  its private material locally, returns only the signed enrollment and public
+  endpoint, follows the versioned runbook on its own host, and publishes the
+  resulting DKG/activation/retirement evidence. Project maintainers must not
+  generate, copy or escrow an operator's private material.
 
 ## EB-3: Multi-region WAN test infrastructure
 
@@ -136,18 +141,47 @@ only the listed action. Never fabricate these.
 - **Verification afterward:** `git tag -v protocol-v1` succeeds against the
   published public key, and the tagged tree's conformance corpus digest
   matches the one recorded in the evidence index.
-- **Already complete:** everything the tag would cover. The corpus, the
-  compatibility matrix, the downgrade rule and the cross-architecture check
-  are in place and enforced; the specification content is written. What is
-  missing is a signature over it, and only custody prevents that.
+- **Engineering boundary before signing:** the corpus, compatibility matrix,
+  downgrade rule and cross-architecture check exist, but PROD-01 still lacks a
+  published conformance schema and a single normative account of all state
+  transitions, errors and timeouts. The protocol is not frozen. Do not create
+  or sign `protocol-v1` until those blockers are closed and the release target
+  is fixed.
+- **Exact external handoff after that boundary:** the project owner verifies
+  the frozen commit and corpus digest, signs that exact commit with the
+  project-controlled key, and publishes only the public key and signed tag.
+
+## EB-8: GitHub Actions runner availability
+
+- **Missing:** a runner that actually starts the required repository
+  workflows. Draft PR #16 run `32737789012` on exact head `5491caa` failed in
+  the `unit` job with zero steps; `live-compose` and `release` were skipped.
+  The same zero-step failure pattern affects the current Nomad repositories.
+- **Why not autonomous:** Actions enablement, billing/minutes budgets and
+  self-hosted-runner registration are account/organization controls not
+  exposed to repository code or the GitHub connector.
+- **Exact minimal handoff:** the owner opens GitHub repository/organization
+  **Settings → Actions** and **Billing/Budgets**, enables Actions for these
+  private repositories and restores hosted-runner capacity, or registers a
+  trusted ephemeral self-hosted runner. No repository secret is required for
+  the unit/Compose jobs.
+- **Verification afterward:** rerun workflow `32737789012`; `unit` must show an
+  assigned runner and execute checkout, formatting, dependency gates, build,
+  vet, race, component, conformance and platform steps; `live-compose` must
+  then execute and pass. Preserve the run URL and artifact digests against
+  exact head `5491caa`.
+- **Alternative:** a complete external test report from exact head `5491caa`
+  may satisfy evidence rule item 4, but it must include every required command
+  and immutable digests; the older 2026-08-21 report cannot be reused for this
+  head.
 
 ## What none of these are
 
-None of these seven is a design problem, and none is waiting on further
-engineering here. Each names a person, a credential, a machine or an elapsed
-duration. Where a blocker sits between "the work is done" and "the gate is
-MET", the work is described above as already complete so that the external
-party performs exactly one action and no more.
+Each blocker contains an irreducibly external action: a person,
+credential, machine, independent organization or elapsed duration. That does
+not imply all adjacent engineering is complete. EB-2 and EB-7 explicitly name
+their remaining engineering boundary so an external party is not asked to
+validate a moving or incomplete target.
 
 Two further gates are held by the same principle without appearing here,
 because they need a second party rather than an external one: PROD-02 (a

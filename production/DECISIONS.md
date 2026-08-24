@@ -2,6 +2,20 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-010 (2026-08-24): PROD-08 requires the complete live lifecycle boundary
+
+PROD-08 is downgraded from MET to PARTIAL. A public-only planner, signed
+descriptor model, erasure primitive and in-process recovery drill are
+necessary but do not demonstrate the criterion as a whole. Promotion requires
+one production path that automatically runs next-epoch DKG, gathers approvals
+and activations, validates outputs, reaches READY, imports the descriptor,
+activates only at the signed public boundary, retires the predecessor and
+records erasure. It also requires a forward-secrecy experiment against the
+persisted state of a live ceremony after later credential compromise. An
+external test report for an older commit cannot verify a newer integrated
+head. This is an evidence-boundary correction, not a redefinition of the
+criterion.
+
 ## DEC-009 (2026-08-20): One two-world capture harness, born in A, extended in E
 
 The blind-capture/preregistration machinery required by the airlock DoD
