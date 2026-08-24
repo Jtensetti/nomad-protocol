@@ -319,3 +319,51 @@ second pair of eyes in this project".
 days out, and four more gates need people this session cannot be. What is
 reachable is that every gate is honestly marked with a specific blocker rather
 than a general one, and that is now true of all thirty.
+
+## Checkpoint 2026-08-21d: the deposit path, and the end of achievable NOT_MET
+
+**Publication had no distributed form.** The queue held encrypted fragments,
+the uplink could seal work and cover indistinguishably, the airlock could
+accept deposits and seal a batch — and nothing called `Queue.Next` or
+`Airlock.Deposit`. The sizes had been designed to fit and had never met: a
+fragment is 504 bytes, exactly one uplink payload and one mix plaintext; the
+uplink's inner layer is 1152 bytes, exactly one airlock deposit.
+
+`live/deposit` joins them. The design point is what the drain does *not* do:
+call the queue on the cadence tick. An empty queue costs one directory read
+and a non-empty one costs a read, a decrypt, an unlink and a sync, and that
+difference is publication timing. A filling goroutine holds a one-slot buffer;
+the tick does a non-blocking receive and touches no disk.
+
+**Two instrument defects caught before they became evidence.**
+
+The correlation experiment's first positive control was an unshuffled airlock
+batch, and it scored chance — which looked exactly like the unlinkability
+measurement this project withdrew earlier, and was in fact the airlock
+working: `Seal` orders by deposit ID and randomises placement, destroying
+arrival order before any mixer touches the batch. The control was rebuilt with
+no defence at all, where the matcher recovers the mapping at 1.00.
+
+The publication campaign's first version synthesised each packet's timestamp
+as base plus tick times interval. Every capture was then perfectly regular by
+construction and the preregistered rule reported KS p=1.0 on all five pairs —
+a fabricated agreement that would have been filed as evidence of timing
+indistinguishability.
+
+**A refusal worth recording.** With real timestamps the campaign's own control
+fails: two idle publishers differ in mean inter-arrival by 0.003 to 0.520 of
+the nominal interval across five runs, against a 0.02 tolerance. The campaign
+therefore judges cell count, size and destination — which are exact — and
+explicitly declines to judge timing, while still measuring the floor every run
+so the refusal stays a finding rather than an assumption.
+
+**Gates: 2 MET, 24 PARTIAL, 3 NOT_MET, 1 BLOCKED.** The three NOT_MET are
+PROD-03 (a second implementer), PROD-28 (thirty days) and PROD-30 (a monitored
+beta and a second approver); PROD-29 is BLOCKED on an external assessor. No
+gate whose remaining work this project could do is still NOT_MET.
+
+That is a statement about NOT_MET, not about readiness. Twenty-four criteria
+are PARTIAL and their blockers are now specific rather than general: no
+independent review anywhere, no distributed correlation experiment, no
+descriptor distribution, no economic analysis, no availability claim under
+sustained flood, and no measurement of long-horizon correlation at all.
