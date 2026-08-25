@@ -463,10 +463,20 @@
   },
   {
    "id": "PROD-28",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "published SLOs: nomad-testnet deploy/SLO.md gives every target the test that measured it, and marks the ones that are wishes -- no uptime target, no capacity number, no disk-bytes bound, no regional-failure measurement. Availability is stated as subordinate to the privacy invariant, because where they conflict the protocol loses work rather than emit a private-dependent signal",
+    "disaster-recovery exercise that runs: live/node/recovery_test.go destroys each piece of a node's durable state in turn -- raw cache, hop sequence, topology watermark, and the combination -- and records what the code does. deploy/RECOVERY.md is written from what it measured rather than from what recovery ought to look like",
+    "the exercise's finding: a hop sequence file restored from backup moves the counter backwards and the node reissues numbers its peers have already seen. Measured in the unit exercise (sender emitted 18 cells, 0 local drops, receiver refused 17 as replays) and again end to end in the drill with shipped binaries (sender sent 99 cells, 0 local drops, passed --check-health; peer refused 80 replays). The sender cannot detect it at all; the only signal is a peer's replay_rejected, and the runbook is built around that",
+    "incident drill that runs: scripts/incident-drill.sh builds the real binaries, bootstraps three operators on loopback and works two scenarios with a pass or fail for each -- a node present and not working, and the sequence rollback. It runs in CI rather than on request, because a runbook whose drill has not been run since the code moved is a document about an older system",
+    "second drill finding: a stopped node that is resumed exits rather than carrying on, because it missed its lateness budget and a fixed-cadence sender refuses a catch-up burst. Recovery from a hang is therefore a restart and not a resume, which the runbook now says. That is the privacy invariant costing availability on purpose",
+    "the drill found two defects in itself before it found any in the system, both recorded: it asked only one peer for replay_rejected when the signed plan decides who hears whom, and it backed up and restored the sequence file either side of a single restart, where the bytes are identical and the restore does nothing. Both made it report that the documented signal never appears"
+   ],
    "blockers": [
-    "SLO, 30-day soak and incident exercises"
+    "no 30-day soak. Every figure in SLO.md comes from tests measured in seconds, in a container, alongside other work: they establish that a bound exists and is enforced and say nothing about drift, leaks or degradation over weeks, which is what a soak is for. This cannot be compressed and is why the criterion is not MET",
+    "no capacity targets: cells per second per operator, objects per epoch and concurrent publishers have no numbers, because none has been measured at a scale where the number would mean anything",
+    "no regional-failure exercise: the drill is three processes on one host's loopback. Node loss is exercised, regional failure is not, and that needs multi-region infrastructure (EB-3)",
+    "no incident history: these objectives have been tested only by exercises this project designed and ran"
    ]
   },
   {
