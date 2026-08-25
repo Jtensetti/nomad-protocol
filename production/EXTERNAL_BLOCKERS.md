@@ -166,6 +166,43 @@ only the listed action. Never fabricate these.
   are in place and enforced; the specification content is written. What is
   missing is a signature over it, and only custody prevents that.
 
+## EB-8: GitHub Actions is not executing for this account
+
+- **Missing:** the ability to run any workflow. Since 2026-08-24, every
+  workflow run in every Nomad repository completes as `failure` between three
+  and five seconds after it is created.
+- **What was established here:** the failed job records no steps, produces no
+  log (the log endpoint returns 404) and carries no check-run output, which is
+  the shape of a job that was never dispatched to a runner rather than one
+  that ran and failed. Every workflow file in all eight Go repositories parses
+  and declares jobs and triggers (`scripts/check-workflows.py`). The action
+  pins (`actions/checkout@v7`, `actions/setup-go@v7`) resolve to tags that
+  exist and are unchanged since the first workflow commit -- including in
+  `nomad-testnet` run 32301972409, which executed for 280 seconds and
+  succeeded on 2026-08-19 with those same pins. So the cause is upstream of
+  the workflow content.
+- **Why not autonomous:** the remaining candidates are account-level -- an
+  Actions spending limit or billing block, or Actions disabled for the
+  repositories. Both are settings only the account owner can read and change,
+  and neither is visible through the API scopes available here.
+- **Where obtained:** GitHub Settings -> Billing and licensing -> Plans and
+  usage (Actions minutes and any spending limit), and each repository's
+  Settings -> Actions -> General (whether Actions are permitted).
+- **Verification afterward:** push any commit and confirm the run executes for
+  longer than its setup -- for these repositories, tens of seconds at minimum
+  -- and that job logs are retrievable. A run that fails in under five seconds
+  with no logs has not tested anything.
+- **What this costs the registry meanwhile:** every criterion whose evidence
+  reads "checked in CI" is, right now, a statement about a workflow file that
+  is not being executed. The one CI run cited by ID in this registry
+  (nomad-testnet 32301972409) predates the outage and remains valid. Nothing
+  in this session's work has been verified remotely; it was verified locally,
+  and the evidence entries say which.
+- **Already complete:** local verification is not blocked by this. Every
+  repository's `go build`, `go vet` and `go test -race ./...` run here, and
+  the `agent-efficient-ci` skill's ladder exists precisely so that remote CI
+  is the last check rather than the first.
+
 ## What none of these are
 
 None of these seven is a design problem, and none is waiting on further

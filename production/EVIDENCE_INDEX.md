@@ -1474,3 +1474,35 @@ is drained by a goroutine on its own clock into a one-slot buffer, and the
 cadence tick does a non-blocking receive, so the tick never asks the queue
 anything.
 
+
+## FINDING: CI has not run since 2026-08-19, and nothing noticed
+
+`nomad-protocol` EB-8.
+
+Every workflow run in every Nomad repository since 2026-08-24 completes as
+`failure` between three and five seconds after it is created. The failed job
+records no steps, its log endpoint returns 404, and its check run carries no
+output -- the shape of a job that was never dispatched to a runner, not one
+that ran and failed. By contrast `nomad-testnet` run 32301972409 executed for
+280 seconds and succeeded on 2026-08-19.
+
+The cause is upstream of the workflow content. All eight Go repositories'
+workflow files parse and declare jobs and triggers; the action pins are
+unchanged since the first workflow commit and resolve to tags that exist,
+including in the run that succeeded. What is left is account-level -- an
+Actions spending limit, or Actions disabled -- and neither is readable through
+the API scopes available here. It is recorded as EB-8.
+
+**Why this belongs in an evidence index rather than a bug tracker.** This
+project's registry uses "checked in CI" as an evidence phrase in many places.
+For the last several days that phrase has described a workflow file rather
+than an execution. No criterion was ever marked MET on that basis in this
+session -- the work was verified locally and the entries say so -- and the one
+CI run cited by ID predates the outage and remains valid. But the distinction
+between "the gate exists" and "the gate ran" is exactly the distinction this
+index exists to keep, and it went unexamined for days of pushes.
+
+**The rule that should have caught it earlier is already written down.** The
+`agent-efficient-ci` skill states that a substantial job failing in seconds did
+not run. Twenty-odd pushes went out under that rule without anyone checking the
+result against it. Writing the check down is not the same as performing it.
