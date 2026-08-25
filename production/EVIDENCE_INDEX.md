@@ -1095,3 +1095,45 @@ reader queries between two attestations and requires the digest not to move.
 - Still missing for PROD-24: an OS sandbox, mutual IPC authentication (the API
   key authenticates the client to the service, not the service to the client),
   and attempted-egress packet capture.
+
+## FINDING: the vulnerability gate existed in one repository, and it was failing
+
+`nomad-rlnc` 8491ae3, `nomad-anytrust-mix-sim` 9391eab,
+`nomad-constant-rate-fabric` 8c79820, `nomad-local-reconstruction` 3f87f8f,
+`nomad-selection-firewall` f45a5f9, `nomad-semantic-basins` 29e2d97,
+`nomad-testnet` eece3e5, `Nomad-browser` 41631ae
+
+PROD-25 requires dependencies to be "continuously checked for vulnerable or
+malicious dependencies", and the registry cited a "govulncheck reachability gate
+on every push" as evidence. That gate ran in exactly one of nine Go repositories
+— and running it today reports **20 reachable standard-library vulnerabilities**
+in that one.
+
+**The cause is not a missed dependency bump.** The repositories pinned Go 1.23.
+Go backports security fixes only to the two newest minor versions, so 1.23
+stopped receiving them. Several findings name fixes that exist only in 1.24.9
+and in 1.25.11 through 1.25.13; there is no 1.23 release that carries them. A
+pinned toolchain silently ages out of support, and nothing in the repositories
+noticed because nothing was looking.
+
+**The other eight had no gate at all.** `nomad-semantic-basins` is the sharpest:
+its `LoopbackHTTPEmbedder` drives a real HTTP client, so `net/url`, `crypto/tls`,
+`crypto/x509`, `encoding/asn1` and `net/textproto` are reachable from it —
+including a `crypto/tls` Encrypted Client Hello privacy leak, in the component
+that handles the reader's query text.
+
+Every repository now builds on 1.25 and scans clean: `go` directives raised to
+1.25.0, CI moved to `1.25.x` so it resolves to the newest patch, and the gate
+added everywhere it was missing. `nomad-testnet` also scans each vendored
+component module, because they are separate modules behind replace directives
+and a root scan never reaches them — the same structural gap that once let an
+untested rlnc decoder ship.
+
+Verified by exit code on all nine repositories and all nine vendored modules,
+plus build, vet and the full test suites. The vendored snapshots were also found
+to differ from their upstreams by a blank line and a trailing newline, and are
+now byte-identical, so "byte-for-byte snapshot" is true rather than approximate.
+
+- What this does **not** establish: nothing here checks for *malicious*
+  dependencies, which the criterion also names. govulncheck answers "is a known
+  advisory reachable", not "is this dependency what it claims to be".

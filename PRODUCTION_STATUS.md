@@ -247,14 +247,21 @@ was supposedly enforcing, found four gates that were not gating:
 - **`go test -race ./...` was failing outright** in nomad-testnet, timing out
   at Go's ten-minute package default, because two statistical experiments ran
   under a race detector that changes the cost of the thing they measure.
+- **The vulnerability gate ran in one repository of nine, and was failing
+  there.** Every repository pinned Go 1.23, which stopped receiving backported
+  security fixes; Nomad-browser's govulncheck step reports twenty reachable
+  standard-library vulnerabilities, and PROD-25 cited that gate as evidence.
+  The other eight had no gate at all, so nothing was looking.
 
 Two more defects were found in code the gates were supposed to be watching: a
 cadence test that failed when the scheduler *correctly* refused to burst on a
 stalled host, and a topology admission check that compared endpoint strings,
 so two operators could occupy one address under different spellings and still
-be counted as two independent operators.
+be counted as two independent operators. A third pattern showed up twice more:
+capability gates that *skipped* when they could not resolve a package graph,
+reporting a boundary as fine without having looked.
 
-All six are fixed and each fix was verified by reintroducing the regression it
+All of them are fixed and each fix was verified by reintroducing the regression it
 exists to catch. The reason to record them here rather than only in the
 evidence index is that they are evidence about the evidence: this project's
 gates have been wrong at a rate that should inform how much weight the table

@@ -162,8 +162,10 @@ Levels, weakest first:
 | An embedding model that changed is detected | behavioural attestation | a fixed public probe set fingerprinted by basin, refused when it moves; degenerate probe sets rejected at attestation time | adversarial |
 | The embedding service is running the model it claims | attestation of the model itself | **not establishable: a service willing to lie about its model is willing to lie about a hash of it** | n/a |
 | The semantic service is sandboxed with authenticated IPC | sandbox + mutual auth + egress capture | **none — bounded loopback adapter only** | none |
-| Dependencies are scanned and gated | CI | govulncheck reachability gate | integration |
-| Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
+| Dependencies are scanned and gated | CI | govulncheck reachability gate in all nine repositories and all nine vendored modules, verified by exit code | integration |
+| The toolchain still receives security fixes | CI pin against Go's support window | every repository on 1.25, after a 1.23 pin aged out and left 20 reachable stdlib vulnerabilities in the one repo that was scanning | integration |
+| Dependencies are not malicious | provenance or attestation of the dependency itself | **none — govulncheck answers whether an advisory is reachable, not whether a dependency is what it claims to be** | none |
+| Build has an SBOM and provenance | release artifacts | both generated in CI; provenance stamps itself unsigned outside a protected identity, and no release key exists (EB-7) | integration |
 | Update cannot roll back | updater tests | a persisted watermark refuses anything not strictly newer, pre-release ordering included, so a signed 1.2.0-alpha.1 cannot install over 1.2.0 | adversarial |
 | Two signed artefacts for one version are refused, not resolved | negative test | equivocation is an error rather than a choice, because resolving it silently is how a build made for one person reaches them | adversarial |
 | A genuine manifest does not authorise a different file | negative test | size checked before hash, so a padded artefact fails on length | adversarial |

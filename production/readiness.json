@@ -376,12 +376,15 @@
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
     "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
+    "the vulnerability gate runs in all nine Go repositories and on all nine vendored component modules, verified by exit code. It previously ran in one, and that one was failing: 20 reachable standard-library vulnerabilities, because the repositories pinned Go 1.23 after it stopped receiving backported security fixes. Every repository is now on 1.25 and scans clean",
+    "SLSA-shaped provenance is generated in CI alongside the SBOM (Nomad-browser 41631ae). The generator existed and no workflow ran it, so no provenance was produced anywhere; it attests rather than signs and stamps itself unsigned outside a protected identity, so it cannot be mistaken for the signed provenance this criterion wants"
    ],
    "blockers": [
     "two independent matching builds",
     "SBOM and signed provenance",
-    "continuous vulnerability gate"
+    "nothing checks for *malicious* dependencies, which this criterion also names. govulncheck answers whether a known advisory is reachable, not whether a dependency is what it claims to be",
+    "provenance is generated but not signed: signing needs a key no repository may hold, and no release key exists yet (EB-7)"
    ]
   },
   {

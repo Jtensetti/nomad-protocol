@@ -676,7 +676,7 @@
      "id": "H-05",
      "summary": "signed SLSA-style provenance",
      "status": "PARTIAL",
-     "note": "scripts/generate-provenance.sh emits SLSA-shaped in-toto provenance binding artifact digest, commit, builder, toolchain and dependency state; attests but does not sign, and stamps itself unsigned outside CI"
+     "note": "scripts/generate-provenance.sh emits SLSA-shaped in-toto provenance binding artifact digest, commit, builder, toolchain and dependency state, and is now actually run in CI -- it existed and no workflow invoked it, so no provenance was produced anywhere. It attests but does not sign, and stamps itself unsigned outside a protected identity, so an unsigned document cannot be mistaken for a signed one. Signing waits on EB-7"
     },
     {
      "id": "H-06",
@@ -688,7 +688,7 @@
      "id": "H-07",
      "summary": "vulnerability scanning gate + severity/response policy",
      "status": "PARTIAL",
-     "note": "govulncheck reachability gate on every push plus docs/VULNERABILITY_POLICY.md with severity, response and explicit non-coverage (Nomad-browser)"
+     "note": "the gate now runs in all nine Go repositories and on all nine vendored component modules. It previously ran in one -- Nomad-browser -- and that one was failing: 20 reachable standard-library vulnerabilities, because every repository pinned Go 1.23 after it stopped receiving backported security fixes. All are on 1.25 and scan clean by exit code. docs/VULNERABILITY_POLICY.md carries severity, response and explicit non-coverage; nothing checks for malicious dependencies, which is a different question"
     },
     {
      "id": "H-08",
