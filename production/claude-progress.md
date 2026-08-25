@@ -3,6 +3,59 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-25b: an evaluator did not approve, and was right
+
+**The single-cell encryption change was reviewed and rejected.** Not the code —
+the reviewer verified every property it claims and found no defect in it — but
+the evidence and the tests around it, which is the more uncomfortable outcome.
+
+- **A false evidence claim, written by me, sitting in EVIDENCE_INDEX.md.** I had
+  led with "the published conformance corpus digest is unchanged" as proof the
+  wire had not moved. The corpus contains **zero bytes of mix ciphertext**: its
+  only uplink vector is eight bytes of cleartext counter whose own fields say
+  the sealed body is randomised and only the frame is pinned. The digest would
+  be unchanged if the encryption emitted 1152 zeros. It was not weak evidence;
+  it was none. Struck, with a CORRECTION where the claim stood.
+- **A test whose central assertion could not fail.** `len(individual) !=
+  len(fromBatch[0])` over two `[1200]byte` values folds to `1200 != 1200` at
+  compile time. It built and marshalled a two-column batch to read a constant.
+- **Six mutations passed the whole file**, including copying the first 48 bytes
+  of the private fragment into the padding — publishing plaintext in cleartext
+  in every cell. All six now fail on named tests. "Not all zero" is not
+  "carries nothing".
+- **A real pre-existing vulnerability.** `Encrypt` never called
+  `rejectSmallOrder`, which this package has had for as long as
+  `validateThresholdCommittee`. Encrypting to the identity gives `y = m + r·0 =
+  m`; the reviewer recovered a full 504-byte fragment off the wire with no key
+  material. `uplink.Session` holds a bare `PublicKey` that never passes
+  committee validation, so it was precisely the exposed caller.
+- **The change was incomplete.** The airlock's `coverColumn` still carried the
+  two-column workaround, and runs once per cover column up to the batch size —
+  the larger consumer of the discarded work than the seal ever was.
+
+**A classification correction that matters more than it reads.** No `cmd/`
+binary calls `uplink.NewSession` or `deposit.NewDrain`. The only non-test caller
+is the conformance vector generator. So the whole publication path is
+implemented and integration tested, **not** production-boundary tested, and the
+seal-cost figures describe something nothing deploys. PROD-17 and PROD-18 now
+say so.
+
+**Also closed this checkpoint.** The `windows/amd64` build gap (a `LockFileEx`
+implementation behind a build tag; eight targets in the matrix, and an honest
+replacement blocker that it compiles and has never run). Threshold-share
+permissions at rest, which had implementations on both sides and tests on
+neither — the same combination that shipped a 0644 node-secrets file to the WAN
+campaign.
+
+**The pattern, stated plainly.** Every significant finding in the last two
+checkpoints came from turning the project's own instruments on the project, and
+several came from a reviewer rather than from me. The recurring failure is not
+bad code; it is claims that outrun their evidence, and gates that report a
+boundary as fine without having looked. That rate is the argument for PROD-04
+and PROD-29, and it is an argument about what has not been looked at yet.
+
+**Gate counts unchanged**: 2 MET, 24 PARTIAL, 3 NOT_MET, 1 BLOCKED.
+
 ## Checkpoint 2026-08-25: the vulnerability gate, and what determinism is not
 
 **The largest finding.** PROD-25 cited a "govulncheck reachability gate on every
