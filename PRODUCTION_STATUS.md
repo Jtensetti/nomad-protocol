@@ -133,7 +133,7 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**Two.** 2/30: PROD-08 and PROD-12. The registry holds 26 PARTIAL, 1 NOT_MET
+**Two.** 2/30: PROD-08 and PROD-12. The registry holds 27 PARTIAL, 0 NOT_MET
 and 1 BLOCKED besides them.
 
 - **PROD-08** (committee membership, rotation, forward secrecy, key erasure,
@@ -203,18 +203,18 @@ Seven external dependencies, detailed in
 | EB-6 | A second human release approver | PROD-30 |
 | EB-7 | A project release key for the signed specification tag | PROD-01 |
 
-**No gate is still NOT_MET for want of engineering.** One is: PROD-30 needs a
-monitored beta and a second approver. PROD-29 is BLOCKED on an external
-assessor. Everything else has moved to PARTIAL with a specific blocker
-recorded against it.
+**Nothing is NOT_MET any more.** One gate is BLOCKED — PROD-29, on
+independent assessors, which no maintainer may self-approve. Every other
+criterion is PARTIAL with a specific blocker recorded against it.
 
-PROD-28 left the NOT_MET column when the SLOs were published, a
-disaster-recovery exercise was written as a test that runs, and an incident
-drill was written that starts three real nodes on loopback and works two
-scenarios from the runbook. It is PARTIAL, not MET, because thirty days of
-soak has to elapse and cannot be compressed: every figure in `deploy/SLO.md`
-comes from tests measured in seconds, which establish that a bound exists and
-is enforced and say nothing about drift over weeks.
+That sentence is worth less than it sounds and the next section says why.
+Emptying the NOT_MET column means every criterion now has real work behind it
+and a named reason it is not finished. It does not mean the criteria are
+nearly met. PROD-30 has an enforced two-person approval rule and no beta, no
+red team and no second person; PROD-28 has published SLOs, a recovery exercise
+and an incident drill, and no soak; PROD-03 has a second implementation of one
+wire format written by the same author. In each case the part that remains is
+the part that needs someone who is not this project.
 
 PROD-03 was in that list until a second implementation of the hop cell format
 was written from the published specification, in another language and sharing
@@ -227,8 +227,8 @@ have interoperated from it at all. Two further ambiguities and a corpus that
 published MAC vectors without their key came out of the same attempt.
 
 That is a statement about the NOT_MET column and not about readiness. Most of
-the twenty-six PARTIAL criteria are substantially incomplete, and the pattern
-across their blockers is worth reading as one thing rather than twenty-six:
+the twenty-seven PARTIAL criteria are substantially incomplete, and the pattern
+across their blockers is worth reading as one thing rather than twenty-seven:
 nothing here has been reviewed by anyone who did not build it, no experiment
 has run across genuinely separate administrative domains, and the largest
 claimed property — that repeated use does not accumulate into an

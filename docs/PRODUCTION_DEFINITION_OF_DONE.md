@@ -69,7 +69,7 @@ dependency. `NOT_MET` means the required result does not yet exist.
 | PROD-27 | Operational metrics, logs and crash data are data-minimized and cannot contain queries, basins, object choices, plaintext, stable cross-epoch identifiers or secret keys. | Schema allowlist, log-scraping tests, retention controls and privacy review. | PARTIAL |
 | PROD-28 | Reliability and capacity targets are met under sustained load, node loss and regional failure; runbooks, on-call, backup and incident response are exercised. | Published SLOs, 30-day soak, disaster-recovery exercise and incident drill. | PARTIAL |
 | PROD-29 | Independent cryptographic, systems, browser and privacy assessments have no unresolved severity-1 or severity-2 findings. | Publicly identifiable final reports, fixes and auditor verification of remediation. | BLOCKED |
-| PROD-30 | A release candidate has completed a monitored multi-operator beta, passed a release red team and been approved through a documented two-person release process. | Signed release decision, immutable artifacts, beta report, red-team report and rollback plan. | NOT_MET |
+| PROD-30 | A release candidate has completed a monitored multi-operator beta, passed a release red team and been approved through a documented two-person release process. | Signed release decision, immutable artifacts, beta report, red-team report and rollback plan. | PARTIAL |
 
 ## Required release artifacts
 

@@ -99,13 +99,23 @@ only the listed action. Never fabricate these.
 - **Verification afterward:** cross-implementation transcript corpus and a
   successful conformance run in CI.
 - **Already complete:** the formats an implementer needs are published and
-  enforced. A nine-vector conformance corpus covers the hop cell, the uplink
-  cell frame, the object manifest and signed topologies, sealed by a digest
-  over the ordered set and identical on 32-bit and 64-bit builds;
-  `nomad-testnet/conformance/COMPATIBILITY.md` names all 58 frozen labels with
-  the refusal behaviour for each, enforced by a test that fails if the code
-  gains a version the matrix omits. What remains for the second party is only
-  to read them and disagree.
+  enforced, and — since this was written — one of them has actually been
+  reimplemented. `nomad-testnet/conformance/reference/nomadwire.py` is a
+  second implementation of the hop cell in another language, sharing no code
+  and written from the specification rather than from the Go, with a
+  bidirectional conformance run in CI.
+  It found that the specification could not be built from: it described the
+  last 48 bytes of every cell as "random representation padding, fresh filler,
+  not application data" when they are the authenticated hop header, so nobody
+  could have interoperated at all. Two further ambiguities and a corpus that
+  published MAC vectors without their key came out of the same attempt. All
+  four are fixed.
+  So what remains for the second party is smaller and sharper than it was:
+  the specification is now known to be *sufficient* to build from, because
+  someone did. What it is not known to be is *unambiguous to a stranger*,
+  which is the half a single author cannot supply, and the object manifest,
+  signed topology and uplink profiles still have no second implementation at
+  all.
 
 ## EB-6: Two-person release decision (PROD-30)
 
@@ -115,6 +125,21 @@ only the listed action. Never fabricate these.
 - **Where obtained:** project owner designates a second maintainer.
 - **Verification afterward:** signed release decision recorded in the release
   evidence with two distinct identities.
+- **Already complete:** the rule is enforced rather than documented. A release
+  manifest carries approvals, and `Nomad-browser update.Decode` refuses one
+  without signatures from at least two *distinct* trusted approver keys —
+  including refusing a build whose trusted set is one key, or one key listed
+  twice, before it reads a manifest at all. Exercised end to end with the
+  shipped binary, which refuses a single-approver build with "One person who
+  can approve alone is not a two-person process".
+  **The exact minimal handoff:** generate two Ed25519 keypairs on two separate
+  machines held by two separate people; compile both public halves into the
+  release binary as a comma-separated `releaseKeys`; each approver runs
+  `update.Approve` with their own key on their own machine. Note the limit
+  that no code can close: two keys held by one person satisfy every check.
+  Custody is the control. And because there is no revocation channel, do not
+  ship a build that trusts exactly two keys if losing one is meant to be
+  survivable — see `Nomad-browser docs/RELEASE_PROCESS.md`.
 
 ## EB-7: Project release key for the signed specification tag (PROD-01)
 

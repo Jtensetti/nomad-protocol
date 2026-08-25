@@ -489,10 +489,19 @@
   },
   {
    "id": "PROD-30",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "the two-person release process is a control rather than a document: a release manifest carries approvals, and Nomad-browser update.Decode refuses one without signatures from at least two distinct trusted approver keys. The refusal happens on the machine that would otherwise install the release, which is the one party with no incentive to skip the step",
+    "adversarial, mutation-verified: fewer than two approvals refused; two approvals from the same key refused, because one person signing twice is one person; an approval from an untrusted key refused; a build whose trusted set is one key or one key listed twice refused before a manifest is read; approvals do not transfer between releases, covering version, channel, artifact name, digest and size. Five mutations of the rule are all caught",
+    "the manifest format is v2 and Sign is gone: a release is not signed by the project, it is approved by people. Prepare builds the manifest, Approve adds one person's signature, and Approve takes a single key on purpose because a function taking two at once would be a two-person process one person can run",
+    "exercised end to end with the shipped binary: two approvers verify, one trusted approver is refused with 'One person who can approve alone is not a two-person process', and a build with no keys refuses and names EB-6 and EB-7",
+    "rollback plan in Nomad-browser docs/RELEASE_PROCESS.md: roll-forward only, because an updater that can move a user backwards is one an attacker can move backwards. It also records what cannot be solved -- a user already on a bad release cannot be reached, since the browser fetches nothing, and a compromised approver key has no revocation channel, so a build trusting exactly two keys cannot survive losing one"
+   ],
    "blockers": [
-    "multi-operator beta and release red team"
+    "no monitored multi-operator beta: nothing has been given to users at all, which is the substance of this criterion and needs people (EB-4)",
+    "no release red team. An internal adversarial exercise is not one, and a subagent review is QA rather than independence",
+    "no second approver and no release keys: the mechanism is ready and exercised only against test keys, which the tool says out loud every time it is used that way (EB-6, EB-7)",
+    "two keys held by one person satisfy every check the code makes. Key custody is what makes this a two-person process and it is an operational property, not a cryptographic one"
    ]
   }
  ]
