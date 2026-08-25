@@ -330,7 +330,7 @@
    "blockers": [
     "Apple-provisioned App Group or independently reviewed production IPC boundary",
     "independent browser/client assessment",
-    "no engine code is modified in either fork: the inventories are the prerequisite work, not the integration. A build alone is beyond what this environment can run, so nothing here demonstrates that a Nomad browsing context cannot fall through -- only what would have to be closed for it not to"
+    "no engine code is modified in either fork, and per DEC-013 none will be: Nomad-browser is the browser and the forks are parked. The inventories are the prerequisite work, not the integration. This criterion names 'at least one supported browser/client build', which Nomad-browser is by construction rather than by subtraction -- but the release-binary integration test it also names still needs EB-1"
    ]
   },
   {

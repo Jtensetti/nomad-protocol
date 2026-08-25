@@ -2,6 +2,33 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-013 (2026-08-24): Nomad-browser is the browser; the engine forks are parked
+
+The maintainer's decision, recorded because it changes what "done" means for
+Workstream F and should not be re-litigated by a later session reading the
+workstream list.
+
+Nomad-browser is a working networkless browser core with a release pipeline,
+an enforced sandbox entitlement, an adversarially tested materializer handoff
+and a no-fallback adapter. `firefox-nomad` and `chromium-nomad` are full engine
+checkouts carrying integration contracts and, as of today, a machine-checked
+egress inventory each. Nothing more will be invested in them for now.
+
+**What this means for the registry.** F-11 stays PARTIAL and PROD-22 keeps its
+blocker saying no engine code is modified in either fork. Neither becomes MET,
+and neither is deleted: the criteria still describe work that a full production
+deployment would want, and the honest status is "not done and not being
+pursued" rather than "not applicable". The inventories remain useful to whoever
+picks this up, and their verifier keeps them from rotting.
+
+**Why the decision is reasonable on the merits.** An engine integration is the
+single largest remaining piece of work in the whole programme, it duplicates a
+guarantee Nomad-browser already provides by construction rather than by
+subtraction, and a networkless browser built from nothing is a far smaller
+attack surface to defend than a networked engine with its network removed. The
+egress inventories are the honest measure of that: thirty-one surfaces in Gecko
+and eighteen in Blink, each of which would have to be closed and stay closed.
+
 ## DEC-009 (2026-08-20): One two-world capture harness, born in A, extended in E
 
 The blind-capture/preregistration machinery required by the airlock DoD
