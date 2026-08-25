@@ -654,3 +654,48 @@ worlds that differ by nothing. Chasing sub-second statistics in a per-push
 suite was a decision this project had already made correctly once, and I had
 quietly unmade it.
 
+
+## Checkpoint: the embedding service was whoever answered the port
+
+`nomad-semantic-basins` bd3c5cc, 2dc8eb4; vendored into `Nomad-browser`
+c06c87b; snapshot repinned in `nomad-testnet` 9fccaba.
+
+PROD-24's blocker named a real defect and named it precisely: the API key
+authenticated the client to the service, never the service to the client --
+and that service is the one component handed the reader's query in the clear.
+The URL checks established that the destination was loopback. They said
+nothing about who was listening there. A process that bound the port first
+received every query and the credential meant to protect it.
+
+**The first fix was wrong and is worth recording.** I implemented a
+challenge-response handshake: prove the service holds the key, then send. It
+compiled, it was clean, and it does not establish the property. It proves
+somebody holding the key is reachable, not that the party about to receive the
+query is that somebody -- an impostor on the configured port can relay the
+challenge to the real service on another port and then take the query. It also
+leaves the reply unauthenticated, and an impostor's chosen vector chooses the
+reader's basin, which is the same "you fetch a different part of the
+catalogue" failure `basin/attest.go` exists to catch. Rereading my own design
+after it built is what caught this; the tests I had planned would all have
+passed.
+
+**What shipped instead.** The query is sealed to the key rather than gated on
+it: fresh 32-byte salt per request, HKDF-SHA256 per direction, AES-256-GCM,
+256-byte padding blocks. Both directions authenticated, replies bound to their
+request, no unauthenticated mode. `loopback.Service` and
+`cmd/nomad-embed-service` are the other half of the channel, so this is a
+deployment a person can run rather than a client with no counterpart.
+
+**Two failures in my own verification.** The mutation script crashed partway
+through one run and left a mutation applied; the next run took that tree as
+its baseline, so every result it printed was measured against already-broken
+code. It now asserts a green baseline before and after. And two mutations
+initially survived because the address tests only checked that an error came
+back -- every address in the table also fails to connect. They now assert the
+reason. That is the same defect class as the closed-socket test recorded
+earlier in this file: a test passing for a reason unrelated to its claim, twice
+now, in work whose whole purpose is to be the thing that catches that.
+
+PROD-24 stays PARTIAL. What is left is a sandbox whose escape has been
+attempted and an attempted-egress packet capture. The systemd profile is
+pinned by directive presence and has never been run.

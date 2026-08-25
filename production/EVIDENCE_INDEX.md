@@ -1103,9 +1103,90 @@ exported so an operator can see exactly what is sent to their service and two
 operators can confirm they attested the same thing. A test embeds unrelated
 reader queries between two attestations and requires the digest not to move.
 
-- Still missing for PROD-24: an OS sandbox, mutual IPC authentication (the API
-  key authenticates the client to the service, not the service to the client),
-  and attempted-egress packet capture.
+- Still missing for PROD-24: a sandbox whose escape has been attempted, and
+  attempted-egress packet capture. Mutual IPC authentication is done; see
+  below.
+
+## FINDING: the embedding service was whoever answered the port
+
+`nomad-semantic-basins` bd3c5cc, 2dc8eb4.
+
+The embedding service is the one component in this system handed a reader's
+query in the clear, and nothing established who it was. The client posted the
+query, and the bearer token meant to protect it, to whatever process was
+listening on the configured loopback port. A process that binds that port
+first -- after a crash, on a shared machine, or simply by starting earlier --
+received every query and the credential. The URL checks establish that the
+destination is loopback. They say nothing about who is listening there.
+
+**The obvious fix is the wrong one, and it was written before it was thrown
+away.** A challenge-response handshake before sending proves that somebody
+holding the key is reachable. It does not prove that the party about to
+receive the query is that somebody: an impostor on the configured port can
+forward the challenge to the real service on another port, return the real
+answer, and then take the query. It also leaves the other direction
+untouched, and that direction matters -- an impostor that answers with a
+chosen vector chooses the reader's basin, and so chooses which part of the
+catalogue that reader fetches. The first implementation in this session was
+exactly that handshake; it is recorded here because reviewing one's own design
+after it compiles is the step that caught it.
+
+**What replaced it.** The query is sealed to the service key rather than gated
+on it. Each request draws a fresh 32-byte salt; both directions derive their
+own key from it with HKDF-SHA256 and are sealed with AES-256-GCM. A request
+key never opens a reply, and a reply captured once cannot be replayed onto a
+later request. Plaintext is padded to 256-byte blocks, because AEAD hides
+content and not length, and the length of a query is information about the
+query. An impostor that does not hold the key can neither read the request nor
+forge a reply, whether it relays the traffic or invents it.
+
+**The other half of the channel now exists.** `loopback.Service` is the shim
+that holds the second copy of the key, and `cmd/nomad-embed-service` runs it.
+It never reaches the model server with a request it could not open, will only
+forward over loopback, and returns one refusal message for every cause so it
+cannot be used as an oracle. The key is read from a file that must not be
+readable by another account, never from a flag where the process table would
+publish it.
+
+**There is no unauthenticated mode.** A client that would send the query anyway
+when the key is missing is the silent fallback this exists to remove, so an
+absent key is refused before anything is sent -- and the test asserts that no
+request was opened at all, not merely that an error came back.
+
+**The claim is tested as a disclosure claim.** A recording process without the
+key receives the sealed bytes and never the query text, never a fragment of
+it, never a credential header, and never the key. The positive control is the
+full client-shim-model chain succeeding, so the refusals are not a client that
+refuses everything.
+
+**Mutation results.** Fifteen mutations of the production path, all killed: a
+compatibility fallback to plain JSON when unsealing fails, a constant salt, key
+derivation that ignores the salt, additional data that ignores the salt,
+dropped response-size and dimension bounds, a deleted loopback address check on
+both the client and the shim's upstream, and a refusal that says which check
+failed.
+
+Two things about that campaign are worth recording because they reflect badly
+on it. An earlier run crashed partway through and left a mutation applied; the
+next run took the mutated tree as its baseline, so every result it printed was
+measured against code that was already broken and all of them were meaningless.
+The script now asserts a green baseline before it starts and again after it
+restores. Separately, two mutations initially survived: the upstream address
+check could be deleted and the tests still passed, because every address in the
+table also fails to connect, so an error came back either way. Those tests now
+assert the reason they were refused. That is the same defect class as the
+closed-socket test recorded earlier in this index -- a test passing for a
+reason unrelated to its claim.
+
+**What is deliberately not claimed.** The sealed channel authenticates the
+service; it does not sandbox it, and nothing here defends against a service
+that holds the key and misuses what it sees -- it is trusted with the query by
+construction. `deploy/nomad-embed-service.service` confines the shim with
+`IPAddressDeny=any`, `IPAddressAllow=localhost`, an empty capability set and a
+system call filter, and a test pins each directive so one deleted line cannot
+pass review silently. The directives are checked for presence, never by
+attempting to escape them on a running system, and the README says so, because
+a hardening profile that reads as a proven sandbox is worse than none.
 
 ## FINDING: the vulnerability gate existed in one repository, and it was failing
 
