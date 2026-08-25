@@ -36,10 +36,17 @@
   },
   {
    "id": "PROD-03",
-   "status": "NOT_MET",
-   "evidence": [],
+   "status": "PARTIAL",
+   "evidence": [
+    "second implementation: nomad-testnet conformance/reference/nomadwire.py implements hop-cell-v1 in another language, with no shared build and no dependency past the Python standard library, written from docs/PROTOCOL.md rather than from the Go",
+    "bidirectional conformance run, four directions: the second implementation verifies the committed corpus and re-seals it to identical bytes; produces cells the first has never seen, which live/conformance/crossimpl_test.go verifies and whose stream ID it recomputes; refuses 16 mutations and cross-context replays, mirrored in Go with a positive control so a Verify that refused everything could not pass; and verifies cells the first implementation sealed at test time",
+    "mutation-verified across the boundary: MAC domain string, header field layout, stream-ID domain, stream-ID preimage, and sealing without zeroing the tag region are all caught. The header-layout mutation survived a first attempt and is why the fresh-seal direction exists -- a committed corpus is a snapshot, and the other directions exercised only the Go decoder",
+    "building it found three specification defects and one corpus defect, which is what this criterion is for: docs/PROTOCOL.md described the last 48 bytes of every cell as 'random representation padding, fresh filler, not application data' when they are the hop header, so nobody could have interoperated from the published specification at all; it did not say the tag region is zeroed before the tag is computed; it did not say the stream-ID hash covers the batch size; and the corpus published authenticated cells without the key or the context their tag binds, so no second implementation could check a tag",
+    "run in CI standalone as well as from the Go test, so the second implementation is exercised even where the Go side skips for want of a python3"
+   ],
    "blockers": [
-    "independent second implementation"
+    "both implementations were written by the same author. That tests whether the specification is sufficient to build from -- it demonstrably was not -- but not whether it reads the same way to someone who did not write it, which is most of what two implementations are for. This is why the criterion is not MET",
+    "coverage is hop-cell-v1 only. The signed topology document, the object manifest and the uplink cell profile have corpus vectors but no second implementation, so interoperability for those formats is unevidenced"
    ]
   },
   {

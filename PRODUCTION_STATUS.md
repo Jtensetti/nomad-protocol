@@ -1,6 +1,6 @@
 # Nomad production status
 
-Last updated: 2026-08-24. Authoritative gate statuses live in
+Last updated: 2026-08-25. Authoritative gate statuses live in
 [`production/readiness.json`](production/readiness.json); this document
 explains them in prose. Where the two disagree, the registry wins.
 
@@ -133,7 +133,7 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**Two.** 2/30: PROD-08 and PROD-12. The registry holds 24 PARTIAL, 3 NOT_MET
+**Two.** 2/30: PROD-08 and PROD-12. The registry holds 25 PARTIAL, 2 NOT_MET
 and 1 BLOCKED besides them.
 
 - **PROD-08** (committee membership, rotation, forward secrecy, key erasure,
@@ -203,15 +203,24 @@ Seven external dependencies, detailed in
 | EB-6 | A second human release approver | PROD-30 |
 | EB-7 | A project release key for the signed specification tag | PROD-01 |
 
-**No gate is still NOT_MET for want of engineering.** Three are: PROD-03
-needs an implementer who is not this project, PROD-28 needs thirty days of
-soak to elapse, and PROD-30 needs a monitored beta and a second approver.
-PROD-29 is BLOCKED on an external assessor. Everything else has moved to
-PARTIAL with a specific blocker recorded against it.
+**No gate is still NOT_MET for want of engineering.** Two are: PROD-28 needs
+thirty days of soak to elapse, and PROD-30 needs a monitored beta and a second
+approver. PROD-29 is BLOCKED on an external assessor. Everything else has moved
+to PARTIAL with a specific blocker recorded against it.
+
+PROD-03 was in that list until a second implementation of the hop cell format
+was written from the published specification, in another language and sharing
+no code. It is PARTIAL rather than MET because the same author wrote both, and
+that is the part a second party supplies (EB-5). What the exercise did supply
+is the thing two implementations are for: the specification described the last
+48 bytes of every cell as "random representation padding, fresh filler, not
+application data" when they are the authenticated hop header, so nobody could
+have interoperated from it at all. Two further ambiguities and a corpus that
+published MAC vectors without their key came out of the same attempt.
 
 That is a statement about the NOT_MET column and not about readiness. Most of
-the twenty-four PARTIAL criteria are substantially incomplete, and the pattern
-across their blockers is worth reading as one thing rather than twenty-four:
+the twenty-five PARTIAL criteria are substantially incomplete, and the pattern
+across their blockers is worth reading as one thing rather than twenty-five:
 nothing here has been reviewed by anyone who did not build it, no experiment
 has run across genuinely separate administrative domains, and the largest
 claimed property — that repeated use does not accumulate into an
