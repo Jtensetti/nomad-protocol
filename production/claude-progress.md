@@ -3,6 +3,69 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-25: the vulnerability gate, and what determinism is not
+
+**The largest finding.** PROD-25 cited a "govulncheck reachability gate on every
+push". That gate existed in exactly one of nine Go repositories, and running it
+there reports **20 reachable standard-library vulnerabilities**. The cause is not
+a missed dependency bump: every repository pinned Go 1.23, and Go backports
+security fixes only to the two newest minors, so 1.23 had aged out. Several
+findings name fixes that exist only in 1.24.9 and 1.25.11-13. The other eight
+repositories had no gate, so nothing was looking. `nomad-semantic-basins` was
+the sharpest: its HTTP embedder makes `crypto/tls`, `crypto/x509`, `net/url`,
+`encoding/asn1` and `net/textproto` all reachable, including a TLS Encrypted
+Client Hello privacy leak, in the component that handles query text.
+
+All nine repositories are now on 1.25 and scan clean by exit code, including the
+nine vendored modules a root scan never reaches. The vendored snapshots also
+turned out to differ from their upstreams by a blank line and a trailing
+newline, so "byte-for-byte snapshot" is now true rather than approximate.
+
+**Determinism, measured, and carefully not called reproducibility.**
+`compare-builds.sh` existed to compare two build trees and nothing ever produced
+two. `check-reproducible.sh` now builds the release binaries twice from two
+source copies at different path lengths and requires byte-identical results;
+removing `-trimpath` fails it. Independence remains what it always was —
+somebody else's machine — and the matrix now splits the claim three ways so a
+determinism result cannot be read as a reproducibility one. `docs/REPRODUCIBILITY.md`
+records the trap a second builder meets first: Go stamps the commit hash and
+dirty flag by default, so a git checkout and an exported tarball differ from
+identical source.
+
+**Also closed.** The recorded `windows/amd64` build gap: `live/epoch`'s
+cross-process chain lock called `unix.Flock` unconditionally and is now split by
+build tag with a `LockFileEx` implementation. All eight targets build and
+Windows is in the CI matrix. The honest replacement blocker is that it compiles
+and has never run.
+
+**The doc gate audited on its own terms.** `check_docs.py` had the same
+weaknesses as everything else: its PRODUCTION_STATUS breakdown check ran only if
+its sentence matched, so rewording it turned the check off; `workstreams.json`
+had no schema check at all; nothing verified the execution artifacts existed or
+that a cited EB-N was defined. Running the strengthened version found 23 real
+gaps, including fifteen BLOCKED or PARTIAL requirements with no note and a
+PROD-29 blocker that pointed at no external dependency.
+
+**Two mistakes worth recording.** Summarising the external test report while it
+was still being written, and reporting "no failures" from a log set that was two
+thirds finished — the exact failure this session spent its time on, committed by
+the person fixing it. And copying `check-reproducible.sh` to `/tmp` to
+mutation-test it, where its repo root resolved to `/` and it tarred the
+filesystem until the disk filled. The script now refuses to run unless its root
+really is the repository.
+
+**Scope.** DEC-013: Nomad-browser is the browser and the engine forks are
+parked. F-11 stays PARTIAL and PROD-22 keeps its blocker; neither is promoted
+and neither is deleted.
+
+**Evidence.** `production/reports/2026-08-24-gate-integrity/`: 55 checks, every
+one exit=0, logs digested. First run in which nomad-testnet's `go test -race
+./...` completes rather than timing out, and in which govulncheck passes in all
+nine repositories.
+
+**Gate counts unchanged**: 2 MET, 24 PARTIAL, 3 NOT_MET, 1 BLOCKED. Everything
+this checkpoint did was make existing claims true rather than make new ones.
+
 ## Checkpoint 2026-08-24: four gates that were not gating, and the seal cost
 
 **What this checkpoint is mostly about.** A full sweep across every repository
