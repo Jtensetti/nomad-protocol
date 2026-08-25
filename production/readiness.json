@@ -228,11 +228,12 @@
     "cross-platform vectors: the 7-vector corpus produces the identical digest 44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45 on linux/amd64 and linux/386 (64-bit and 32-bit int), with the full 18-package suite green on both; CI now gates on the 386 run and on six supported build targets",
     "external test report production/reports/2026-08-21-pollution-resistance/ plus the cross-architecture run recorded above",
     "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)",
-    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there",
+    "the recorded windows/amd64 build gap is closed (nomad-testnet b26c435): live/epoch's cross-process chain lock called unix.Flock unconditionally and is now split by build tag, with a LockFileEx implementation that blocks until the lock is available -- mandatory rather than advisory there, so stricter than flock and not weaker. All eight targets build, and windows/amd64 and windows/arm64 are in the CI matrix so it cannot regress quietly"
    ],
    "blockers": [
     "executable MIME decisions are covered by the browser adapter's own tests (scheme, traversal, encoding and data: media-type table) but not by a corpus vector, so the MIME half of this criterion rests on adapter tests rather than on published vectors",
-    "windows/amd64 does not build (live/epoch/lock.go uses unix.Flock). Not a supported platform today, but the criterion says cross-platform and the gap is recorded rather than left to be discovered"
+    "Windows is built but not tested: no Windows runner executes the suite, so the LockFileEx path compiles and has never run. It is not a supported platform, and the honest status is that cross-platform means eight build targets and two tested architectures"
    ]
   },
   {

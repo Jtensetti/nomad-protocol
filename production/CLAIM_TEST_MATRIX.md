@@ -189,6 +189,9 @@ Fixed-rate cover bounds what one observation reveals. It says nothing about
 what many reveal in aggregate. This is the largest unmeasured area in the
 project and the easiest to over-read from the per-observation results above.
 
+| Every supported target builds | cross-compilation matrix | eight targets including windows/amd64 and windows/arm64, gated in CI | integration |
+| The Windows cross-process lock works | a Windows runner | **none — it compiles and has never run** | none |
+
 ## How to read the gaps
 
 Every row at `none` is a claim the project must not make. Several of them —
