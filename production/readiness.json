@@ -434,7 +434,7 @@
    "status": "BLOCKED",
    "evidence": [],
    "blockers": [
-    "independent cryptographic, systems, browser and privacy assessors"
+    "blocked on EB-4: independent cryptographic, systems, browser and privacy assessors. This criterion cannot be self-approved, and a subagent review is QA rather than independence"
    ]
   },
   {

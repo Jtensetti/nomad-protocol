@@ -103,6 +103,12 @@ for item in criteria:
             errors.append(f"{criterion}: MET requires immutable evidence")
         if blockers:
             errors.append(f"{criterion}: MET cannot retain blockers")
+    elif not blockers:
+        # A criterion that is not MET and names nothing missing has either
+        # been promoted without saying so or never examined. Both should be
+        # visible rather than inferred from an empty list.
+        errors.append(f"{criterion}: {status} must record at least one blocker "
+                      "saying what is missing")
 
 score = re.search(r"Current score: \*\*(\d+)/30 production gates MET\.\*\*", production_dod)
 if not score:
@@ -131,14 +137,108 @@ else:
     counts = {status: 0 for status in allowed_statuses}
     for item in criteria:
         counts[item.get("status")] = counts.get(item.get("status"), 0) + 1
+    # Mandatory, not best-effort. This used to run only if the sentence
+    # matched, so rewording it -- or deleting it -- turned the check off
+    # silently, which is the failure mode the check exists to prevent.
     breakdown = re.search(r"registry holds (\d+) PARTIAL, (\d+) NOT_MET\s+and (\d+)\s+BLOCKED",
                           production_status)
-    if breakdown:
+    if not breakdown:
+        errors.append("PRODUCTION_STATUS.md must carry the machine-checkable breakdown "
+                      "sentence (\"registry holds N PARTIAL, N NOT_MET and N BLOCKED\")")
+    else:
         stated = tuple(int(value) for value in breakdown.groups())
         actual = (counts["PARTIAL"], counts["NOT_MET"], counts["BLOCKED"])
         if stated != actual:
             errors.append(f"PRODUCTION_STATUS.md breakdown {stated} does not match "
                           f"registry {actual}")
+
+# The execution artifacts CLAUDE.md requires. They are the record of what was
+# done and what is still missing, and nothing checked they existed: a deleted
+# or renamed one would simply stop being maintained.
+EXECUTION_ARTIFACTS = [
+    "production/workstreams.json",
+    "production/EXECUTION_PLAN.md",
+    "production/claude-progress.md",
+    "production/CLAIM_TEST_MATRIX.md",
+    "production/EVIDENCE_INDEX.md",
+    "production/DECISIONS.md",
+    "production/EXTERNAL_BLOCKERS.md",
+    "production/GOAL.md",
+]
+artifacts = {}
+for relative in EXECUTION_ARTIFACTS:
+    path = ROOT / relative
+    if not path.is_file():
+        errors.append(f"missing execution artifact: {relative}")
+        continue
+    artifacts[relative] = path.read_text(encoding="utf-8")
+
+# workstreams.json drives the same claims as the registry and had no schema
+# check at all, so a typo in a status or a requirement that lost its note went
+# unnoticed.
+workstream_statuses = {"NOT_STARTED", "PARTIAL", "BLOCKED", "MET", "DONE", "VERIFIED"}
+workstreams_text = artifacts.get("production/workstreams.json")
+if workstreams_text is not None:
+    try:
+        workstreams = json.loads(workstreams_text)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        errors.append(f"invalid workstreams file: {exc}")
+        workstreams = {}
+    streams = workstreams.get("workstreams", {})
+    if not isinstance(streams, dict) or not streams:
+        errors.append("workstreams.json must carry a non-empty workstreams object")
+        streams = {}
+    for letter, stream in sorted(streams.items()):
+        if not isinstance(stream, dict):
+            errors.append(f"workstream {letter}: must be an object")
+            continue
+        for field in ("title", "phase", "repos", "requirements"):
+            if field not in stream:
+                errors.append(f"workstream {letter}: missing {field}")
+        seen_ids = set()
+        for requirement in stream.get("requirements", []):
+            if not isinstance(requirement, dict):
+                errors.append(f"workstream {letter}: every requirement must be an object")
+                continue
+            identifier = requirement.get("id", "")
+            if not re.fullmatch(rf"{re.escape(letter)}-\d{{2}}", identifier):
+                errors.append(f"workstream {letter}: requirement id {identifier!r} is not "
+                              f"{letter}-NN")
+            if identifier in seen_ids:
+                errors.append(f"workstream {letter}: duplicate requirement id {identifier}")
+            seen_ids.add(identifier)
+            if not requirement.get("summary"):
+                errors.append(f"{identifier}: missing summary")
+            status = requirement.get("status")
+            if status not in workstream_statuses:
+                errors.append(f"{identifier}: unknown workstream status {status!r}")
+            # A requirement that is neither untouched nor finished must say
+            # where it stands, or "PARTIAL" carries no information.
+            if status in {"PARTIAL", "BLOCKED"} and not requirement.get("note"):
+                errors.append(f"{identifier}: {status} must carry a note saying what is done "
+                              "and what is not")
+
+# Every external blocker cited anywhere must be defined, or a criterion can
+# point at a handoff that does not exist.
+blockers_text = artifacts.get("production/EXTERNAL_BLOCKERS.md", "")
+defined_blockers = set(re.findall(r"^#+ *(EB-\d+)", blockers_text, re.MULTILINE))
+defined_blockers |= set(re.findall(r"^\| *(EB-\d+) *\|", blockers_text, re.MULTILINE))
+cited = set()
+for text in list(documents.values()) + list(artifacts.values()):
+    cited |= set(re.findall(r"\bEB-\d+\b", text))
+cited |= set(re.findall(r"\bEB-\d+\b", json.dumps(registry)))
+if not defined_blockers:
+    errors.append("EXTERNAL_BLOCKERS.md defines no EB-N entries, so nothing citing one "
+                  "can be checked")
+for reference in sorted(cited - defined_blockers):
+    errors.append(f"{reference} is cited but not defined in EXTERNAL_BLOCKERS.md")
+
+# A BLOCKED criterion must name the external dependency it waits on.
+for item in criteria:
+    if isinstance(item, dict) and item.get("status") == "BLOCKED":
+        text = json.dumps(item)
+        if not re.search(r"\bEB-\d+\b", text):
+            errors.append(f"{item.get('id')}: BLOCKED must cite the EB-N it waits on")
 
 for relative, text in documents.items():
     base = (ROOT / relative).parent

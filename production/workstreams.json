@@ -372,7 +372,8 @@
      "id": "B-11",
      "summary": "evidence of actual administrative separation (>=3 independent admins, >=3 regions)",
      "status": "BLOCKED",
-     "blocker": "requires genuinely independent operator administrators; see EXTERNAL_BLOCKERS.md"
+     "blocker": "requires genuinely independent operator administrators; see EXTERNAL_BLOCKERS.md",
+     "note": "blocked on EB-2. Everything up to the boundary exists: deploy/OPERATOR_ONBOARDING.md is a complete external-administrator package and nomad-operator covers init, inspect, attest, verify and erase. What is missing cannot be built -- three or more people who do not work for this project, in three or more regions, each holding their own keys"
     },
     {
      "id": "B-12",
@@ -571,12 +572,14 @@
     {
      "id": "F-02",
      "summary": "browser reads only verified materialized objects; atomic write-verify-rename handoff",
-     "status": "PARTIAL"
+     "status": "PARTIAL",
+     "note": "the materializer's side is done and adversarially tested: atomic publish with no surviving temporary, immutability, symlink-at-target refusal, name escape and permissions, all against the real path. The browser's side of the handoff is Swift that reads the objects directory with bounded, size-checked reads; it has never been exercised against a real materializer on macOS, so the handoff is tested from one end only"
     },
     {
      "id": "F-03",
      "summary": "materializer cannot read browser query state; query cannot trigger IPC",
-     "status": "PARTIAL"
+     "status": "PARTIAL",
+     "note": "structural: the materializer's import graph holds no query, basin or selection package and CI fails if it gains one, and the browser reads files rather than calling anything. What is not evidenced is the negative at runtime -- no capture shows that a query produces no IPC, because there is no IPC to capture and no macOS run to capture it on"
     },
     {
      "id": "F-04",
@@ -588,7 +591,8 @@
      "id": "F-05",
      "summary": "Apple-provisioned App Group or independently reviewed IPC",
      "status": "BLOCKED",
-     "blocker": "requires Apple Developer provisioning; see EXTERNAL_BLOCKERS.md"
+     "blocker": "requires Apple Developer provisioning; see EXTERNAL_BLOCKERS.md",
+     "note": "blocked on EB-1. The current design needs no App Group -- the browser reads a directory the materializer writes -- so this is only reachable if a future design introduces IPC. Recorded as blocked rather than closed because an Apple-provisioned App Group is the only reviewed option if it does"
     },
     {
      "id": "F-06",
@@ -611,13 +615,15 @@
      "id": "F-09",
      "summary": "actual signed release binary tested",
      "status": "BLOCKED",
-     "blocker": "requires Developer ID credentials for signed binary; ad-hoc binary capture achievable"
+     "blocker": "requires Developer ID credentials for signed binary; ad-hoc binary capture achievable",
+     "note": "blocked on EB-1. Everything up to the boundary exists: the build produces an ad-hoc signed DMG and macos/scripts/security_gate.sh gates it, and bundle_test.go now checks the entitlements on every push regardless of platform. A Developer ID signed, notarized, stapled binary needs Apple credentials"
     },
     {
      "id": "F-10",
      "summary": "independent browser-security assessment",
      "status": "BLOCKED",
-     "blocker": "external assessor; see EXTERNAL_BLOCKERS.md"
+     "blocker": "external assessor; see EXTERNAL_BLOCKERS.md",
+     "note": "blocked on EB-4. No browser-security assessment can be self-approved, and a subagent review is QA rather than independence"
     },
     {
      "id": "F-11",
@@ -645,7 +651,8 @@
      "id": "H-01",
      "summary": "Developer ID signing, notarization Accepted, stapled ticket, Gatekeeper pass",
      "status": "BLOCKED",
-     "blocker": "Apple credentials; protected fail-closed workflow already exists"
+     "blocker": "Apple credentials; protected fail-closed workflow already exists",
+     "note": "blocked on EB-1. macos/scripts/build_notarized_dmg.sh and the notarized-release workflow are written and wait only on credentials; nothing here can produce a Developer ID signature, a notarization ticket or a Gatekeeper pass"
     },
     {
      "id": "H-02",
@@ -710,7 +717,8 @@
     {
      "id": "H-12",
      "summary": "immutable commit-addressed release evidence",
-     "status": "PARTIAL"
+     "status": "PARTIAL",
+     "note": "release artifacts are commit-addressed and the CI release job publishes a gated prerelease with packet, DKG, ceremony and process evidence attached. What is missing is immutability that does not depend on this project: the digests live in a GitHub release the same account can delete or replace, so nothing yet pins them somewhere a maintainer cannot rewrite"
     }
    ]
   },
@@ -762,43 +770,50 @@
      "id": "I-02",
      "summary": "independent cryptographic assessment",
      "status": "BLOCKED",
-     "blocker": "external assessor"
+     "blocker": "external assessor",
+     "note": "blocked on EB-4. Cannot be self-approved."
     },
     {
      "id": "I-03",
      "summary": "independent systems assessment",
      "status": "BLOCKED",
-     "blocker": "external assessor"
+     "blocker": "external assessor",
+     "note": "blocked on EB-4. Cannot be self-approved."
     },
     {
      "id": "I-04",
      "summary": "independent browser assessment",
      "status": "BLOCKED",
-     "blocker": "external assessor"
+     "blocker": "external assessor",
+     "note": "blocked on EB-4. Cannot be self-approved."
     },
     {
      "id": "I-05",
      "summary": "independent privacy/traffic-analysis assessment",
      "status": "BLOCKED",
-     "blocker": "external assessor"
+     "blocker": "external assessor",
+     "note": "blocked on EB-4. Cannot be self-approved."
     },
     {
      "id": "I-06",
      "summary": "independent red team after remediation",
      "status": "BLOCKED",
-     "blocker": "external red team"
+     "blocker": "external red team",
+     "note": "blocked on EB-4. A red team that reviews its own remediation is not a red team."
     },
     {
      "id": "I-07",
      "summary": "zero unresolved Sev1/Sev2, remediation independently verified",
      "status": "BLOCKED",
-     "blocker": "depends on I-02..I-06"
+     "blocker": "depends on I-02..I-06",
+     "note": "blocked on EB-4. Remediation verified by whoever performed it establishes nothing; the verification is the part that must be independent"
     },
     {
      "id": "I-08",
      "summary": "multi-operator beta, two-person signed release decision",
      "status": "BLOCKED",
-     "blocker": "external operators and second approver"
+     "blocker": "external operators and second approver",
+     "note": "blocked on EB-2 and EB-6. Needs the independent operators to run the beta and a second person to sign the release decision; a single approver is not a two-person decision however the artefact is worded"
     }
    ]
   }
