@@ -1137,3 +1137,27 @@ now byte-identical, so "byte-for-byte snapshot" is true rather than approximate.
 - What this does **not** establish: nothing here checks for *malicious*
   dependencies, which the criterion also names. govulncheck answers "is a known
   advisory reachable", not "is this dependency what it claims to be".
+
+## External test report: gate integrity, 2026-08-24
+
+`production/reports/2026-08-24-gate-integrity/` — 12 files, digested in
+`SHA256SUMS`.
+
+This session's work was mostly about gates that were not gating, so a claim
+that they now do should be evidenced by running them rather than by describing
+them. The report runs the suites and gates the workflows run, directly, at the
+recorded commits with clean working trees.
+
+**55 recorded checks, every one `exit=0`.** No non-zero exit, no `FAIL` line,
+and every log terminates in an exit line — the last of those checked
+deliberately, because an incomplete report that reads as clean is precisely the
+failure mode this session spent its time on. The first attempt to summarise it
+did exactly that: it was read while still running and reported "no failures"
+from a report that was two thirds written.
+
+Green for the first time: `go test -race ./...` in nomad-testnet, which had been
+timing out at Go's ten-minute package default, and `govulncheck` in all nine
+repositories, which previously ran in one and failed there.
+
+- It is this project's own gates, run by this project, on one host. Not
+  independent assessment, not WAN evidence, not a production proving run.

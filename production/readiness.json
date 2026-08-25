@@ -114,7 +114,8 @@
     "forward secrecy: TestForwardSecrecyAfterErasure",
     "key erasure: TestErasureDestroysMaterialAndProducesVerifiableStatement, TestErasureStatementRejectsMissingLimitations",
     "compromise recovery drill: TestRecoveryDrill (5 operators, 3-of-5), TestCompromiseRevocationNeedsPeerQuorum, TestSelfRevocationRequiresTheRevokedOperator",
-    "external test report production/reports/2026-08-21-full-suite/ (nomad-testnet 19b1d6c: live/epoch 53/53 race-clean incl. all 13 named boundary tests; logs digested in SHA256SUMS) satisfying evidence rule item 4"
+    "external test report production/reports/2026-08-21-full-suite/ (nomad-testnet 19b1d6c: live/epoch 53/53 race-clean incl. all 13 named boundary tests; logs digested in SHA256SUMS) satisfying evidence rule item 4",
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
    ],
    "blockers": []
   },
@@ -170,7 +171,8 @@
     "library campaign: TestByzantineCampaignStaysBounded (100k attempts at 50/90/100% malicious, every budget respected)",
     "fuzz/property: FuzzBoundedDecoderStaysWithinBudget (134,125 execs) and FuzzHonestGenerationDecodesExactly; the latter fails within 0.5s against the pre-fix decoder, so it detects the wrong-decode defect rather than passing beside it",
     "wrong-decode defect found and fixed this cycle (nomad-rlnc 70fc47c rlnc/decoder.go + pivot_order_test.go); no open Sev1/Sev2 contradicts this criterion",
-    "external test report production/reports/2026-08-21-pollution-resistance/ (logs digested in SHA256SUMS) satisfying evidence rule item 4"
+    "external test report production/reports/2026-08-21-pollution-resistance/ (logs digested in SHA256SUMS) satisfying evidence rule item 4",
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
    ],
    "blockers": []
   },
@@ -225,7 +227,8 @@
     "rollback/stale: live/topology/watermark.go refuses a topology older than one already accepted and fails closed on equivocation; verified at the binary boundary",
     "cross-platform vectors: the 7-vector corpus produces the identical digest 44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45 on linux/amd64 and linux/386 (64-bit and 32-bit int), with the full 18-package suite green on both; CI now gates on the 386 run and on six supported build targets",
     "external test report production/reports/2026-08-21-pollution-resistance/ plus the cross-architecture run recorded above",
-    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)",
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
    ],
    "blockers": [
     "executable MIME decisions are covered by the browser adapter's own tests (scheme, traversal, encoding and data: media-type table) but not by a corpus vector, so the MIME half of this criterion rests on adapter tests rather than on published vectors",
@@ -258,7 +261,8 @@
     "captures written to runtime/evidence/publication-campaign/ in the same rendered form the preregistered rule reads",
     "the campaign is judged by the full preregistered rule including timing, in CI: success, timeout and loss against a steady control, and restart-with-work against restart-without-work, since a restart is externally observable by construction and only that pair isolates the private variable. All five pass; the noise floor between two idle publishers is 0.0003 to 0.0038 of the interval against a 0.02 tolerance",
     "the campaign now enforces its own preconditions instead of logging them: a world whose mean inter-arrival drifts from the nominal interval fails the run, and a control pair outside the registered 0.02 fails it too. Both were verified by setting the tolerance to an impossible value and confirming the run fails on that specific check. Previously the cadence figure was logged while CI went on to apply the timing rule to whatever captures the run produced",
-    "the timing experiments run off the race detector, which was distorting what they measure: a seal under -race costs more than the 150 ms interval, so the loop fell off its ticker; the package also could not finish inside Go's ten-minute default, so `go test -race ./...` was failing outright. Both experiments now run on a dedicated non-race CI step and the race build keeps the concurrency coverage"
+    "the timing experiments run off the race detector, which was distorting what they measure: a seal under -race costs more than the 150 ms interval, so the loop fell off its ticker; the package also could not finish inside Go's ten-minute default, so `go test -race ./...` was failing outright. Both experiments now run on a dedicated non-race CI step and the race build keeps the concurrency coverage",
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
    ],
    "blockers": [
     "a publisher's per-cell sealing cost still exceeds most permitted cadences: about 42 ms against a 50 ms deployed interval with no useful headroom, and far beyond the 5 ms the topology permits as its shortest. Halved from 87 ms by removing a discarded companion mix column (mix.EncryptCell); what remains is the fragment's own ElGamal encryption, so the next reduction would be a protocol change rather than a refactor",
@@ -378,7 +382,8 @@
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
     "the vulnerability gate runs in all nine Go repositories and on all nine vendored component modules, verified by exit code. It previously ran in one, and that one was failing: 20 reachable standard-library vulnerabilities, because the repositories pinned Go 1.23 after it stopped receiving backported security fixes. Every repository is now on 1.25 and scans clean",
-    "SLSA-shaped provenance is generated in CI alongside the SBOM (Nomad-browser 41631ae). The generator existed and no workflow ran it, so no provenance was produced anywhere; it attests rather than signs and stamps itself unsigned outside a protected identity, so it cannot be mistaken for the signed provenance this criterion wants"
+    "SLSA-shaped provenance is generated in CI alongside the SBOM (Nomad-browser 41631ae). The generator existed and no workflow ran it, so no provenance was produced anywhere; it attests rather than signs and stamps itself unsigned outside a protected identity, so it cannot be mistaken for the signed provenance this criterion wants",
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
    ],
    "blockers": [
     "two independent matching builds",
