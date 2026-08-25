@@ -1339,3 +1339,57 @@ evidence about the send path; the dropped-cell tests are.
 project. This is QA, not an external audit, and it is not evidence for PROD-04
 or PROD-29.
 
+## The publication path had no production caller, and building one found a nonce reuse
+
+PROD-17 and PROD-18 both carried the same blocker: "the publication uplink is
+not on a production path. No `cmd/` binary calls `uplink.NewSession` or
+`deposit.NewDrain` -- the only non-test caller is the conformance vector
+generator." Workstream A's airlock, the uplink session and the bounded queue
+were all implemented, tested and adversarially probed, and nothing shipped
+could run them.
+
+`cmd/nomad-publish` is that caller: it submits an object to the local queue
+with no network configured at all, and separately emits the queue to an entry
+operator at the cadence the signed topology sets. Verified against a real
+socket: twelve cells opened under the entry operator's session key, sequences
+1..12, none repeated.
+
+**What building it found.** `Session.seal` derives its AEAD nonce from the
+sequence it is given, and nothing chose that sequence but the caller. Every
+caller was an in-process test that counted from one and never restarted, so
+the question had never arisen. A publisher process does restart. One built
+without noticing would have re-sealed different fragments under nonces it had
+already used — with a stream cipher that hands an observer the XOR of two
+plaintexts, and with a polynomial MAC it can hand them the authentication key.
+
+The fix is the same shape as the operator's hop sequence: durable, reserved
+ahead, so a crash skips the unused part of a range rather than replaying it,
+and failing closed on an unreadable or exhausted reservation rather than
+starting from zero — which is the failure mode that would look like a fresh
+publisher and behave like a replay. `TestARestartedPublisherDoesNotReuseANonce`
+runs the shipped binary twice against one socket and requires no sequence to
+repeat across the restart.
+
+This is worth recording beyond the fix. The defect was not reachable by
+reading the uplink package, which is correct in isolation, and not by any test
+of it, which is thorough. It was reachable only by asking what a process that
+restarts would do — which is what "on a production path" means and why the
+criterion asks for it.
+
+**What was deliberately not built.** The uplink session is not established in
+band. The publisher reads a pre-shared secret from a file both parties already
+have. An in-band handshake needs the publisher's ephemeral key in the cell,
+and the 1200 bytes are spent: sequence, committee ciphertext, tag, and 24
+bytes of padding. That is a wire-format change, and it joins the other two in
+DEC-015 rather than being invented quietly to make a binary look finished.
+
+**The firewall direction.** This is the one process that holds both a queue of
+private publication work and a socket. That is not a violation — it is where
+the two must meet — and the meeting point is gated rather than exempted: the
+binary must not reach semantic basins, reconstruction, peer selection, fetch
+planning or the node, checked in CI and in its own architecture test. What
+keeps the invariant is the direction, which was already the design: the queue
+is drained by a goroutine on its own clock into a one-slot buffer, and the
+cadence tick does a non-blocking receive, so the tick never asks the queue
+anything.
+
