@@ -24,7 +24,7 @@ project must not claim it.
 
 | Capability | Position | Evidence |
 |---|---|---|
-| Global passive observation | Targeted. Cell size, destination and count are independent of private activity; **cell timing is not** — a reproducible difference is measured. | CLAIM_TEST_MATRIX reader path; the timing row is CONTRADICTED, see EVIDENCE_INDEX E-08 |
+| Global passive observation | Targeted. Cell size, destination and count are independent of private activity; **cell timing is not** — a reproducible difference is measured. **Cell *contents* are not opaque at the operator relay layer** — see below. | CLAIM_TEST_MATRIX reader path; the timing row is CONTRADICTED, see EVIDENCE_INDEX E-08 |
 | Malicious peers | Targeted. A peer that is not in the signed topology gains nothing by existing, and abusive peers are refused per reason at no storage cost. | eclipse, Sybil and abusive-peer rows, adversarial |
 | Compromised minority mixers | Targeted, under the anytrust assumption: privacy holds while at least one mixer in the chain is honest, and correctness holds against a minority under the `t`-of-`n` threshold. A majority-compromised committee is **excluded** — it can decrypt, and no protocol mechanism here prevents that. | shuffle-chain forgery, substituted-signer, non-re-randomising and partial-chain rows, adversarial |
 | Replay | Targeted, at three boundaries: cells, shuffle chains across epochs and committees, and decoder admissions. | chain-replay, abusive-peer and duplicate-budget rows, adversarial |
@@ -37,6 +37,40 @@ project must not claim it.
 The last row is the one most likely to be over-read. Fixed-rate cover bounds
 what a single observation reveals; it says nothing about what many
 observations reveal in aggregate, and Nomad has not measured that.
+
+### The operator-to-operator hop header is not encrypted
+
+The 48 bytes after the mix ciphertext in every relay cell are authenticated
+but sent in the clear. A passive observer of a link reads, without attacking
+anything:
+
+- the **work flag**, which separates relayed work from cover perfectly. This
+  is known and is why publisher traffic uses a different cell profile
+  (`PUBLICATION_INGRESS.md`); `live/uplink/distinguisher_test.go` measures the
+  separation.
+- the **stream ID**, 16 bytes derived from the batch payloads. A relay
+  re-seals a cell with its own sender slot and sequence and leaves the rest of
+  the header as it arrived, so the same identifier appears at every hop the
+  batch takes. Measured in
+  `live/node/linkability_test.go`: cells emitted by a relay carry the ingress
+  stream ID unchanged, so an observer links a batch's ingress hop to its
+  egress hop by reading bytes 1164..1180. No correlation attack is needed.
+- the **batch coordinates**, ordinal and size.
+
+What this does and does not mean. It does not break the reader claim: relay
+work is scheduled by public replication policy, not by any reader's activity,
+so the observable is the same whichever object a reader wants. It does not
+break publisher anonymity at the airlock either, because the shuffle changes
+the payloads and the stream ID is a hash of them, so the identifier on the far
+side of the mix is unrelated to the one on the near side.
+
+What it does mean is that the relay fabric provides **no unlinkability between
+hops** for the traffic it carries, and nothing here bounds what that reveals
+about operator relay patterns over a long horizon. Encrypting the header under
+the existing pairwise hop key would remove the property, at the cost of a wire
+format change that invalidates the published conformance vectors — a decision
+for the protocol freeze, not a change to make quietly before it. Recorded as
+an open design question rather than as a defended position.
 
 ## Reader-side target
 
