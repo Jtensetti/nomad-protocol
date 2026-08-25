@@ -59,9 +59,17 @@ constant: authentication precedes any allocation.
 ## Rate control
 
 Emission is not rate-*limited*, it is rate-*fixed*: one cell per public
-interval, whatever the load. There is no token bucket to drain and no
-backpressure signal to observe, because a rate that responds to conditions is
-a rate that carries information about them.
+interval, scheduled from a clock and never from load. There is no token bucket
+to drain and no backpressure signal to observe, because a rate that responds to
+conditions is a rate that carries information about them.
+
+One qualification, stated here rather than only in the subsection below,
+because it is the difference between a schedule and a claim about output: the
+*schedule* is unconditional, but a scheduled emission can still fail to reach
+the wire when the host cannot send it. What the sender must never do is let
+that failure change the schedule -- no retry, no deferral, no catch-up, no
+change to which peer the next tick addresses. A lost cell is a hole in the
+output, not a shift in the cadence.
 
 ### What a local failure costs
 

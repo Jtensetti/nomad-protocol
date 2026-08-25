@@ -1273,6 +1273,69 @@ campaign measures cadence separately and currently records a finding. Memory
 exhaustion is not driven and the composed multi-process system is not run to
 its limits, so PROD-14 stays PARTIAL with those blockers named.
 
+### The evaluator did not approve it, and was right twice over
+
+The first version of this change was reviewed against the rules in CLAUDE.md
+and came back "do not call this done", with two Sev1 defects. Both were in the
+part of the change that looked most obviously correct.
+
+**The classification had the wrong polarity.** `sendFailureIsFatal` asked "is
+this error fatal?" and answered with a denylist of one, `net.ErrClosed`. Every
+error nobody had thought of therefore became a lost cell — including the two
+that arrive through `FileSequence.Next` and say, in their own message, to
+rotate the topology epoch: the hop sequence space exhausted, and the durable
+state that keeps sequence numbers unique being unreadable. A failed
+cryptographic precondition had been downgraded to a counter, which is exactly
+what CLAUDE.md forbids. This repository already makes the argument against
+that shape, in `live/telemetry/schema.go`, about field names: a denylist
+passes every case nobody thought of, and those are where the damage is. The
+same argument applies to error classification and the change had chosen the
+opposite side of it. It is now an allowlist of named transient conditions, and
+`syscall.EPERM` and `syscall.EINVAL` are deliberately not on it — on Linux
+those mean a firewall verdict and a destination the kernel will never accept,
+both permanent, both of which a node must surface rather than hide.
+
+**A dropped cell burned a sequence number, and the sequence is cleartext.**
+`hop.Seal` consumes a sequence number before the write. When the write then
+failed, the number was spent and the gap it left in the hop header was an
+exact, per-cell count of the sender's local send failures — readable by the
+receiving peer, which the threat model models as hostile, and distinguishing:
+a cell lost in the network still leaves a datagram, a locally dropped one
+leaves a gap and no datagram. The change had created a new observable while
+its own evidence note argued that publishing `send_dropped` "concedes nothing
+because an observer reads it off the wire" — using the channel as the
+justification without noticing it was the finding. Sequence numbers are now
+returned when a cell does not reach the socket, and
+`TestADroppedCellDoesNotBurnASequenceNumberOnTheWire` reads the sequences off
+the emitted cells and requires an unbroken run: 27 cells carrying 1..27 across
+a run with 18 drops.
+
+Three further findings changed the work rather than the record. The
+replacement alarm — the whole safety argument for letting a node keep running
+— was tested only against hand-built `Stats` structs, and two mutations
+survived the entire suite: never storing `last_sent_at`, and storing it before
+the write rather than after, the second of which makes a node dropping every
+cell report itself healthy forever. Both now fail. The deployment surfaces had
+not been updated: `MULTI_OPERATOR.md`, `OPERATOR_ONBOARDING.md` and the WAN
+campaign still checked that the process was alive, which this change made
+permanently true, and the Compose healthcheck's verdict was recorded and never
+read. And `ExhaustReservationForTest` was an exported test hook in production
+code — the only one in eight repositories — that burned 2^20 durable sequence
+numbers per call; it is gone, replaced by an interface the test injects.
+
+**The two-world test was flaky and was not evidence for this change.** Under
+`-race` it failed about one run in ten, in both directions, because a world
+whose node missed its lateness budget was reported as a count divergence
+between worlds — a message that reads like a privacy finding when what
+happened was a loaded runner. Its tolerances were also looser than the
+project's own preregistered rule for the same claim. It is now split: the
+structural half (one cell size, the absolute burst ceiling, both destinations
+of the rotating plan) is deterministic and ran 15/15 under `-race`, and the
+rate comparison is campaign-gated with a floor measured from three worlds that
+differ by nothing, alongside the other wall-clock campaigns. Neither half is
+evidence about the send path; the dropped-cell tests are.
+
 **Not independent.** Implementer and evaluator were both agents in this
-project. This is QA, not an external audit.
+project. This is QA, not an external audit, and it is not evidence for PROD-04
+or PROD-29.
 

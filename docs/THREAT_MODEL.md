@@ -24,7 +24,7 @@ project must not claim it.
 
 | Capability | Position | Evidence |
 |---|---|---|
-| Global passive observation | Targeted. Cell size, destination and count are independent of private activity; **cell timing is not** — a reproducible difference is measured. **Cell *contents* are not opaque at the operator relay layer** — see below. | CLAIM_TEST_MATRIX reader path; the timing row is CONTRADICTED, see EVIDENCE_INDEX E-08 |
+| Global passive observation | Targeted. Cell size and destination are independent of private activity, and so is the emission *schedule*; **cell timing is not** — a reproducible difference is measured. Cell *count* follows the schedule except where the host fails to send a scheduled cell, which is local state, not private activity — bounded below. **Cell *contents* are not opaque at the operator relay layer** — see below. | CLAIM_TEST_MATRIX reader path; the timing row is CONTRADICTED, see EVIDENCE_INDEX E-08 |
 | Malicious peers | Targeted. A peer that is not in the signed topology gains nothing by existing, and abusive peers are refused per reason at no storage cost. | eclipse, Sybil and abusive-peer rows, adversarial |
 | Compromised minority mixers | Targeted, under the anytrust assumption: privacy holds while at least one mixer in the chain is honest, and correctness holds against a minority under the `t`-of-`n` threshold. A majority-compromised committee is **excluded** — it can decrypt, and no protocol mechanism here prevents that. | shuffle-chain forgery, substituted-signer, non-re-randomising and partial-chain rows, adversarial |
 | Replay | Targeted, at three boundaries: cells, shuffle chains across epochs and committees, and decoder admissions. | chain-replay, abusive-peer and duplicate-budget rows, adversarial |
@@ -37,6 +37,30 @@ project must not claim it.
 The last row is the one most likely to be over-read. Fixed-rate cover bounds
 what a single observation reveals; it says nothing about what many
 observations reveal in aggregate, and Nomad has not measured that.
+
+### A scheduled cell that the host cannot send
+
+A node does not stop when a local condition breaks its emission path: an
+exhausted socket buffer, a route flap, a full disk under the hop sequence
+reservation. Stopping was the previous behaviour and was worse — a node going
+permanently silent is the loudest event a passive observer can see, from a
+cause that is local and ordinary. Such a failure now costs the cell it
+interrupted and nothing else.
+
+The residue is that emitted **count** is not purely the schedule: it is the
+schedule minus the cells the host could not send. That quantity is host state
+and an adversary's own pressure, not private user activity, and the operator
+relay path this applies to schedules its work from public replication policy.
+It is stated rather than buried because the claim in the table above is about
+*private activity*, and a reader is entitled to know exactly which other
+inputs can move an observable.
+
+Two things bound it. A condition that does not clear is not treated as
+weather: a node stops after a bounded run of consecutive lost cells and says
+what was failing, so a permanent misconfiguration surfaces instead of hiding.
+And conditions that are permanent by nature — a firewall verdict, a
+destination the kernel will never accept, an exhausted or unreadable sequence
+space — are not lost-cell conditions at all; they stop the node immediately.
 
 ### The operator-to-operator hop header is not encrypted
 
@@ -56,6 +80,14 @@ anything:
   stream ID unchanged, so an observer links a batch's ingress hop to its
   egress hop by reading bytes 1164..1180. No correlation attack is needed.
 - the **batch coordinates**, ordinal and size.
+- the **hop sequence**, a per-sender counter. It is public by construction —
+  an observer counting datagrams on a link has it anyway — but it must stay a
+  count of what was *sent*. A number issued to a cell that then failed at the
+  socket would leave a gap, and a gap is an exact per-cell count of the
+  sender's local send failures, readable by the receiving peer. A sequence
+  number is therefore returned when a cell does not reach the socket;
+  `live/node/resourcelimit_test.go` reads the sequences off the wire and
+  requires an unbroken run across a run with drops in it.
 
 What this does and does not mean. It does not break the reader claim: relay
 work is scheduled by public replication policy, not by any reader's activity,

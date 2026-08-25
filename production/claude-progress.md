@@ -603,5 +603,54 @@ than mentioned.
 
 Gate counts unchanged at 2 MET / 24 PARTIAL / 3 NOT_MET / 1 BLOCKED. PROD-14
 keeps its status and loses two blockers, gaining narrower ones: no whole-system
-load or OOM evidence, and a loopback single-host boundary.
+load evidence, and a loopback single-host boundary.
+
+## Checkpoint: the evaluator said no, and the reasons were better than the change
+
+The above was reviewed before it was recorded, and came back "do not call this
+done". Two Sev1 defects, both in the parts that looked most obviously right.
+
+**The classification had the wrong polarity.** Asking "is this error fatal?"
+and answering with a denylist of one meant every error nobody had thought of
+became a lost cell -- including hop sequence exhaustion, whose own message says
+to rotate the topology epoch. A failed cryptographic precondition downgraded to
+a counter, which CLAUDE.md forbids in as many words. The argument against that
+shape was already written down in this codebase, about telemetry field names,
+and the change had picked the opposite side of it. Now an allowlist of named
+transient conditions; EPERM and EINVAL are off it, because on Linux they mean
+a firewall verdict and a destination the kernel will never accept.
+
+**A dropped cell burned a cleartext sequence number.** The hop sequence is in
+the clear in every header. A number issued to a cell that then failed at the
+socket left a gap, and the gap counted local send failures exactly, for the
+receiving peer and anyone watching the link. Worse, the evidence note argued
+that publishing `send_dropped` conceded nothing *because* an observer reads it
+off the wire -- using the channel as the justification without noticing it was
+the finding. Numbers are returned now, and a test reads the sequences off the
+emitted cells: 27 cells carrying 1..27 across a run with 18 drops.
+
+Three lessons worth keeping.
+
+**The safety argument was the untested part.** The whole case for letting a
+node keep running was "the alarm is replaced". That replacement was tested
+only against hand-built structs, and two mutations survived the suite --
+including storing the liveness timestamp before the write, which makes a node
+dropping every cell report itself healthy forever. The part of a change that
+carries its justification is the part to attack hardest, and it was the part I
+had tested least.
+
+**A fix that removes an alarm has to follow it everywhere.** Compose was
+updated; the two operator runbooks and the WAN campaign still checked that the
+process was alive, which the change had made permanently true, and the Compose
+healthcheck's verdict was recorded in evidence and never read. One surface out
+of four.
+
+**A flaky test is not weak evidence, it is none.** The two-world comparison
+failed about one run in ten under `-race`, in both directions, reporting a
+loaded runner as a count divergence between worlds -- a message that reads like
+a privacy finding. Split now: a deterministic structural half that ran 15/15,
+and a rate comparison behind the campaign gate with a floor measured from three
+worlds that differ by nothing. Chasing sub-second statistics in a per-push
+suite was a decision this project had already made correctly once, and I had
+quietly unmade it.
 
