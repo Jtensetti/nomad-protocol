@@ -304,11 +304,14 @@
    "evidence": [
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
     "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-    "https://github.com/Jtensetti/nomad-testnet/blob/80b9f5c83e30114f6f749a39b89a6d77638abe4c/deploy/MULTI_OPERATOR.md"
+    "https://github.com/Jtensetti/nomad-testnet/blob/80b9f5c83e30114f6f749a39b89a6d77638abe4c/deploy/MULTI_OPERATOR.md",
+    "IPv6 is a first-class operator address at the document layer, not something the format tolerates: IPv6, IPv4 and mixed operator sets are admitted, and the endpoint grammar and canonical form are frozen in conformance/COMPATIBILITY.md (nomad-testnet ea4e4b5)",
+    "the operator-distinctness check compares socket addresses rather than the strings that spell them. Before this, two operators could occupy one address as [::1] against [0:0:0:0:0:0:0:1], as 127.0.0.1 against its IPv4-mapped form, as operator-a against operator-a., or across http and https on one TCP port, and be counted as two"
    ],
    "blockers": [
     "three independently administered operators and regions",
-    "WAN IPv4/IPv6, NAT, churn and partition evidence"
+    "WAN IPv4/IPv6, NAT, churn and partition evidence",
+    "no live IPv6 run anywhere: the development container has no IPv6 stack at all, so dual-stack behaviour on the wire is untested and needs the same multi-region infrastructure EB-3 covers"
    ]
   },
   {

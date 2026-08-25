@@ -377,7 +377,8 @@
     {
      "id": "B-12",
      "summary": "IPv4/IPv6 operator testing",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "the document layer is done and adversarially tested (nomad-testnet ea4e4b5): IPv6, IPv4 and mixed operator sets are admitted, malformed and bracketed non-addresses are refused, and one socket address in two spellings is one operator -- including an IPv4 address against its IPv4-mapped IPv6 form, which look nothing alike. The endpoint grammar and canonical form are frozen in conformance/COMPATIBILITY.md so a second implementation does not have to guess which topologies are admissible. No live IPv6 run: this container has no IPv6 stack at all (socket(AF_INET6) returns EAFNOSUPPORT), so dual-stack behaviour on the wire is untested and needs the same WAN infrastructure as B-04 and B-09"
     },
     {
      "id": "B-13",
