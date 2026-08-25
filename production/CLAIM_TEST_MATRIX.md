@@ -122,6 +122,9 @@ Levels, weakest first:
 | Private activity during an outage does not change what a peer sees | two-world at the surviving peer | idle and busy outage worlds deliver identical counts, sizes and destinations | adversarial |
 | An outage is survivable across regions | regional outage test | **none — B-09 NOT_STARTED; loopback only** | none |
 
+| An encryption key outside the prime-order subgroup is refused | negative test | the identity and small-order points are rejected in publicPoint, covering every encryption entry point | adversarial |
+| A single-cell encryption is indistinguishable from a batch column | structural + mutation | layout decrypted row by row in place; six mutations that previously passed now fail, including plaintext written into the padding | adversarial |
+
 ## Network coding and resources
 
 | Claim | Boundary required | Tests | Level |

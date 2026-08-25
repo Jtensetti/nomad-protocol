@@ -1032,14 +1032,25 @@ format changes and `Encrypt`'s minimum stays where it belongs.
 mix package; 86.8 ms to 42.4 ms per uplink seal. The airlock suite fell from
 375 s to 52 s and the deposit suite from 280 s to 182 s alongside it.
 
-**Evidence that this is the same wire.** The published conformance corpus
-digest is unchanged: `44f69ea7544f156feb773f9da9041de6c4c2b049292de9e371151cc09a1f0c45`.
-Interchangeability is asserted at three levels, because a cell that decrypted
-correctly but sat differently under a shuffle proof would be worse than
-useless: the wire shape, the batch `ParseWire` builds, and a full signed
-shuffle round plus threshold decryption over four individually encrypted
-cells. A batch mixing both encryption paths also decrypts, which is what a
-deployment migrating one publisher at a time will produce.
+**Evidence that this is the same wire.** Interchangeability is asserted at
+three levels, because a cell that decrypted correctly but sat differently under
+a shuffle proof would be worse than useless: the wire shape, the batch
+`ParseWire` builds, and a full signed shuffle round plus threshold decryption
+over four individually encrypted cells. A batch mixing both encryption paths
+also decrypts, which is what a deployment migrating one publisher at a time
+will produce.
+
+**CORRECTION.** This entry originally led with "the published conformance corpus
+digest is unchanged" as the headline evidence that the wire had not moved. That
+claim was false and has been struck. The corpus contains **zero bytes of mix
+ciphertext**: its only uplink vector is `sequence-prefix`, eight bytes of
+cleartext counter whose own fields say `"ciphertext_is_fixed": "false"` and "the
+sealed body is randomised; only the frame is pinned". The other cell vectors are
+`hop-cell-v1`, the operator-to-operator profile that cannot carry uplink
+traffic. The digest would be unchanged if `EncryptCell` emitted 1152 zeros,
+swapped x and y, or reused one ephemeral scalar across every row. It was not
+weak evidence; it was none, and citing it was the kind of overclaim the evidence
+rules exist to prevent. Found by an evaluator review, not by the author.
 
 **The finding is reduced, not closed.** 42 ms fits inside the deployed 50 ms
 interval with no useful headroom and remains far beyond the 5 ms the topology
@@ -1161,3 +1172,48 @@ repositories, which previously ran in one and failed there.
 
 - It is this project's own gates, run by this project, on one host. Not
   independent assessment, not WAN evidence, not a production proving run.
+
+## Evaluator review of the single-cell encryption path
+
+`nomad-anytrust-mix-sim` 60ccdb4, `nomad-testnet` 30d4c50
+
+An evaluator reviewed `mix.EncryptCell` (6a1324e) and the uplink change
+(970cc0e) and did not approve them. The verdict is worth recording as stated:
+the **code** was sound — no defect was found in `EncryptCell` or the new
+`seal()`, and every property claimed was verified directly, including that all
+randomness traces to `crypto/rand`, that the layout is x-then-y per row, that
+nothing downstream depends on how a column was produced, and that the vendored
+snapshot is faithful. The **evidence and the tests** were not.
+
+**A false evidence claim, now struck.** See the CORRECTION above: the
+conformance corpus contains zero bytes of mix ciphertext, so citing its digest
+as evidence the wire had not moved was no evidence at all.
+
+**A test whose central assertion could not fail.** `len(individual) !=
+len(fromBatch[0])` over two `[1200]byte` values is `1200 != 1200`, folded at
+compile time. The test built and marshalled a whole two-column batch in order
+to read a constant, and asserted nothing about ordering, offsets or structure.
+
+**Six mutations passed the whole file.** Reusing one ephemeral scalar across all
+eighteen rows; deriving the ephemeral deterministically from the plaintext; a
+package-level fixed-seed stream; constant padding; and — the sharpest —
+`copy(out[offset:], cell[:])`, publishing the first 48 bytes of the private
+fragment in cleartext in every wire cell. All six now fail, each on a named
+test. The padding case is the lesson: asserting "not all zero" is not asserting
+"carries nothing".
+
+**A real vulnerability, pre-existing and repeated.** `Encrypt` never called
+`rejectSmallOrder`, which this package has had since `validateThresholdCommittee`
+was written. Encrypting to the group identity yields `y = m + r·0 = m`, and the
+evaluator recovered a full 504-byte fragment off the wire with no key material.
+`uplink.Session` holds a bare `mix.PublicKey` that never passes committee
+validation, so it was exactly the caller with no protection. The check now sits
+in `publicPoint`, covering every encryption entry point at once.
+
+**The change was incomplete.** `live/airlock`'s `coverColumn` still encrypted a
+two-column batch and discarded one, and it runs once per cover column up to the
+batch size — a larger consumer of the discarded work than the publisher's seal.
+
+- Per CLAUDE.md this is QA by a subagent evaluator, not an independent external
+  audit, and is not evidence for PROD-04 or PROD-29. It is recorded because the
+  findings changed both the code and the claims.

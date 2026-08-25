@@ -71,7 +71,8 @@
    "evidence": [
     "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1",
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "encrypting to a small-order or identity public key is refused at every entry point (nomad-anytrust-mix-sim 60ccdb4). rejectSmallOrder existed and validateThresholdCommittee used it, but Encrypt never did, so a caller holding a bare PublicKey that never passed committee validation -- uplink.Session -- could encrypt to the identity and put the plaintext on the wire as y = m + r*0. An evaluator recovered a full fragment with no key material; the check now lives in publicPoint"
    ],
    "blockers": [
     "separately administered production shuffle committee",
@@ -249,7 +250,8 @@
    "blockers": [
     "the correlation experiment models one adversary -- an entry operator matching arrival order to release position -- and that adversary is defeated by the seal alone. It does not measure an adversary who observes the batch between hops, controls some mixers, correlates across epochs, or knows which publisher submits when, and the shuffle chain exists chiefly for the first two. The chain's own contribution is therefore not measured by this experiment",
     "single process: publishers, entry operator and committee all run in one test binary. A distributed correlation experiment across real hosts has not been run",
-    "no independent review of the deposit design"
+    "no independent review of the deposit design",
+    "classification: the publication uplink is not on a production path. No cmd/ binary calls uplink.NewSession or deposit.NewDrain -- the only non-test caller is the conformance vector generator -- so this is implemented and integration tested, not production-boundary tested, and the seal-cost figures describe a path nothing deploys yet"
    ]
   },
   {
@@ -268,7 +270,8 @@
    "blockers": [
     "a publisher's per-cell sealing cost still exceeds most permitted cadences: about 42 ms against a 50 ms deployed interval with no useful headroom, and far beyond the 5 ms the topology permits as its shortest. Halved from 87 ms by removing a discarded companion mix column (mix.EncryptCell); what remains is the fragment's own ElGamal encryption, so the next reduction would be a protocol change rather than a refactor",
     "single process: publishers, entry operator and committee share one binary, so no packet capture on a real interface covers the publication path specifically",
-    "replication is not exercised: the criterion names it and the campaign does not reach it"
+    "replication is not exercised: the criterion names it and the campaign does not reach it",
+    "classification: the publication uplink is not on a production path. No cmd/ binary calls uplink.NewSession or deposit.NewDrain -- the only non-test caller is the conformance vector generator -- so this is implemented and integration tested, not production-boundary tested, and the seal-cost figures describe a path nothing deploys yet"
    ]
   },
   {
