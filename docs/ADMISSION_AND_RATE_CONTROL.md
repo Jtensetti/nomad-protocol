@@ -63,6 +63,33 @@ interval, whatever the load. There is no token bucket to drain and no
 backpressure signal to observe, because a rate that responds to conditions is
 a rate that carries information about them.
 
+### What a local failure costs
+
+"Whatever the load" has to survive the load actually breaking something. A
+send can fail for reasons that have nothing to do with the protocol: socket
+buffers exhausted (ENOBUFS), a local rate limiter refusing the datagram
+(EPERM), a route withdrawn (ENETUNREACH), a full disk under the hop sequence
+reservation. Every one of those used to return from the scheduler, and in the
+live node that closed the socket: the node stopped emitting, permanently. The
+loudest event a passive observer can see, from the quietest local cause.
+
+A local failure now costs the cell it interrupted and nothing else. The cell
+is lost -- never retried, never deferred and re-emitted, never followed by a
+catch-up -- and the next emission lands on the absolute deadline it would have
+had anyway. Which peer that deadline is addressed to also stays a function of
+the tick index and the signed plan, so a failing peer does not shift the
+rotation. Only a closed socket still ends the schedule, because a node ticking
+against a socket that is gone is a node emitting nothing while reporting
+nothing wrong.
+
+That trade removes an alarm, and the alarm has to be replaced rather than
+lost: a process that is up, on cadence, and silently dropping every cell is
+invisible to a supervisor that only asks whether the process is up. The node
+publishes `send_dropped` and `last_sent_at`, and `nomad-node --check-health`
+fails a node that has not emitted inside a deployment-set window. Both values
+are things an observer on the link reads directly off the wire, so publishing
+them concedes nothing.
+
 ## Where these bounds stop
 
 - **Fair access under Sybil.** A per-session quota stops one uplink session
@@ -75,7 +102,10 @@ a rate that carries information about them.
   resource-constrained node past its lateness budget, at which point it stops
   emitting — correct fail-closed behaviour, and a denial of service. Measured:
   a replay flood shifted median cadence by 5.5% on a two-core host against
-  0.7% on an eight-core one, with deadline misses on the smaller machine.
+  0.7% on an eight-core one, with deadline misses on the smaller machine. A
+  local *send* failure no longer does this (above); a missed lateness budget
+  still does, and deliberately so, because emitting late is emitting a
+  measurement of the host.
 - **Coded-symbol pollution** cannot be prevented pre-admission with GF(2^8)
   coding and peer re-encoding; see `POLLUTION_AND_RESOURCES.md`. Budgets bound
   the cost, not the availability loss: at 50% or more malicious symbols a

@@ -561,3 +561,47 @@ are PARTIAL and their blockers are now specific rather than general: no
 independent review anywhere, no distributed correlation experiment, no
 descriptor distribution, no economic analysis, no availability claim under
 sustained flood, and no measurement of long-horizon correlation at all.
+
+## Checkpoint: the quietest cause of the loudest event
+
+PROD-14 asked what a node emits at a resource limit. Reading the emission path
+to write the test answered it before the test did: `Scheduler.run` returned on
+any Sink error, and `node.Run` closed the socket on return, so an exhausted
+socket buffer or a full disk under the hop sequence reservation stopped the
+node permanently. A node going silent is the most visible thing a passive
+observer can see, and every cause was local and ordinary.
+
+Fixed in the fabric (`ErrCellDropped`: count the cell, keep the absolute
+deadline, never retry or catch up, only a closed socket is fatal) and in the
+node (one classification rule every failure site routes through; a health-file
+write can no longer end `maintain`). Then the two-world test PROD-14 actually
+asked for: one node's cache rejecting 448 of 449 streams against one storing
+449, matching sizes, counts, destination split and burst ceiling.
+
+Three things worth keeping from this one.
+
+**The fix removed an alarm, so the alarm had to be rebuilt.** A node that no
+longer stops is a node that can be up, on cadence, and silently dropping every
+cell — invisible to a Compose healthcheck that asked `test -s health.json`.
+`last_sent_at` and `send_dropped` are published, `nomad-node --check-health`
+reads them, and the live e2e asserts on them. Trading a crude alarm for none
+would have been a worse change than the bug.
+
+**A test passed for the wrong reason and mutation testing caught it.** The
+first closed-socket test called `Send` on a closed socket expecting the fatal
+branch; `SetWriteDeadline` fails first, so that branch never ran, and deleting
+it left the test green. Reading the test would not have found this. The
+classification moved into one function and got a table over the real errno
+values.
+
+**What the test does not claim is now asserted rather than omitted.** The two
+worlds emit the same size, count and destinations, and a *different* work/cover
+mix — readable on the wire, because the operator-to-operator hop header is
+authenticated but not encrypted. That was already known and documented; the
+test now asserts the mix actually moved, so the limitation is measured rather
+than mentioned.
+
+Gate counts unchanged at 2 MET / 24 PARTIAL / 3 NOT_MET / 1 BLOCKED. PROD-14
+keeps its status and loses two blockers, gaining narrower ones: no whole-system
+load or OOM evidence, and a loopback single-host boundary.
+

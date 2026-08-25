@@ -141,6 +141,10 @@ Levels, weakest first:
 | Abusive peers are rejected for their own reason at no cost | negative tests | malformed, unauthenticated, misdirected, cross-epoch and replayed each rejected, nothing stored | adversarial |
 | Availability under flood | sustained campaign | **not claimed — a flood can push a small node past its lateness budget; see ADMISSION_AND_RATE_CONTROL.md** | none |
 | Backpressure does not alter private-sensitive cadence | wire trace under load | **none** | none |
+| A resource limit does not change size, count, destination or burst | two worlds at and below the limit, real sockets | `TestAResourceLimitDoesNotChangeTheEmittedTrace`: one world's cache rejects 448 of 449 streams and relays 1 cell, the other stores 449 and relays 41; emitted sizes, cell counts, destination split over a rotating peer plan and the one-second burst ceiling all match | adversarial, loopback |
+| A resource limit does not change the *work/cover mix* | — | **not claimed at the operator relay layer, and measured false: the hop header is authenticated but not encrypted, so the work flag is readable on the wire (`live/uplink/distinguisher_test.go` measures the separation as perfect). Relay work is public replication policy; the publisher uplink uses a pseudorandom profile instead. See PUBLICATION_INGRESS.md.** | finding |
+| A local send failure costs one cell, not the schedule | real socket, refused destination and unwritable state | `TestASendFailureCostsOneCellAndNotTheNode` (30 drops over 30 ticks, cadence held), `TestAFullDiskUnderTheSequenceReservationCostsCellsNotTheNode`, `TestADroppedCellStillConsumesItsPlaceInThePeerPlan` (15/15 over a two-peer rotation), `fabric` scheduler tests; all mutation-verified | adversarial, loopback |
+| A failing node is visible to a supervisor | health file + healthcheck | `nomad-node --check-health` fails a node that is up but has emitted nothing; `cmd/nomad-node` table over five states; Compose healthcheck and `compose-e2e.sh` assert `send_dropped`, `health_deferred` and `last_sent_at` | unit + integration |
 
 ## Operational output
 

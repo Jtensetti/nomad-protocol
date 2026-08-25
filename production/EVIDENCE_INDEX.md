@@ -1217,3 +1217,62 @@ batch size — a larger consumer of the discarded work than the publisher's seal
 - Per CLAUDE.md this is QA by a subagent evaluator, not an independent external
   audit, and is not evidence for PROD-04 or PROD-29. It is recorded because the
   findings changed both the code and the claims.
+
+## A local failure used to cost the whole schedule
+
+PROD-14 asks what a node emits when it hits a resource limit. Answering it
+turned up something the question had not anticipated: until this change the
+answer was "nothing, ever again".
+
+`Scheduler.run` returned on any error from its Source or Sink, and
+`node.Run` closed the socket on return. So every one of these ended emission
+permanently, with no restart and no report:
+
+- `WriteToUDP` returning ENOBUFS when the host's socket buffers are exhausted;
+- EPERM from a local rate limiter, ENETUNREACH across a route flap;
+- a full disk under `FileSequence.reserve`, which writes state to disk before
+  a range of hop sequence numbers can be used;
+- a health-file write failing, which returned from `maintain`.
+
+A node going permanently silent is the loudest event a passive observer can
+see, and each of those causes is local, ordinary, and partly within an
+adversary's reach through host pressure. It is an availability bug and an
+observability one at the same time.
+
+**What changed.** `fabric.ErrCellDropped` lets a Source or Sink say that this
+one cell could not be produced or delivered. The scheduler counts it and
+continues on the same absolute deadline: the cell is lost, never retried,
+never deferred and re-emitted, never followed by a catch-up. The peer counter
+advances before anything can fail, so the destination stays a function of the
+tick index and the signed plan rather than of local conditions. Only
+`net.ErrClosed` still ends the schedule.
+
+**What it cost, and what replaced it.** The change removes an alarm: a process
+that is up, on cadence, and silently dropping every cell was previously
+detected by the container exiting, and the Compose healthcheck asked only
+`test -s /state/health.json`. That is now replaced rather than lost. The node
+publishes `send_dropped` and `last_sent_at`; `nomad-node --check-health` fails
+a node that has emitted nothing inside a deployment-set window; the Compose
+healthcheck runs it; and `scripts/compose-e2e.sh` asserts on a live run that
+`send_dropped` and `health_deferred` are zero and that an emission was
+actually recorded. Both published values are things an observer on the link
+reads directly off the wire, so publishing them concedes nothing.
+
+**A test that passed for the wrong reason.** The first version of the
+closed-socket test closed the node's socket and called `Send`, expecting to
+exercise the fatal branch. It passed, and mutating that branch away left it
+green: `SetWriteDeadline` fails on a closed socket before `WriteToUDP` is ever
+reached, so the branch under test never ran. The classification now lives in
+one function, `sendFailureIsFatal`, that every failure site routes through,
+and `TestOnlyAClosedSocketEndsTheSchedule` tables the real error values
+against it. Mutation testing is what found this; reading the test did not.
+
+**Boundary.** Loopback, single host, sub-second windows. It establishes size,
+count, destination and burst under a resource limit, not cadence — the timing
+campaign measures cadence separately and currently records a finding. Memory
+exhaustion is not driven and the composed multi-process system is not run to
+its limits, so PROD-14 stays PARTIAL with those blockers named.
+
+**Not independent.** Implementer and evaluator were both agents in this
+project. This is QA, not an external audit.
+
