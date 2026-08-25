@@ -21,12 +21,31 @@ is `production/GOAL.md`. The authoritative readiness registry is
 
 ## Skills
 
-`.claude/skills/agent-efficient-ci` — verify cheaply and locally before
-spending remote CI, tokens or maintainer attention. Read it before committing,
-after a CI failure, and when changing a workflow. It carries the escalation
-ladder, the cheapest-check table for these repositories, failure
-classification, and the rule that a substantial job failing in seconds did not
-run.
+Skills are progressive-disclosure instructions. **Do not load all skill bodies at
+session start.** Read only the skill(s) triggered by the current task so the
+skills themselves do not become context overhead.
+
+- `.claude/skills/agent-efficient-ci` — always read before committing/pushing,
+  after CI failure, or when changing workflows. Cheapest-check ladder and
+  failure classification.
+- `.claude/skills/headroom` — read when logs/tool output/search results/code
+  context are large. Compress input before reasoning; preserve exact failures.
+- `.claude/skills/systematic-debugging` — read for every bug, build/test failure
+  or unexpected behavior before proposing a fix. Root cause before patching;
+  stop after three failed fix attempts and question assumptions/architecture.
+- `.claude/skills/pre-commit` — read before meaningful pushes and when local
+  checks/hooks are involved. Catch deterministic failures locally first.
+- `.claude/skills/gh-fix-ci` — read for red GitHub Actions. Inspect bounded
+  actionable failure snippets instead of whole logs, classify, reproduce
+  locally, then fix.
+- `.claude/skills/tldr-code` — read when exploring or tracing unfamiliar code.
+  Structure/symbol/search/slices before whole-file reads; use `tldr` if already
+  installed, otherwise apply the same hierarchy with native tools.
+
+For a CI failure, the normal chain is:
+`headroom -> gh-fix-ci -> systematic-debugging -> agent-efficient-ci -> pre-commit`.
+Do not repeatedly push speculative fixes. `tldr-code` joins only when codebase
+navigation is needed.
 
 ## Build/test commands
 
