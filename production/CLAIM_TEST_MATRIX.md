@@ -154,6 +154,8 @@ Levels, weakest first:
 | A failed load never falls back to ordinary networking | negative tests at the adapter | thirteen failure modes, each ending in a local 4xx with no redirect header and an intact CSP; adapter graph holds no socket | adversarial |
 | The renderer admits only local, non-scriptable URLs | negative tests | scheme, traversal, encoding and data: media-type table; the URL gate and the adapter share one path rule and a test fails if their verdicts diverge | adversarial |
 | Zero browser egress including DNS | packet/DNS capture of the binary | **none** | none |
+| The engine egress surfaces are enumerated and anchored | inventory verified against the tree | 31 Gecko and 18 Blink surfaces, each with what the integration owes it; a verifier fails when an anchor stops existing | structural |
+| An engine fork routes renderer paths through verified local data | engine implementation + browser tests | **none — no engine code is modified in either fork** | none |
 | Partial write cannot render | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Symlink, traversal, overwrite rejected | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |

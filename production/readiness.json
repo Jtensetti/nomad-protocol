@@ -324,11 +324,13 @@
     "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
     "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
+    "the engine-side egress audit exists as a machine-checked list rather than a paragraph: 31 Gecko surfaces (firefox-nomad fbc1b2b2e8) and 18 Blink surfaces (chromium-nomad 37cfdd900e), each anchored to a real path with what the integration owes it, plus a verifier that fails when an anchor stops existing"
    ],
    "blockers": [
     "Apple-provisioned App Group or independently reviewed production IPC boundary",
-    "independent browser/client assessment"
+    "independent browser/client assessment",
+    "no engine code is modified in either fork: the inventories are the prerequisite work, not the integration. A build alone is beyond what this environment can run, so nothing here demonstrates that a Nomad browsing context cannot fall through -- only what would have to be closed for it not to"
    ]
   },
   {
@@ -343,7 +345,8 @@
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
     "the entitlement gate now runs where it is pushed, not only where it can be built: the release bundle's declared capabilities were checked by macos/scripts/security_gate.sh, which needs PlistBuddy and swift and so runs only on a macOS runner -- and the only macOS workflow triggered on push for `branches: [agent/macos-browser]`, so on every other branch nothing checked the entitlements at all. Nomad-browser/bundle_test.go parses the plists directly and runs on every push (77d632c)",
     "entitlements are an allowlist with a written reason per key rather than a denylist of the ones someone thought of: an unexplained key fails until a reason is recorded, and named defeats (network client/server, mach-lookup exceptions, unsigned executable memory, library validation off, get-task-allow, apple-events) fail by name. Info.plist must declare no URL types, document types or extension points and no App Transport Security exceptions",
-    "the forbidden-Swift-symbol scan is checked against itself: a second test runs it over samples containing each construct, so a pattern that stopped matching after a rename is caught rather than passing over sources that happen to be clean. It found one immediately -- a word boundary made the CFNetwork pattern miss CFNetworkCopySystemProxySettings, which the shell version caught"
+    "the forbidden-Swift-symbol scan is checked against itself: a second test runs it over samples containing each construct, so a pattern that stopped matching after a rename is caught rather than passing over sources that happen to be clean. It found one immediately -- a word boundary made the CFNetwork pattern miss CFNetworkCopySystemProxySettings, which the shell version caught",
+    "the surfaces this criterion enumerates are individually anchored in both engine forks, including the ones a URL-level or DNS-level control would miss: DNS-over-HTTPS, WebRTC (which reaches the network with no channel or URLLoader at all), speculative connect and DNS prefetch (which fire on hover and on parse rather than on navigation), captive portal probes, OCSP fetching, and the component updater"
    ],
    "blockers": [
     "release-binary packet and DNS capture matrix on every supported platform"

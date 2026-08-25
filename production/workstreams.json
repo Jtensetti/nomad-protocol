@@ -628,8 +628,8 @@
     {
      "id": "F-11",
      "summary": "engine forks route all renderer/service paths through the verified-local contract",
-     "status": "NOT_STARTED",
-     "note": "firefox-nomad/chromium-nomad carry integration contracts only"
+     "status": "PARTIAL",
+     "note": "no engine code is modified and none of the renderer or service paths are routed anywhere yet: this remains an integration contract, and the status says so. What now exists is the prerequisite both contracts named and neither had. Each fork carries tools/nomad/egress-inventory.json enumerating its network-capable surfaces anchored to real paths in that checkout -- 31 for Gecko (firefox-nomad fbc1b2b2e8), 18 for Blink (chromium-nomad 37cfdd900e) -- with the interception boundary named (nsIProtocolHandler.idl; URLLoaderFactory via network_context.cc) and what the integration owes each surface. A verifier checks every anchor still exists and nothing more, because a checklist whose anchors have rotted reads as coverage; the first Gecko draft listed nsINetworkPredictor.idl, an interface since removed, which is what caught it"
     },
     {
      "id": "F-12",
