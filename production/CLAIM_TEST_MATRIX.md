@@ -134,6 +134,7 @@ Levels, weakest first:
 | Polluted systematic symbols never enter the basis | negative tests | commitment-mismatch test | adversarial |
 | A malicious symbol cannot exceed the generation budget | Byzantine campaign | 50/90/100% campaigns, all budgets asserted | adversarial |
 | Replay drains no budget | unit | duplicate test | unit |
+| A mixer that cheats mid-session is attributed, and honest mixers downstream are not | live chain, adversary at its own turn | `mix/livefault_test.go`: a real committee runs every round through `ShuffleAndSign`; one mixer substitutes or drops a cell in its own output and re-signs, and the rest shuffle the poisoned batch honestly. Attribution names the culprit, a third party confirms it, and the report cannot be re-pointed at any of the honest mixers. Mutation-verified, including blaming the last round instead | adversarial, single process |
 | Coded-symbol pollution is prevented | per-symbol verification | **not claimed; see POLLUTION_AND_RESOURCES.md** | none |
 | Eclipse is structurally impossible | invariant test | no peer discovery exists; peer set is a function of the signed topology and is byte-identical after a flood from unnamed addresses and correctly sealed cells from the wrong socket | adversarial |
 | Sybil identities buy nothing | invariant test | 64 fresh identities leave the peer set unchanged; admission consults a signed document, never a population | adversarial |
