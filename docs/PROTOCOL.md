@@ -104,6 +104,98 @@ the window; one within 64 below it is accepted once and then rejected; one
 allocated per sender across all its peers, and a cell that fails locally before
 reaching the socket returns its number rather than leaving a gap.
 
+## Signed topology document
+
+The topology is the root of trust: it names the operator set, their endpoints
+and keys, the epoch, the validity window, the traffic class and the DKG
+profile. Every other check in the system is relative to it, so an
+implementation that cannot verify one cannot participate at all.
+
+It was not specified here until an attempt to write a second implementation
+found that it could not be (PROD-03). What follows is what the reference
+implementation does. Read the last subsection before building on it: the
+encoding it signs is defined by one language's library defaults, which is a
+defect, not a design.
+
+### Structure
+
+A signed topology is a JSON object with exactly two members:
+
+```json
+{"document": { ... }, "signature": "<base64 Ed25519 signature>"}
+```
+
+The document's members, in this order:
+
+| Member | Type |
+|---|---|
+| `version` | string, exactly `nomad-live-topology-v3` |
+| `network_id` | string |
+| `epoch` | unsigned integer |
+| `not_before`, `not_after` | RFC 3339 timestamps |
+| `traffic` | object: `cell_size`, `cell_interval_ms`, `max_lateness_ms`, `queue_capacity` |
+| `dkg` | object: `threshold`, `session_id`, `start_at`, `phase_duration_ms` |
+| `operators` | array of operator objects |
+
+Each operator, in this order: `id`, `index`, `endpoint`, `partial_endpoint`,
+`dkg_endpoint`, `identity_key`, `kex_key`, `dkg_identity_key`, `peer_plan`,
+`attestation`. Keys are base64; `peer_plan` is an array of operator indices.
+
+### Three signed messages
+
+Each is a domain string concatenated with the canonical encoding below — no
+length prefix, no separator — and all three use v3 domains.
+
+1. **Draft digest.** Blank every operator's `attestation`, encode, then
+   `SHA256("nomad-topology-draft-v3" || canonical)`. This is what each
+   operator attests to, so attestations bind the same membership, endpoints,
+   keys, window, traffic class and peer plans regardless of the order they
+   were collected in.
+2. **Authority signature.** `Ed25519` over
+   `"nomad-topology-authority-v3" || canonical`, where the canonical encoding
+   is of the document **with** attestations present.
+3. **Topology digest.** `SHA256("nomad-topology-digest-v3" || canonical)`,
+   over the same bytes as the authority signature. This is the 32-byte value
+   the hop authentication tag binds to.
+
+### Verification order
+
+A verifier must, in this order: reject an input above the size bound; reject
+**duplicate JSON object keys** before decoding anything, because a signature
+check cannot catch them — each implementation verifies whatever it parsed, so
+a duplicate key makes one accept what another refuses; reject unknown members
+and trailing data; validate the document against its own rules and the current
+time; check the authority signature against a **pinned** key, never one the
+document names; then check every operator's attestation.
+
+### The bytes on disk are not the bytes signed
+
+A topology file is pretty-printed, with two-space indentation and newlines. The
+canonical encoding below has no insignificant whitespace at all. A verifier
+must parse the file and re-encode canonically; hashing the file as it found it
+verifies nothing and is the first mistake to make here.
+
+### The canonical encoding, and why it is a defect
+
+The canonical encoding is the output of Go's `encoding/json` on the reference
+implementation's structs. Reproducing it requires all of:
+
+- members in the struct-declaration order given above, **not** sorted;
+- no insignificant whitespace;
+- `<`, `>` and `&` escaped as `\u003c`, `\u003e` and `\u0026` — a rule
+  specific to Go's encoder that no JSON specification requires;
+- an absent `operators` array encoded as `null`, not `[]`;
+- every member always present, including empty strings and zeros.
+
+This is written down so a second implementation is possible today. It should
+not survive the protocol freeze. A canonical encoding defined by one
+language's default library behaviour is not a specification: the HTML escaping
+in particular is invisible until a `network_id` or an endpoint contains an
+ampersand, at which point every signature over that document fails in one
+implementation and verifies in another. A freeze should replace it with an
+encoding that is canonical by definition — RFC 8785, or the length-prefixed
+binary form the hop tag already uses. See `production/DECISIONS.md`.
+
 ## RLNC generation packet
 
 The mix cleartext is exactly 504 bytes:

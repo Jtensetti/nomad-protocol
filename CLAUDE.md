@@ -19,6 +19,15 @@ is `production/GOAL.md`. The authoritative readiness registry is
 | Nomad-browser | Networkless macOS browser core + release pipeline (Go + Swift). |
 | firefox-nomad / chromium-nomad | Engine forks; integration contracts only so far. |
 
+## Skills
+
+`.claude/skills/agent-efficient-ci` — verify cheaply and locally before
+spending remote CI, tokens or maintainer attention. Read it before committing,
+after a CI failure, and when changing a workflow. It carries the escalation
+ladder, the cheapest-check table for these repositories, failure
+classification, and the rule that a substantial job failing in seconds did not
+run.
+
 ## Build/test commands
 
 Every Go repo: `go build ./...`, `go vet ./...`, `go test -race ./...`.
