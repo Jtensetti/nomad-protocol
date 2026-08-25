@@ -2,6 +2,65 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-015 (2026-08-25): Two wire-format questions are deferred to the freeze, not settled quietly
+
+Both were found by measurement this session, both have a clear technical
+answer, and both change bytes on the wire. Recording them together because the
+reason for deferring is the same and the freeze is the moment to take them.
+
+**The hop header is authenticated but not encrypted.** A link observer reads
+the work flag, the batch coordinates and the 16-byte stream ID off every relay
+cell, and the stream ID is unchanged across hops, so ingress and egress link by
+reading 16 bytes with no correlation attack
+(`nomad-testnet live/node/linkability_test.go`). Encrypting the header under
+the existing pairwise hop key removes the linkability. It also invalidates the
+published conformance vectors and the second implementation built against them.
+
+**Embedding data in a point's y-coordinate costs sixteen discarded scalar
+multiplications per chunk.** Of a 36 ms serial cell seal, about 30 ms is
+kyber's `Point.Embed` rejection loop and under 4 ms is the ElGamal. A
+prime-order group encoding (Ristretto-style) has no cofactor and no rejection,
+which removes the cost rather than spreading it across cores as the current
+parallelisation does.
+
+**Decision: neither is made now.** Each is a protocol change with an
+interoperability cost, and this project has exactly one second implementation
+and one conformance corpus to invalidate. Making them separately, before a
+freeze, spends that twice. Making them after a freeze costs far more. So both
+are recorded as blockers on PROD-01 with the measurements attached, to be taken
+together as one format revision or explicitly declined with a reason.
+
+**What was done instead**, so the deferral is not an excuse for inaction: the
+linkability is measured and stated in `THREAT_MODEL.md` rather than left as a
+note; the seal cost is parallelised from 36 ms to 12 ms, which clears the 50 ms
+deployed cadence with headroom, and the remaining gap to the 5 ms shortest
+permitted cadence is recorded as a blocker naming this decision.
+
+## DEC-014 (2026-08-25): A local failure costs one cell, never the schedule
+
+Recorded because it trades availability for the emission invariant in a way a
+later reader might otherwise mistake for a bug.
+
+Any error from the sink used to end the scheduler, and in the live node that
+closed the socket: an exhausted socket buffer or a full disk stopped a node
+permanently. A node going silent is the loudest event a passive observer can
+see, from causes that are local and ordinary.
+
+A transient local failure now costs the cell it interrupted and nothing else --
+never retried, never deferred and re-emitted, never followed by a catch-up, and
+the peer rotation stays a function of the tick index. Which failures qualify is
+an **allowlist** of named transient conditions, not a denylist: the first
+version asked whether an error was fatal and answered with a list of one, so
+hop sequence exhaustion became a counter. `EPERM` and `EINVAL` are deliberately
+absent, being a firewall verdict and an unusable destination, and a transient
+condition that does not clear stops the node after a bounded run.
+
+The cost is that the crudest alarm an operator had -- the process exiting --
+is gone. It is replaced rather than dropped: `last_sent_at` and `send_dropped`
+are published, `nomad-node --check-health` fails a node that is up and emitting
+nothing, and both deploy runbooks, the Compose healthcheck and the WAN campaign
+use it.
+
 ## DEC-013 (2026-08-24): Nomad-browser is the browser; the engine forks are parked
 
 The maintainer's decision, recorded because it changes what "done" means for
