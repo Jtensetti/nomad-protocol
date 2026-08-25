@@ -158,7 +158,9 @@ Levels, weakest first:
 | An engine fork routes renderer paths through verified local data | engine implementation + browser tests | **none — no engine code is modified in either fork** | none |
 | Partial write cannot render | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Symlink, traversal, overwrite rejected | filesystem adversarial tests | materializer boundary tests | adversarial |
-| Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |
+| The build is deterministic | two builds from different source paths | byte-identical across three targets on every push; removing -trimpath fails it | integration |
+| Release is reproducible by a second builder | two independent builders | **none — determinism is not independence (EB-2)** | none |
+| The shipped .dmg is reproducible | unsigned-payload comparison | **none — codesign and hdiutil embed timestamps; not implemented** | none |
 | An embedding model that changed is detected | behavioural attestation | a fixed public probe set fingerprinted by basin, refused when it moves; degenerate probe sets rejected at attestation time | adversarial |
 | The embedding service is running the model it claims | attestation of the model itself | **not establishable: a service willing to lie about its model is willing to lie about a hash of it** | n/a |
 | The semantic service is sandboxed with authenticated IPC | sandbox + mutual auth + egress capture | **none — bounded loopback adapter only** | none |

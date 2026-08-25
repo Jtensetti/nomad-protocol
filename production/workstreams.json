@@ -664,7 +664,7 @@
      "id": "H-03",
      "summary": "two independent builders, reproducibility evidence or normalized comparison",
      "status": "PARTIAL",
-     "note": "scripts/compare-builds.sh reports where two build trees differ and fails closed; two genuinely independent builders remain to be run"
+     "note": "determinism is now measured rather than assumed: check-reproducible.sh builds the Go release binaries twice from two source copies at different path lengths and requires byte-identical results across three targets, on every push. compare-builds.sh reports where two trees differ and still fails closed. Independence is the half that remains: a second builder on their own machine is not something this project can establish about itself (EB-2). The .dmg is explicitly out of scope -- codesign and hdiutil embed timestamps (Nomad-browser 7ad564b)"
     },
     {
      "id": "H-04",

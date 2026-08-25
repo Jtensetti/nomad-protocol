@@ -384,13 +384,14 @@
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
     "the vulnerability gate runs in all nine Go repositories and on all nine vendored component modules, verified by exit code. It previously ran in one, and that one was failing: 20 reachable standard-library vulnerabilities, because the repositories pinned Go 1.23 after it stopped receiving backported security fixes. Every repository is now on 1.25 and scans clean",
     "SLSA-shaped provenance is generated in CI alongside the SBOM (Nomad-browser 41631ae). The generator existed and no workflow ran it, so no provenance was produced anywhere; it attests rather than signs and stamps itself unsigned outside a protected identity, so it cannot be mistaken for the signed provenance this criterion wants",
-    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there"
+    "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there",
+    "build determinism is measured on every push, not assumed (Nomad-browser 7ad564b): the Go release binaries are built twice from two copies of the source at different path lengths and must be byte-identical across three targets. Two paths is the point -- building twice in one directory proves almost nothing, while two paths show the source path does not reach the binary, which -trimpath is supposed to guarantee and which nothing had checked. Removing -trimpath makes it fail, so it does not pass vacuously"
    ],
    "blockers": [
-    "two independent matching builds",
-    "SBOM and signed provenance",
     "nothing checks for *malicious* dependencies, which this criterion also names. govulncheck answers whether a known advisory is reachable, not whether a dependency is what it claims to be",
-    "provenance is generated but not signed: signing needs a key no repository may hold, and no release key exists yet (EB-7)"
+    "provenance is generated but not signed: signing needs a key no repository may hold, and no release key exists yet (EB-7)",
+    "determinism is established; independence is not. A second builder on their own machine getting the same bytes is not something this project can establish about itself (EB-2). docs/REPRODUCIBILITY.md records the procedure and the trap: Go stamps the commit hash and dirty flag by default, so a git checkout and an exported tarball differ from identical source",
+    "the macOS .dmg is out of scope for the determinism check: codesign and hdiutil embed timestamps and a signature is not reproducible by construction, so reproducing the shipped installer would mean comparing the unsigned payload, which is not implemented"
    ]
   },
   {
