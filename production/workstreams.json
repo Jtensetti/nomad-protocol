@@ -628,7 +628,7 @@
      "id": "F-12",
      "summary": "semantic service sandbox: authenticated IPC, no network capability, bounded inputs, reproducible model hash attestation, attempted-egress capture (PROD-24)",
      "status": "PARTIAL",
-     "note": "loopback-only bounded adapter exists in nomad-semantic-basins; sandbox, IPC auth, attestation and egress capture missing"
+     "note": "reproducible model identity now exists (nomad-semantic-basins a96d821): a behavioural fingerprint over a fixed public probe set, quantized to basins so it tolerates float noise and catches every change that moves what a reader fetches. It establishes reproducibility, never authenticity, and says so. The loopback-only bounded adapter still stands; OS sandbox, mutual IPC authentication and attempted-egress capture remain missing"
     }
    ]
   },

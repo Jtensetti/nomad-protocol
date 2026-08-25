@@ -1049,3 +1049,49 @@ is the mechanism the standing E-08 timing finding has been looking for. What
 remains is the fragment's own ElGamal encryption rather than waste, so the next
 reduction is not a refactor: it would mean changing the group or the cell
 geometry, which is a protocol change.
+
+## Detecting an embedding model that changed underneath its readers
+
+`nomad-semantic-basins` a96d821 (`basin/attest.go`)
+
+A basin ID decides which objects a reader ends up fetching. It is a function of
+the embedding, and the embedding is a function of whatever model the local
+service happens to be running. So a model that changes underneath a reader
+silently moves every one of their basins, and nothing in the system notices: the
+embeddings still look like embeddings, the quantizer still quantizes, and the
+reader simply starts pulling a different part of the catalogue than everyone
+still on the old model.
+
+PROD-24 asks for "reproducible model identity". This supplies the reproducible
+half and is deliberate about the rest.
+
+**What it cannot do.** It cannot establish *authenticity*. The embedding service
+is a separate process on loopback; nothing it says about which model it loaded
+can be checked from outside, and a service willing to lie about its model is
+willing to lie about a hash of it. What can be established is that the service
+behaves now as it behaved when the attestation was recorded, and that is the
+property the system actually depends on.
+
+**Why basins rather than vectors.** The fingerprint is taken over the quantized
+basin of each probe, not the raw floats. That is deliberate on both sides:
+floating-point embedding output can differ in the last bits between runs,
+kernels and hardware without meaning anything, while a change large enough to
+move a basin is by definition a change that moves what a reader fetches.
+Digesting the floats would produce an attestation that fails constantly for no
+reason, and one that fails constantly gets disabled.
+
+**A probe set that fingerprints nothing is refused when it is made**, not
+discovered later matching everything: fewer than four probes, a repeated probe,
+an empty probe, and a service that answers every input identically. Verification
+fails closed on an unknown version, a malformed digest, an edited or reordered
+probe set, a different quantizer seed, a service that errors, and a nil
+embedder. There is no warn-and-continue path.
+
+**The artefact carries no private state.** Probes are fixed public strings,
+exported so an operator can see exactly what is sent to their service and two
+operators can confirm they attested the same thing. A test embeds unrelated
+reader queries between two attestations and requires the digest not to move.
+
+- Still missing for PROD-24: an OS sandbox, mutual IPC authentication (the API
+  key authenticates the client to the service, not the service to the client),
+  and attempted-egress packet capture.

@@ -350,10 +350,15 @@
    "id": "PROD-24",
    "status": "PARTIAL",
    "evidence": [
-    "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60"
+    "https://github.com/Jtensetti/nomad-semantic-basins/commit/644bff28a2075b66426f1cf4b5960ae18363ac60",
+    "reproducible model identity implemented (nomad-semantic-basins a96d821, basin/attest.go): a service is fingerprinted over a fixed public probe set, and verification refuses when its basins move. The fingerprint is over quantized basins rather than raw vectors on purpose -- float output differs in the last bits between runs and hardware without meaning anything, while a change large enough to move a basin is by definition a change that moves what a reader fetches",
+    "the attestation refuses to fingerprint nothing: fewer than four probes, a repeated probe, an empty probe and a service that answers every input identically are all rejected when the attestation is made rather than discovered later matching everything. Verification fails closed on an unknown version, a malformed digest, an edited or reordered probe set, a different quantizer seed, a service that errors and a nil embedder",
+    "the artefact carries no private state: probes are fixed public strings, exported so an operator can see what is sent to their service, and a test embeds unrelated reader queries between two attestations and requires the digest not to move"
    ],
    "blockers": [
-    "sandbox, authenticated IPC and model attestation"
+    "sandbox, authenticated IPC and model attestation",
+    "attestation establishes reproducibility, never authenticity: the embedding service is a separate process and nothing it says about which model it loaded can be checked from outside. A service willing to lie about its model is willing to lie about a hash of it. What is detected is change, which is the property the system depends on, and the implementation says so rather than claiming more",
+    "the service is still only bounded, not sandboxed: no OS sandbox, no mutual IPC authentication (the API key authenticates the client to the service, not the service to the client), and no attempted-egress packet capture"
    ]
   },
   {

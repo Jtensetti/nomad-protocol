@@ -157,6 +157,9 @@ Levels, weakest first:
 | Partial write cannot render | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Symlink, traversal, overwrite rejected | filesystem adversarial tests | materializer boundary tests | adversarial |
 | Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |
+| An embedding model that changed is detected | behavioural attestation | a fixed public probe set fingerprinted by basin, refused when it moves; degenerate probe sets rejected at attestation time | adversarial |
+| The embedding service is running the model it claims | attestation of the model itself | **not establishable: a service willing to lie about its model is willing to lie about a hash of it** | n/a |
+| The semantic service is sandboxed with authenticated IPC | sandbox + mutual auth + egress capture | **none — bounded loopback adapter only** | none |
 | Dependencies are scanned and gated | CI | govulncheck reachability gate | integration |
 | Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
 | Update cannot roll back | updater tests | a persisted watermark refuses anything not strictly newer, pre-release ordering included, so a signed 1.2.0-alpha.1 cannot install over 1.2.0 | adversarial |
