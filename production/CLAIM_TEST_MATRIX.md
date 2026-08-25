@@ -116,7 +116,8 @@ Levels, weakest first:
 | A falsely accused operator can answer, and the answer names its accusers | refutation | the accused produces its own sound round for that exact position; a round from another position, another mixer's round and an unsound round are all refused | adversarial |
 | A stopped mixer can be shown to have *withheld* | — | **not decidable: asynchrony makes withholding and a dropped packet indistinguishable, so the report is deliberately non-attributable** | n/a |
 | Reporting availability does not leak reader activity | privacy boundary | every certified operator is judged at every deadline so report volume cannot track load; two observations of one position are byte-identical; CI holds the observer's graph to mix and topology | adversarial |
-| Selective failure is detected | serving some peers and not others | **none** | none |
+| Selective failure above the quorum is reported | two-world at the observers | an operator starving a quorum of peers is reported exactly as a total failure is | adversarial |
+| Selective failure below the quorum is detected | — | **not detectable by this mechanism: the same threshold that stops a coalition evicting an honest operator lets a minority be starved indefinitely, rotating which minority** | n/a |
 | Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts and a unit-tested delivery source only; needs a running committee where an operator actually stops** | none |
 | A vanished operator's share is not rerouted to a survivor | two-world at the surviving peer | the survivor receives exactly its half of a two-peer rotation with the other operator absent, and the sender counts every scheduled emission as sent | adversarial |
 | Private activity during an outage does not change what a peer sees | two-world at the surviving peer | idle and busy outage worlds deliver identical counts, sizes and destinations | adversarial |
