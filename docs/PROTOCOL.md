@@ -229,26 +229,47 @@ canonical encoding below has no insignificant whitespace at all. A verifier
 must parse the file and re-encode canonically; hashing the file as it found it
 verifies nothing and is the first mistake to make here.
 
-### The canonical encoding, and why it is a defect
+### The canonical encoding
 
-The canonical encoding is the output of Go's `encoding/json` on the reference
-implementation's structs. Reproducing it requires all of:
+Every signed message over a topology is computed over these bytes, so two
+implementations that disagree here agree on nothing else. The encoding is
+close to RFC 8785 (JCS) and deliberately stricter in one place.
 
-- members in the struct-declaration order given above, **not** sorted;
-- no insignificant whitespace;
-- `<`, `>` and `&` escaped as `\u003c`, `\u003e` and `\u0026` — a rule
-  specific to Go's encoder that no JSON specification requires;
-- an absent `operators` array encoded as `null`, not `[]`;
-- every member always present, including empty strings and zeros.
+- **Member order** is by the UTF-16 code units of the member names, ascending.
+  Not struct-declaration order, and not the order they appear in a file.
+- **No whitespace** between tokens.
+- **Strings** are escaped minimally: `"` as `\"`, `\` as `\\`, U+0008 as
+  `\b`, U+000C as `\f`, U+000A as `\n`, U+000D as `\r`, U+0009 as `\t`, any
+  other character below U+0020 as `\u00xx` with lowercase hex. Everything
+  else is written literally as UTF-8, including `<`, `>`, `&` and `/`, and
+  including every non-ASCII character. A string that is not valid UTF-8 is
+  refused.
+- **Numbers** are integers, written as their exact decimal digits with no
+  exponent, no leading zeros and no `-0`. A fractional or exponential literal
+  is **refused** rather than given a canonical form. Every number in a Nomad
+  signed document is an integer — an epoch, a count, a threshold, an interval
+  — so this removes the floating-point half of JCS, which is where its
+  subtleties live. An epoch is a `uint64` and must survive exactly, so an
+  implementation must not route numbers through a binary64 float.
+- **An absent array** encodes as `[]`, never `null`. Nomad documents have no
+  nullable members.
+- **Every member is always present**, including empty strings and zeros.
+- Applying the encoding to its own output changes nothing.
 
-This is written down so a second implementation is possible today. It should
-not survive the protocol freeze. A canonical encoding defined by one
-language's default library behaviour is not a specification: the HTML escaping
-in particular is invisible until a `network_id` or an endpoint contains an
-ampersand, at which point every signature over that document fails in one
-implementation and verifies in another. A freeze should replace it with an
-encoding that is canonical by definition — RFC 8785, or the length-prefixed
-binary form the hop tag already uses. See `production/DECISIONS.md`.
+Until this was specified, the canonical encoding was whatever Go's
+`encoding/json` produced for the reference implementation's structs:
+declaration order, `<`, `>` and `&` escaped as `\u003c`, `\u003e` and
+`\u0026`, and an absent array as `null`. Two of those were live defects — a
+field inserted into the middle of a struct would have changed the signed bytes
+of documents that did not otherwise change.
+
+The escaping was a third, latent one. Every free-form string in a topology is
+constrained today — identifiers by a character-class pattern, endpoints by
+host:port and URL parsing, timestamps by RFC 3339, keys and the session
+identifier by base64 — and none of those alphabets contains `<`, `>` or `&`,
+so no valid document could reach the difference. That is two invariants
+pretending to be one: loosening a field is a change someone will make, and a
+canonical encoding is not what they will check first. See DEC-017.
 
 ## RLNC generation packet
 

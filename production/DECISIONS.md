@@ -2,6 +2,43 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-017 (2026-08-26): The canonical topology encoding is specified, not inherited
+
+The bytes every topology signature is computed over were the output of Go's
+`encoding/json` on the reference implementation's structs. That is not a
+specification, it is an implementation detail that happened to be reachable
+from another language if you described it carefully enough — which the second
+implementation did, and recorded as a defect while doing it.
+
+**Specified instead:** members sorted by UTF-16 code unit, no whitespace,
+minimal string escaping, integers only, an absent array as `[]`. Close to
+RFC 8785, stricter about numbers: a fractional or exponential literal is
+refused rather than given a canonical form, because every number in a Nomad
+signed document is an integer and refusing the rest removes the entire
+floating-point half of JCS.
+
+**Two of the three inherited quirks were live.** Struct-declaration order meant
+inserting a field in the middle of a struct would silently change the signed
+bytes of documents that had not otherwise changed. An absent array as `null`
+was the same class of accident.
+
+**The third was latent, and that is the more interesting one.** Go's escaping
+of `<`, `>` and `&` could not be reached by any valid document: every
+free-form string in a topology is constrained by a pattern, a URL parser, an
+RFC 3339 parser or base64, and none of those alphabets contains those
+characters. The defect was real and unreachable at the same time. It is fixed
+anyway, and a test pins the unreachability so that loosening a field turns
+into a failing test rather than into two implementations disagreeing about a
+signature. "The encoding is wrong but validation keeps the difference out of
+reach" is two invariants pretending to be one, and only one of them is
+written down anywhere.
+
+**Cost:** the signed bytes changed, so the corpus was regenerated and the
+second implementation ported — for the second time in one session, after
+DEC-016. That is the cost DEC-015 was trying to avoid paying twice. Paying it
+twice took an afternoon, and the alternative was carrying two known-wrong
+formats into a freeze.
+
 ## DEC-016 (2026-08-26): The hop cell is encrypted per link. Supersedes half of DEC-015
 
 DEC-015 deferred two wire-format questions to the freeze on the grounds that
