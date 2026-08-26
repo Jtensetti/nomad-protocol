@@ -212,12 +212,14 @@
    "status": "PARTIAL",
    "evidence": [
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "private-state non-interference for storage is measured (nomad-testnet 2711803, live/rawcache/noninterference_test.go): two worlds take byte-identical public input and differ only in whether anything reads the cache, and the resulting store must be identical file for file and digest for digest, including a world that reads one stream eight times per step and probes for streams it never received",
+    "three of the four things this criterion names are architectural rather than measured, and the test says which: there is no eviction (a full cache refuses a new stream rather than choosing a victim), replication is driven by what signed peers send, and warming comes from a public seed bundle. The comparison covers the fourth, which is where an LRU touch or an access counter would be added by a future change",
+    "the comparison has a positive control: a world that writes one extra byte of read-derived state into a stream directory must produce a different transcript, so a comparison that noticed nothing could not pass for one that had nothing to notice"
    ],
    "blockers": [
     "multi-region churn and partition testing",
-    "measured durability and repair targets",
-    "private-state non-interference comparison"
+    "measured durability and repair targets"
    ]
   },
   {
@@ -462,10 +464,13 @@
     "the vulnerability gate runs in all nine Go repositories and on all nine vendored component modules, verified by exit code. It previously ran in one, and that one was failing: 20 reachable standard-library vulnerabilities, because the repositories pinned Go 1.23 after it stopped receiving backported security fixes. Every repository is now on 1.25 and scans clean",
     "SLSA-shaped provenance is generated in CI alongside the SBOM (Nomad-browser 41631ae). The generator existed and no workflow ran it, so no provenance was produced anywhere; it attests rather than signs and stamps itself unsigned outside a protected identity, so it cannot be mistaken for the signed provenance this criterion wants",
     "external test report production/reports/2026-08-24-gate-integrity/ (55 checks, every one exit=0, logs digested in SHA256SUMS): the first run in which nomad-testnet's `go test -race ./...` completes rather than timing out, and in which govulncheck passes in all nine repositories rather than running in one and failing there",
-    "build determinism is measured on every push, not assumed (Nomad-browser 7ad564b): the Go release binaries are built twice from two copies of the source at different path lengths and must be byte-identical across three targets. Two paths is the point -- building twice in one directory proves almost nothing, while two paths show the source path does not reach the binary, which -trimpath is supposed to guarantee and which nothing had checked. Removing -trimpath makes it fail, so it does not pass vacuously"
+    "build determinism is measured on every push, not assumed (Nomad-browser 7ad564b): the Go release binaries are built twice from two copies of the source at different path lengths and must be byte-identical across three targets. Two paths is the point -- building twice in one directory proves almost nothing, while two paths show the source path does not reach the binary, which -trimpath is supposed to guarantee and which nothing had checked. Removing -trimpath makes it fail, so it does not pass vacuously",
+    "the dependency set is closed and reviewed (nomad-testnet 2711803, DEPENDENCY_POLICY.json + supplychain/dependency_test.go): every external module any module in the repository may require is listed with its version and a reason, and anything else fails. A version bump is a new review because the bytes are different, and an approved entry nothing requires fails too so the list cannot grow stale",
+    "also enforced: every replace points inside the repository (one pointing out substitutes code with no go.sum entry and no manifest line), every approved module has both its go.mod hash and its module hash in go.sum, nothing in the environment relaxes module verification, and CI runs go mod verify on the root and every vendored component -- a vulnerability scan over substituted bytes reports on the wrong code",
+    "6 mutations killed: an unreviewed direct dependency, an unreviewed transitive one inside a vendored component, a silent version bump, a replace pointing at /tmp, an approved entry nothing uses, and a requirement with no go.sum entry"
    ],
    "blockers": [
-    "nothing checks for *malicious* dependencies, which this criterion also names. govulncheck answers whether a known advisory is reachable, not whether a dependency is what it claims to be",
+    "what a repository can establish about malicious dependencies is now established: the set is closed, reviewed, content-addressed and verified. What it cannot is that a listed module's upstream source is benign -- nothing here reads it -- and the policy file says so in its own text rather than leaving the gap to be inferred",
     "provenance is generated but not signed: signing needs a key no repository may hold, and no release key exists yet (EB-7)",
     "determinism is established; independence is not. A second builder on their own machine getting the same bytes is not something this project can establish about itself (EB-2). docs/REPRODUCIBILITY.md records the procedure and the trap: Go stamps the commit hash and dirty flag by default, so a git checkout and an exported tarball differ from identical source",
     "the macOS .dmg is out of scope for the determinism check: codesign and hdiutil embed timestamps and a signature is not reproducible by construction, so reproducing the shipped installer would mean comparing the unsigned payload, which is not implemented"
