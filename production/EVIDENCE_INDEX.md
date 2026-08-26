@@ -51,6 +51,46 @@ actually demonstrates and, equally, what it does not.
 - Supports (PARTIAL): PROD-15, and contributes to PROD-03 and PROD-19 as a
   further public object with a consumer that is not its encoder.
 
+## Capacity
+
+### Measured per-cell margins and the derived envelope
+
+- Commit: `Jtensetti/nomad-testnet@d79625e9fe40f9840059d46b4763b037f117c0b7`
+- Branch: `claude/nomad-production-ready-dxv4ql`
+- Artifacts: `live/capacity/` (derivation + measurement), `deploy/capacity-report.json`
+  (measurement with its environment stamped in), `deploy/SLO.md` section
+  "Capacity".
+- Demonstrates:
+  - the envelope the deployed traffic class implies -- 40 cells/s/operator,
+    3,456,000 cells per 24-hour epoch, 1,660 objects/epoch at 1 MiB -- and that
+    two of PROD-28's three named figures are configuration and arithmetic rather
+    than measurements, because a fixed-cadence fabric emits at one rate whether
+    or not anyone is using it;
+  - measured cost of every per-cell operation on the operator's path, and the
+    margin each has against the 50 ms interval;
+  - that the relay path for every link fits the interval with a wide margin, as
+    an assertion rather than a log line;
+  - that the report cannot drift from the deployment: the assumed cadence,
+    operator count and cache-stream default are checked against
+    `deploy/compose.yaml` and `cmd/nomad-node`, and each drift case was
+    confirmed to fire.
+- Findings recorded rather than smoothed over:
+  - the raw-cache write is the operator's expensive step, several times the
+    cryptographic relay path, and is the figure most likely to differ on real
+    hardware because it is the one that touches a disk;
+  - the publisher's uplink seal at ~9.5 ms cannot hold the 5 ms cadence the
+    topology permits -- a current number for PROD-18's existing blocker;
+  - concurrent publishers has no deployed value because no command constructs
+    an uplink responder, so the entry-operator role has no capacity figure for
+    want of a deployment.
+- Does NOT demonstrate: capacity *targets*. Every figure comes from a shared
+  development container running other work, each cost is measured in isolation
+  rather than with the scheduler, socket and cache contending for one core, and
+  nothing runs long enough to speak to drift. These are what the implementation
+  costs today, not what an operator should expect. No soak, no dedicated host,
+  no composed-system load.
+- Supports (PARTIAL): PROD-28; contributes a current measurement to PROD-18.
+
 ## Existing evidence (pre-2026-08-20 baseline)
 
 ### Live testnet with distributed DKG (single-admin Docker fixture)

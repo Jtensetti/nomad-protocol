@@ -25,6 +25,7 @@ Levels, weakest first:
 | Cell timing does not depend on private activity | real interface, two worlds, blind | **CONTRADICTED — a reproducible difference is measured. See EVIDENCE_INDEX.md. Under a two-sample KS test over inter-arrivals, with a Latin-square rotation removing the position confound, idle and active differ at 1−p = 0.993 against a 0.517 control spread, reproduced on a second measurement.** | finding |
 | Private reader activity does not change wire behavior | real interface, two worlds, blind | as above; the blind evaluator and the WAN environment are both missing | integration |
 | Cache maintenance independent of reads | wire trace comparison | CI dependency gates only | structural |
+| Per-cell work fits inside the cadence with margin | measured cost vs the deployed interval | `TestTheRelayPathFitsInsideTheCadence`, `TestCapacityReport`; **shared container, costs measured in isolation** | unit |
 | The analysis rule detects the differences it claims to | both-direction self-tests | `scripts/test-two-world-analysis.py`, in CI: identical worlds accepted, each preregistered difference rejected, parser fails closed on any unparsed line | adversarial |
 
 ## Epoch and key lifecycle

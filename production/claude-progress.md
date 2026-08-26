@@ -3,6 +3,65 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-26d: capacity, and a flake that was telling the truth
+
+**PROD-28's capacity blocker is closed as far as code closes it.** The blocker
+said cells per second per operator, objects per epoch and concurrent publishers
+had no numbers. Two of the three turned out not to be measurements at all, and
+saying so is most of the value.
+
+A fixed-cadence fabric has no throughput in the usual sense: an operator emits
+one cell per interval per link whether it has work or not. So cells per second
+per operator is a fact about the signed topology (40 at the deployed cadence),
+and objects per epoch is arithmetic on top of it (1,660 at 1 MiB per 24-hour
+epoch) and an explicit ceiling no deployment reaches, because cover traffic is
+the mechanism rather than waste. What the hardware actually decides is the
+margin by which per-cell work fits inside the interval, and that is now measured
+for every operation on the operator's path.
+
+Three findings worth keeping:
+
+- **The raw-cache write is the operator's expensive step**, several times the
+  entire cryptographic relay path. Still ~100x inside the interval, so not a
+  problem -- but it is the one that touches a disk, and therefore the one whose
+  container number is least likely to survive contact with real hardware.
+- **The publisher's seal at ~9.5 ms cannot hold the 5 ms cadence the topology
+  permits.** That is PROD-18's existing blocker with a current number on it.
+- **Concurrent publishers has no deployed value to measure.** No command in
+  `cmd/` constructs an uplink responder: `live/deposit` accepts an
+  already-established session and the session limit is a parameter nothing sets.
+  The entry-operator role has no capacity figure because it has no deployment.
+  That is a gap the capacity question surfaced rather than one it answered.
+
+**The report cannot drift from the deployment it describes.** The assumed
+cadence, operator count and cache-stream default are checked against
+`deploy/compose.yaml` and `cmd/nomad-node`, and all three drift cases were
+confirmed to fire. Without that, halving the cadence would leave every derived
+number in SLO.md describing a deployment that no longer exists, with nothing
+red.
+
+**A flake that was reporting something true.** The fair-allocation test failed
+under the full parallel `-race` sweep and passed five times in isolation, which
+is the shape of a test everyone learns to re-run. It was not: the failing run
+received 55 datagrams where a healthy one receives ~1,300. The receive loop had
+been starved of CPU and the quiet peer's cells were lost in the kernel before
+the node could refuse them -- which says nothing about fairness, and the test
+was reporting it as a fairness defect. It now resends until the batch is
+admitted rather than for a fixed number of attempts, stops as soon as it
+succeeds, and its failure message reports delivery so the two situations are
+told apart. Healthy runs are also slightly faster than before.
+
+Ten full `-race` sweeps have passed since. One sweep failed between them whose
+output I did not capture, so this is good evidence and not a confirmed fix, and
+the commit says so rather than claiming the flake is gone.
+
+**Not claimed.** These are not capacity targets. Every figure comes from a
+shared container running other work, each cost is measured in isolation rather
+than with the scheduler, socket and cache contending for one core, and nothing
+runs long enough to speak to drift. PROD-28 keeps four blockers: the soak, the
+regional-failure exercise, incident history, and now an explicit one saying
+these numbers are costs rather than targets.
+
 ## Checkpoint 2026-08-26c: descriptor distribution, and the log's own failure modes
 
 **PROD-15's open blocker is closed in code.** The blocker said descriptor
