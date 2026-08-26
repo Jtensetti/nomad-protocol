@@ -4,6 +4,53 @@ Immutable evidence references for production criteria. Statuses live in
 [`readiness.json`](readiness.json). This index annotates what each artifact
 actually demonstrates and, equally, what it does not.
 
+## Descriptor distribution (transparency log)
+
+### The publisher-identity log
+
+- Commit: `Jtensetti/nomad-local-reconstruction@0ada2b48a0df635ecac0d597bc666a5c13e79d37`
+- Branch: `claude/nomad-production-ready-dxv4ql`
+- Artifacts: `site/transparency/` (tree, checkpoint, monitor + log),
+  `site/distribution.go`, `site/logvectors.go`,
+  `site/testdata/site-log-corpus.json` (48 KB published corpus),
+  `conformance/reference/nomadsitelog.py`,
+  `conformance/reference/ed25519ref.py`,
+  `conformance/reference/crosscheck_sitelog.py`
+- Specification: `nomad-protocol/docs/SITE_IDENTITY.md`, section
+  "Descriptor distribution", rules 5-8, normative.
+- Demonstrates:
+  - RFC 6962 hashing agreeing with the standard's own published vectors for
+    sizes 0..8, and with a second implementation that shares no Go code;
+  - a descriptor outside the log cannot enter a chain;
+  - a chain with no log view can never reach PUBLISHER_VERIFIED, and the
+    witnessed and unwitnessed append paths refuse to substitute for each other;
+  - a reader partitioned from the log stops issuing a publisher verdict within
+    one freshness window, and recovers when the partition ends;
+  - a forked log cannot prove consistency, by either verification route;
+  - log equivocation produces transferable evidence that a third party verifies
+    with only the log's public key, and is absorbing for that log;
+  - proof verifiers terminate on hostile sizes.
+- Verification performed: `gofmt -l`, `go build ./...`, `go vet ./...`,
+  `go test -race -count=1 ./...` all clean at this commit; the second
+  implementation reproduces 9 reference roots, 5 log entries and 5 checkpoint
+  signatures, verifies 36 proofs, refuses 14 published documents each for its
+  published machine-tagged reason, and refuses 11 negative controls it builds
+  itself.
+- Mutation campaign: survivors 21/131 -> 3/135 over `site/transparency`. The
+  three remaining are equivalent mutants: a same-result boundary rewrite in the
+  split, an unreachable defensive branch (`encoding/json` never yields a
+  non-string object key), and a closing-token error that any downstream decode
+  also rejects.
+- Does NOT demonstrate: that the log is honest. A single log that equivocates
+  is caught only by a reader that sees both heads; this produces the proof
+  rather than preventing the act, and multi-log or cosigning-witness deployment
+  is not implemented. Also does not demonstrate a wire capture of the claim that
+  distribution adds no read-dependent traffic -- that remains structural
+  (proofs travel with the publication; refresh takes no read-derived argument).
+  No independent review of the design.
+- Supports (PARTIAL): PROD-15, and contributes to PROD-03 and PROD-19 as a
+  further public object with a consumer that is not its encoder.
+
 ## Existing evidence (pre-2026-08-20 baseline)
 
 ### Live testnet with distributed DKG (single-admin Docker fixture)

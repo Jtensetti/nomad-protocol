@@ -3,6 +3,102 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-08-26c: descriptor distribution, and the log's own failure modes
+
+**PROD-15's open blocker is closed in code.** The blocker said descriptor
+distribution was neither specified nor implemented, and pointed at the recovery
+drill's step 6: a reader who had not seen a recovery still accepted the
+attacker, with nothing bounding how long that lasted.
+
+Descriptors now go into an RFC 6962 append-only log. A verifier accepts a
+descriptor only with an inclusion proof against a checkpoint it has verified,
+moves between checkpoints only with a consistency proof from the size it itself
+holds, and stops issuing a publisher verdict once its checkpoint is older than
+its freshness window. `docs/SITE_IDENTITY.md` gains a normative "Descriptor
+distribution" section with rules 5 to 8; DEC-019 records the three choices worth
+arguing about.
+
+The drill's step 6 is rewritten and now measures the bound instead of noting its
+absence. It distinguishes two following profiles, because they buy different
+things: a reader that mirrors the log's entries gets the recovery as soon as it
+syncs, and a reader that follows only checkpoints keeps losing to the attacker
+until its window lapses. Both are privacy-safe for the same reason, and the
+reason is the load-bearing part of the design: the inclusion proof travels with
+the publication, and checkpoint refresh runs on a cadence that takes no argument
+describing what anyone is reading. A refresh that failed is never retried harder
+because a user is waiting -- that is exactly the private-state-dependent
+catch-up traffic the core invariant forbids.
+
+**The gate is structural.** A chain built without a log view can never return
+PUBLISHER_VERIFIED, and the witnessed and unwitnessed append paths refuse to do
+each other's job. The alternative -- an optional distribution argument -- would
+have meant any deployment that forgot to wire it up silently returned to the
+unbounded case, invisibly, in exactly the deployments that needed the property.
+
+**Six defects found while building it, all mine, all fixed.**
+
+1. *Both proof verifiers consumed the path in the wrong order.* RFC 6962 emits
+   proofs leaf-to-root; both verifiers walked them root-to-leaf. A hand-traced
+   seven-entry example passed because its decision sequence happened to be a
+   palindrome. The exhaustive all-sizes test failed on `3 -> 4`.
+2. *An integer overflow reachable by anyone who can hand a reader a document.*
+   The RFC 6962 split was a doubling loop; on a size near the top of the uint64
+   range the counter goes negative, the comparison never ends, and the verifier
+   spins allocating until it is killed. Sizes come out of proofs. Replaced with
+   `bits.Len64`, with a deadline-guarded regression test.
+3. *`Distribution` was not safe for concurrent use* -- in the deployment shape
+   its own documentation describes, where a refresh runs on a cadence in one
+   goroutine and reads happen in another.
+4. *The split-view memory was unbounded*, in the one component designed to run
+   for months against a log that advances continuously. Now bounded, always
+   retaining the held size, because that is the head the escalation demands.
+5. *`Log.Append` was O(n^2)* on a structure whose purpose is to keep growing.
+6. *Log equivocation was not absorbing.* The specification said a verifier
+   "stops trusting the log"; the code returned an error and would happily
+   continue at another size, which is the same attack run once more with a
+   different number. Now absorbing on both paths, and it resolves
+   PUBLISHER_INVALID rather than PUBLISHER_UNKNOWN: the reader holds evidence,
+   not a gap.
+
+**A mutation campaign took the survivors from 21 of 131 to 3, and those three
+are provably equivalent mutants.** The 18 that died were nearly all the same
+failure: a refusal that was being caught by a *later* check, so the test passed
+with the check under test deleted. An edited root also breaks the signature; a
+malformed time also breaks the signature; a short root also breaks the
+signature. The table now asserts the reason, not just that something errored.
+
+**Second implementation and published corpus.** `conformance/reference/
+nomadsitelog.py` reads the log objects with no shared Go, from the
+specification and RFC 6962. `site/testdata/site-log-corpus.json` publishes the
+preimages -- log entries, checkpoint signing messages, every inclusion and
+consistency proof, and fourteen documents that must be refused. The crosscheck
+runs both directions plus negative controls, and Go verifies proofs the Python
+side built over a tree Go has never seen. Two things came out of writing it:
+the corpus's refusal reasons had to become machine tags rather than English
+prose, because comparing messages across implementations tests translation
+rather than agreement; and the container's `cryptography` is present but panics,
+so rather than report a pass while silently checking no signatures, the tool
+falls back to an RFC 8032 reference verifier used for conformance only.
+
+**Process failure, recorded.** The mutation harness was killed twice mid-run and
+left a mutation applied both times. The second time cost about forty minutes:
+`descend`'s loop guard had been flipped from `> 1` to `>= 1`, which makes it
+allocate forever, and the resulting hang looked like a defect in code I had just
+written. A per-mutation `finally` does not run when the process group is killed.
+The harness now writes pristine copies outside the repo before touching
+anything, restores from them at startup, and has a `--restore-only` mode.
+Related: it restores the files it was given, so editing them mid-run silently
+reverts the edit -- which is how an export I had added disappeared and turned up
+as a compiler error in another package.
+
+**Not claimed.** None of this makes the log honest. A single log that
+equivocates is caught only by a reader that sees both heads; the mechanism
+produces the proof rather than preventing the act. Preventing it needs more than
+one log, or cosigning witnesses, and that is recorded as a deployment decision
+rather than claimed as a property. PROD-15's remaining blocker is that the
+specification, implementation and drill are all authored here -- a second party,
+not more code.
+
 ## Checkpoint 2026-08-25b: an evaluator did not approve, and was right
 
 **The single-cell encryption change was reviewed and rejected.** Not the code —

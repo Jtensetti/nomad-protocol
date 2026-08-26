@@ -165,6 +165,115 @@ A descriptor for a different site is never equivocation. A verifier pins the
 SiteID it is tracking and rejects anything else as unrelated, because a
 genesis descriptor only proves that it commits to its own derived SiteID.
 
+## Descriptor distribution
+
+The chain makes rollback and equivocation *detectable by a verifier that sees
+both branches*. Nothing in it makes anyone see both branches. A reader shown
+only an attacker's descriptor accepts it, and the rules above bound that for
+exactly as long as the attacker can keep the honest branch away -- which is
+indefinitely. Distribution closes that.
+
+Descriptors are published to an append-only transparency log with RFC 6962
+hashing: a leaf is `SHA-256(0x00 || entry)`, an interior node is
+`SHA-256(0x01 || left || right)`, and the split at size *n* is the largest
+power of two strictly less than *n*. A log entry for a descriptor is
+`"nomad-site-log-entry-v1" || uint64(len(encoded)) || encoded`.
+
+A log signs its head as a **checkpoint**: `version`, `origin`, `size`, `root`
+(32 bytes, lower-case hex), `time` (canonical UTC RFC3339), and an Ed25519
+`signature` over
+`"nomad-site-log-checkpoint-signature-v1" || len||origin || size || root ||
+len||time`, every variable-length field length-prefixed. `origin` names the
+log and is supplied out of band by the verifier, never read from the document:
+a checkpoint that named its own log could be replayed as any other's.
+
+Rules:
+
+5. **Witnessing** — a verifier operating in the witnessed profile accepts a
+   descriptor into a chain, including its genesis, only with an inclusion
+   proof against a checkpoint it has verified. A descriptor an attacker showed
+   to one reader alone is not in the log, has no proof, and is refused. A
+   descriptor that *is* accepted is one the site's owner can see, which is
+   what makes recovery possible at all.
+6. **Consistency** — a verifier moves to a new checkpoint only with a
+   consistency proof from the size it currently holds to the size the new
+   checkpoint names, and the verifier supplies its own held size. A proof that
+   could name its own starting point would let a log claim the reader had held
+   nothing and hand it any branch. A checkpoint at a smaller size, or dated
+   before the one held, is refused.
+7. **Freshness** — a verifier whose most recent checkpoint is older than its
+   freshness window stops treating publications as identity-verified and
+   stops accepting descriptors. It reports PUBLISHER_UNKNOWN, never
+   PUBLISHER_VERIFIED, and never falls back to accepting. A checkpoint dated
+   more than five minutes into the future is refused, or a log could date a
+   head forward and make every reader permanently and falsely fresh.
+8. **Log equivocation is fatal, per log** — two checkpoints of one size, signed
+   by one log key, with different roots, are a split-view proof: transferable
+   evidence anyone holding the log's key can check. Only checkpoints whose
+   signatures have already verified may take part, so a split-view proof cannot
+   be manufactured by anyone who is not the log. A verifier that finds one
+   refuses every later checkpoint and every later descriptor from that log. The
+   state is absorbing, mirroring the chain's EQUIVOCATING state and for the same
+   reason: a log that has served two histories has no branch a verifier is
+   entitled to prefer, and one that could be re-entered at another size would
+   let an attacker step around the detection simply by advancing. No other log
+   is affected. When a consistency proof fails, the verifier cannot yet
+   distinguish a forked log from a corrupted proof; the next step is to demand
+   a signed checkpoint at the size already held, which either matches -- the
+   proof was merely broken -- or equivocates and becomes evidence.
+
+   A verifier's split-view memory may be bounded, and a bounded verifier cannot
+   notice equivocation at a head older than its memory. The bound must always
+   retain the size the verifier currently holds, because that is the head the
+   escalation above demands.
+
+An unwitnessed chain can never reach PUBLISHER_VERIFIED. This is structural
+rather than advisory: a deployment that fails to configure distribution loses
+the identity verdict instead of silently returning to the unbounded case.
+
+### Distribution must not observe what a reader reads
+
+Fetching a checkpoint or an inclusion proof because a user opened a site would
+make an externally observable network event depend on private activity, which
+the core invariant forbids. Two rules keep it out, and both are normative:
+
+- The inclusion proof travels **with** the publication, over the same path as
+  the object. Reading a site fetches nothing extra.
+- Checkpoint refresh runs on a **fixed cadence that does not depend on what
+  the reader is reading, has read, or is about to read**, and runs whether or
+  not anyone opens a site.
+
+It follows that a failed refresh is never retried harder because a user is
+waiting. That would be precisely the private-state-dependent catch-up traffic
+the invariant rules out. A reader whose refresh fails goes stale and says so;
+losing the identity verdict is the cheaper of the two failures.
+
+### Two following profiles, and what each bounds
+
+- **Entry-following.** A reader that mirrors the log's entries on its own
+  cadence obtains a recovery descriptor as soon as it syncs, because an
+  attacker cannot both get a descriptor accepted and keep it out of the log.
+  Recovery propagates promptly. The cost is bandwidth proportional to the log
+  rather than to what the reader cares about -- which is exactly why it leaks
+  nothing about the reader's interests.
+- **Checkpoint-following.** A reader that follows only checkpoints is cheaper
+  and weaker: within its freshness window an attacker who can withhold the
+  recovery still wins. Past the window the reader stops issuing a verdict.
+
+The residual exposure of the checkpoint-following profile is one freshness
+window, and it is a deployment choice with a cost at both ends: too short and
+a reader loses its verdict whenever the log is briefly unreachable, too long
+and an attacker who can partition a reader has that long to serve a private
+branch.
+
+### What this does not do
+
+It does not make the log honest. A single log that equivocates is caught only
+by a reader that sees both heads, and the mechanism above produces the proof
+rather than preventing the act. Preventing it requires more than one log, or
+witnesses that cosign heads. That is a deployment decision and is recorded as
+such; nothing in this specification claims a single log is trustworthy.
+
 ## SitePublication v1
 
 The join between object integrity and publisher identity, kept separate

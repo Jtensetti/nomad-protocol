@@ -2,6 +2,63 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-019 (2026-08-26): Descriptors are distributed through a transparency log, and an unwitnessed chain cannot reach a publisher verdict
+
+PROD-15's open blocker was that the recovery drill's step 6 showed a reader who
+had not seen a recovery still accepting the attacker, with nothing bounding how
+long that lasted. The chain already made rollback and equivocation detectable by
+a verifier that sees both branches; what was missing was anything that made
+anyone see both branches.
+
+Descriptors now go into an RFC 6962 append-only log. A verifier accepts a
+descriptor only with an inclusion proof against a checkpoint it has verified,
+moves between checkpoints only with a consistency proof from the size it itself
+holds, and stops issuing a publisher verdict once its checkpoint is older than
+its freshness window.
+
+Three choices in this are worth recording because the obvious alternative was
+worse:
+
+*The gate is structural, not advisory.* A chain built without a log view can
+never return PUBLISHER_VERIFIED, and the witnessed and unwitnessed append paths
+refuse to do each other's job. The alternative -- an optional distribution
+argument -- would have meant that any deployment that forgot to wire it up
+silently returned to exactly the unbounded case PROD-15 describes. That is the
+kind of fallback the engineering rules forbid, and it would have been invisible
+in precisely the deployments that needed the property.
+
+*The freshness gate sits on the positive verdict only.* A contradicted claim is
+still reported PUBLISHER_INVALID when the reader's log view is stale. Gating
+the whole of Resolve would have traded a true negative for an absence, which is
+strictly worse for the reader: it would tell someone "unknown" about a
+publication the reader can prove is wrong.
+
+*Distribution must not observe what a reader reads.* The obvious implementation
+fetches a checkpoint or a proof when a user opens a site, which makes an
+observable network event depend on private activity and violates the core
+invariant outright. Instead the inclusion proof travels with the publication
+over the same path as the object, and checkpoint refresh runs on a fixed cadence
+that does not depend on what anyone is reading. It follows that a failed refresh
+is never retried harder because a user is waiting -- that would be the
+private-state-dependent catch-up traffic the invariant rules out. A reader whose
+refresh fails goes stale and says so.
+
+What this does not do is make the log honest. A log that signs two heads at one
+size has equivocated, and the implementation produces transferable evidence
+rather than preventing the act. Preventing it needs more than one log or
+cosigning witnesses, which is a deployment decision and is recorded as an open
+item rather than claimed.
+
+Two defects were found and fixed while building it, both worth naming. Both
+proof verifiers consumed the proof path root-to-leaf while the prover emits it
+leaf-to-root, as RFC 6962 specifies; this passed a hand-traced example whose
+decision sequence happened to be a palindrome and failed the exhaustive
+all-sizes test. And the RFC 6962 split was computed by a doubling loop that
+overflows on a size near the top of the uint64 range, after which the counter is
+negative, the comparison never ends and the verifier spins forever allocating --
+a denial of service reachable by anyone who can hand a reader a document, since
+sizes come out of proofs.
+
 ## DEC-018 (2026-08-26): The uplink session is established in band, one-sided
 
 The publisher read a shared secret from a file and the entry operator read the

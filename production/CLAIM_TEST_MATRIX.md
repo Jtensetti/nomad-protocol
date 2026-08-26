@@ -65,6 +65,15 @@ Levels, weakest first:
 | Encodings are unambiguous across implementations | parser differential | strict-parsing table, base64 malleability regression | adversarial |
 | Identity resolution creates no query-dependent traffic | capture | pure function, no I/O; **no capture** | structural |
 | Browser distinguishes integrity from identity | release binary | states defined; **not integrated** | none |
+| A descriptor outside the log cannot enter a chain | negative tests | `TestAnUnloggedDescriptorCannotEnterAWitnessedChain`, drill step 6a | adversarial |
+| An unwitnessed chain cannot reach a publisher verdict | API shape + negative tests | `TestAnUnwitnessedChainCannotReachAPublisherVerdict`, `TestTheWitnessedAndUnwitnessedPathsDoNotSubstituteForEachOther` | adversarial |
+| A partitioned reader loses the verdict within one window | negative tests | `TestAPartitionedReaderLosesThePublisherVerdict`, drill step 6b | adversarial |
+| A log cannot rewrite its own history | negative tests | `TestAForkedLogCannotProveConsistency` (both seeded and complete-subtree routes), `TestConsistencyFailsClosed` | adversarial |
+| Log equivocation yields a transferable proof | third-party verification | `TestAForkedLogIsCaughtAndTheEvidenceIsTransferable` (proof relayed through JSON and checked with only the log key), `TestVerifySplitViewFailsClosed` | adversarial |
+| Log hashing agrees with other implementations | published vectors | `TestRootsMatchRFC6962` over sizes 0..8, `TestTheSplitIsRFC6962sAndNotTheMidpoint` | adversarial |
+| A leaf cannot be presented as an interior node | negative test with positive control | `TestAnInteriorNodeCannotBePresentedAsALeaf` | adversarial |
+| Proof verifiers terminate on hostile sizes | negative tests with a deadline | `TestHostileSizesTerminate` | adversarial |
+| Distribution creates no read-dependent traffic | capture | proofs travel with the publication; refresh takes no read-derived argument; **no capture** | structural |
 
 ## Publication
 

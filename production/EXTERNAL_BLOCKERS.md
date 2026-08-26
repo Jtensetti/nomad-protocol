@@ -67,7 +67,7 @@ only the listed action. Never fabricate these.
   Workstream E is building the netem matrix, blind-classification harness and
   72-hour capture harness validated locally.
 
-## EB-4: Independent external assessors and red team (PROD-04, PROD-29, PROD-30)
+## EB-4: Independent external assessors and red team (PROD-04, PROD-15, PROD-29, PROD-30)
 
 - **Missing:** independent cryptographic, systems, browser and
   privacy/traffic-analysis assessors, plus a release red team, none of whom
@@ -86,6 +86,14 @@ only the listed action. Never fabricate these.
   assembled continuously; two internal adversarial reviews have already run
   and their findings are fixed with regressions. Booking assessors is
   wall-clock bound and should start now rather than after implementation.
+- **PROD-15 specifically:** the publisher identity design -- descriptor chain,
+  recovery policy, and now transparency-log distribution -- is specified,
+  implemented, adversarially tested, mutation-verified and cross-checked by a
+  second implementation, and every one of those was authored here. That is the
+  criterion's only remaining blocker. What an assessor is being asked for is a
+  judgement on the *design*: whether a single log plus a freshness window is
+  the right bound for the split-view threat, and whether the two following
+  profiles are the right choice to offer. No further code closes it.
 
 ## EB-5: Second independent protocol implementation (PROD-03)
 

@@ -171,7 +171,7 @@
      "id": "D-07",
      "summary": "split-view/equivocation detection model implemented",
      "status": "PARTIAL",
-     "note": "implemented, independently reviewed (4 HIGH exploits found and fixed with regressions), vectors published; awaiting browser integration and re-review"
+     "note": "descriptor distribution implemented: RFC 6962 append-only log, signed checkpoints with origin binding, inclusion + consistency proofs, freshness window, transferable split-view proof; an unwitnessed chain cannot reach PUBLISHER_VERIFIED by construction; recovery drill step 6 now bounds the propagation window in both following profiles; second implementation and published corpus; mutation-verified. Still self-reviewed"
     },
     {
      "id": "D-08",
@@ -188,7 +188,7 @@
      "id": "D-10",
      "summary": "SiteID resolution introduces no query-dependent network behavior",
      "status": "PARTIAL",
-     "note": "resolution implemented as a pure local function with no I/O and no query input (d572673); capture evidence pending browser integration (D2)"
+     "note": "resolution is a pure function; distribution adds no read-dependent traffic by construction -- inclusion proofs travel with the publication and checkpoint refresh takes no read-derived argument -- but this is structural, with no wire capture"
     },
     {
      "id": "D-11",
