@@ -699,3 +699,71 @@ now, in work whose whole purpose is to be the thing that catches that.
 PROD-24 stays PARTIAL. What is left is a sandbox whose escape has been
 attempted and an attempted-egress packet capture. The systemd profile is
 pinned by directive presence and has never been run.
+
+## Checkpoint: eleven blockers closed by code, and what the closing found
+
+Since the last checkpoint, work in `nomad-testnet`, `nomad-semantic-basins`,
+`nomad-anytrust-mix-sim` and `Nomad-browser` closed eleven blockers. Nine
+criteria are now down to a single blocker each, and in every one of those nine
+the remaining item is a second party, a platform, or elapsed time.
+
+**What was built.** The hop cell is encrypted per link, not merely
+authenticated (DEC-016). The topology's canonical encoding is specified rather
+than inherited from Go's `encoding/json` (DEC-017). The uplink session is
+established in band and one-sided (DEC-018). The relay path allocates per
+sender at both layers a flood reaches. Storage non-interference under private
+reads is measured. The dependency set is closed and reviewed. The embedding
+chain's egress is measured in a namespace with no route off the host. The
+release binary's network boundary is observed at runtime by system-call trace.
+A committee transcript can be verified by a third party with a tool rather
+than a library. Every message the wire corpus publishes, and the renderer's 59
+frozen URL decisions, now have a consumer that is not the encoder that wrote
+them.
+
+**Eight defects the work found in itself.** These matter more than the
+features, because each is a way evidence can look sound and not be.
+
+1. `Node.Run` returned as soon as one of its three goroutines finished,
+   leaving the other two cancelled but still writing to the cache, the health
+   file and the durable sequence state. Found by a temp-directory cleanup
+   failing under `-race` — the kind of complaint that is easy to read as noise.
+2. A session-identifier HKDF domain equal to the session-secret domain makes
+   the *public* deposit identifier be the session secret. A one-character edit;
+   no round-trip test notices. Found as a surviving mutation.
+3. `strace` writes `<pid>  syscall(...)` with `-f -o`, not `[pid N] ...`. The
+   parser matched only the second form, found nothing, and reported zero
+   network syscalls for every binary — including the control that opens one.
+   Both "measurements" would have gone into the registry as evidence.
+4. Checking captured packets for loopback by substring accepts exactly the
+   packets the check exists to catch: `::1` is a substring of `2001:db8::1`.
+5. `tcpdump` buffers, and a buffer unwritten when the process is killed leaves
+   a truncated file that reads as "nothing was captured" — indistinguishable
+   from the result the test reports.
+6. The mix wire encoding pads with fresh randomness, so encoding one batch
+   twice gives different bytes and a published transcript's chain could not be
+   read from the file at all.
+7. A transcript missing its last round is a valid shorter transcript. The test
+   trimmed its own key list to fit, which is exactly what a dishonest committee
+   would want a verifier to do.
+8. A write-failure toggle at half the cell cadence resonates: writes land
+   entirely in the healthy phase, nothing is dropped, and the test fails with
+   "nothing was dropped", which reads like a production defect.
+
+**Two of my own tests passed for the wrong reason** and were caught by
+mutation: the upstream-address tests only checked *that* an error came back,
+when every address in the table also fails to connect; and three hop tests
+were satisfied by metadata failing to validate rather than by the check under
+test. Both now assert the reason. That is the third and fourth time this
+defect class has appeared in this project.
+
+**A process failure worth recording.** One commit was pushed with two tests
+red — the compatibility gate catching a missing label, and a fairness test
+losing datagrams to the kernel under `-race`. Both were fixed immediately
+after, but the push came first, which is the discipline the
+`agent-efficient-ci` skill in this repository states in as many words.
+
+**Where the code ran out.** Nine criteria have exactly one blocker and it is
+external in every case: a reviewer who did not write the document (PROD-02), a
+second implementer (PROD-03, PROD-19), independent cryptographic review
+(PROD-04), a macOS runner (PROD-09, PROD-23), a Windows runner (PROD-16), a
+release key (PROD-01), and assessors who cannot be self-appointed (PROD-29).

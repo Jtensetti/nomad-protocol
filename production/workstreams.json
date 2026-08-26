@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated": "2026-08-25",
+ "updated": "2026-08-26",
  "status_values": [
   "NOT_STARTED",
   "PARTIAL",
@@ -635,7 +635,7 @@
      "id": "F-12",
      "summary": "semantic service sandbox: authenticated IPC, no network capability, bounded inputs, reproducible model hash attestation, attempted-egress capture (PROD-24)",
      "status": "PARTIAL",
-     "note": "reproducible model identity exists (nomad-semantic-basins a96d821): a behavioural fingerprint over a fixed public probe set, quantized to basins so it tolerates float noise and catches every change that moves what a reader fetches. It establishes reproducibility, never authenticity, and says so. Mutual IPC authentication is now done (bd3c5cc): the query is sealed to a shared service key with HKDF-SHA256 and AES-256-GCM rather than posted to whichever process holds the loopback port, both directions are authenticated, replies are bound to their request, and there is no unauthenticated mode. loopback.Service and cmd/nomad-embed-service are the other half of the channel; 15 mutations killed. Remaining: a sandbox whose escape has been attempted -- the systemd profile (2dc8eb4) is pinned by directive presence, never exercised on a running system -- and attempted-egress packet capture"
+     "note": "the embedding service is done as far as code reaches: the query is sealed to a shared service key rather than posted to whoever holds the loopback port (bd3c5cc), and egress is measured rather than promised -- the client, shim and model server complete an embedding inside a network namespace with no route off the host, with a capture inside it naming loopback at both ends of all 21 packets (a9c468c). What remains is a sandbox whose escape has been attempted; the systemd profile is pinned by directive presence and has never been run"
     }
    ]
   },
