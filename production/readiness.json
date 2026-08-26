@@ -160,10 +160,15 @@
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32287433817",
     "https://github.com/Jtensetti/Nomad-browser/commit/b19710be10b896e47e97885d5f7391c0c9213455",
     "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046813",
-    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809"
+    "https://github.com/Jtensetti/Nomad-browser/actions/runs/32303046809",
+    "runtime evidence for a shipped binary now exists alongside the dependency-graph gate (Nomad-browser 1168851, runtime_boundary_test.go): the release verifier is built and run under a system-call trace, doing real work against a real signed manifest and artifact, and makes zero calls to socket, connect, sendto, sendmsg, sendmmsg, recvfrom, recvmsg, bind, listen, accept or accept4",
+    "a trace rather than a packet capture, deliberately: a capture sees what left, a trace sees what was attempted -- a connect that failed because nothing was listening, a resolver that gave up, a socket opened and never used. For a cannot-egress claim the attempt is the interesting event, and DNS is covered by construction because a resolver opens a socket like anything else",
+    "the refusal path is traced too: a verifier that opened a socket when a signature failed, to report or to check a revocation list, would be egress on exactly the input an attacker controls",
+    "the positive control caught a vacuous measurement before it became evidence: strace writes '<pid>  syscall(...)' when -f and -o are combined rather than '[pid N] syscall(...)', the parser matched only the second form, and both binaries therefore reported zero network syscalls -- including the control that opens one",
+    "scope is stated in the file rather than left to be inferred: QUIC, WebSockets, WebRTC, service workers, extensions and speculative fetch live in an engine, and per DEC-013 the engine forks are parked, so this is evidence about the Go binaries this repository ships and nothing else"
    ],
    "blockers": [
-    "independent runtime process-boundary assessment on every supported platform"
+    "runtime evidence now exists for the Go release binary on Linux, by system-call trace with a positive control. What the criterion asks for beyond that is an *independent* assessment and every supported platform: macOS in particular has no runner here, and an assessment this project performs on itself is QA rather than independence (EB-4)"
    ]
   },
   {
@@ -435,10 +440,15 @@
     "the entitlement gate now runs where it is pushed, not only where it can be built: the release bundle's declared capabilities were checked by macos/scripts/security_gate.sh, which needs PlistBuddy and swift and so runs only on a macOS runner -- and the only macOS workflow triggered on push for `branches: [agent/macos-browser]`, so on every other branch nothing checked the entitlements at all. Nomad-browser/bundle_test.go parses the plists directly and runs on every push (77d632c)",
     "entitlements are an allowlist with a written reason per key rather than a denylist of the ones someone thought of: an unexplained key fails until a reason is recorded, and named defeats (network client/server, mach-lookup exceptions, unsigned executable memory, library validation off, get-task-allow, apple-events) fail by name. Info.plist must declare no URL types, document types or extension points and no App Transport Security exceptions",
     "the forbidden-Swift-symbol scan is checked against itself: a second test runs it over samples containing each construct, so a pattern that stopped matching after a rename is caught rather than passing over sources that happen to be clean. It found one immediately -- a word boundary made the CFNetwork pattern miss CFNetworkCopySystemProxySettings, which the shell version caught",
-    "the surfaces this criterion enumerates are individually anchored in both engine forks, including the ones a URL-level or DNS-level control would miss: DNS-over-HTTPS, WebRTC (which reaches the network with no channel or URLLoader at all), speculative connect and DNS prefetch (which fire on hover and on parse rather than on navigation), captive portal probes, OCSP fetching, and the component updater"
+    "the surfaces this criterion enumerates are individually anchored in both engine forks, including the ones a URL-level or DNS-level control would miss: DNS-over-HTTPS, WebRTC (which reaches the network with no channel or URLLoader at all), speculative connect and DNS prefetch (which fire on hover and on parse rather than on navigation), captive portal probes, OCSP fetching, and the component updater",
+    "runtime evidence for a shipped binary now exists alongside the dependency-graph gate (Nomad-browser 1168851, runtime_boundary_test.go): the release verifier is built and run under a system-call trace, doing real work against a real signed manifest and artifact, and makes zero calls to socket, connect, sendto, sendmsg, sendmmsg, recvfrom, recvmsg, bind, listen, accept or accept4",
+    "a trace rather than a packet capture, deliberately: a capture sees what left, a trace sees what was attempted -- a connect that failed because nothing was listening, a resolver that gave up, a socket opened and never used. For a cannot-egress claim the attempt is the interesting event, and DNS is covered by construction because a resolver opens a socket like anything else",
+    "the refusal path is traced too: a verifier that opened a socket when a signature failed, to report or to check a revocation list, would be egress on exactly the input an attacker controls",
+    "the positive control caught a vacuous measurement before it became evidence: strace writes '<pid>  syscall(...)' when -f and -o are combined rather than '[pid N] syscall(...)', the parser matched only the second form, and both binaries therefore reported zero network syscalls -- including the control that opens one",
+    "scope is stated in the file rather than left to be inferred: QUIC, WebSockets, WebRTC, service workers, extensions and speculative fetch live in an engine, and per DEC-013 the engine forks are parked, so this is evidence about the Go binaries this repository ships and nothing else"
    ],
    "blockers": [
-    "release-binary packet and DNS capture matrix on every supported platform"
+    "the Go binaries this repository ships are measured on Linux by system-call trace, including the refusal path. The matrix the criterion names is wider in two directions this project cannot close: every supported platform needs a macOS runner, and the engine-side paths -- QUIC, WebSockets, WebRTC, service workers, extensions, speculative fetch -- live in forks that DEC-013 parked, so nothing here is evidence about them"
    ]
   },
   {
