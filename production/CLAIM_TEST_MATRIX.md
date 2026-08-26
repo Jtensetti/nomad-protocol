@@ -224,3 +224,13 @@ on unstarted work rather than on further design.
 They are also why the great majority of PROD gates are not MET. Two gates
 (PROD-08, PROD-12) are MET because their criteria name harms this matrix has
 rows for at `adversarial` level; that is not a statement about the others.
+
+## Fair access under a flooding operator
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| One operator cannot take another's relay-queue share | the queue's own accept and serve paths | a flooder enqueuing 6400 cells keeps its share of 16 and is served 4 times in 16 emissions; every other source keeps all of its cells and loses none | adversarial |
+| One operator cannot take another's cache stream share | the cache's admission rule | a sender asking for 64 streams gets its exact share of 4; three other senders keep all of theirs; the share survives a reopen | adversarial |
+| A flood does not stop another operator's work being admitted | a live node under continuous flood | `TestAFloodFromOnePeerDoesNotStarveAnother`: 4527 rejections driven, the second operator's batch still admitted and completed | adversarial, loopback |
+| A sender outside the signed set gets no share of either | queue and cache accept paths | refused with no line created and no drop counted, so a stranger cannot write to this node's diagnostics either | structural |
+| Fair allocation does not change emission timing | — | the scheduler asks for one cell per tick whatever the queue holds; the rotation decides which cell, and relay work is public replication policy | structural |

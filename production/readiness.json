@@ -360,11 +360,16 @@
     "sybil: TestUnsignedIdentitiesGainNothingByExisting",
     "amplification: TestFloodFromAnAcceptedPeerNeitherAmplifiesNorInducesCatchUp (0.0003-0.0008)",
     "abusive peers: TestHostileDatagramsAreRejectedForTheRightReason",
-    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)"
+    "external test report production/reports/2026-08-21-protocol-freeze/ (all suites green on two architectures; logs digested in SHA256SUMS)",
+    "fair allocation implemented at both layers that a flood reaches (nomad-testnet cc3fd69): rawcache.OpenShared gives each signed sender an equal share of the stream budget and records who introduced each stream so the share survives a restart, and live/node.FairQueue keeps a relay line per source served in a fixed rotation whose cursor advances on the tick rather than on who has work",
+    "the cache was the more binding of the two and is why a queue fix alone would have been theatre: it refuses a new stream once full with no eviction, so work refused there never reached the queue to be scheduled at all",
+    "measured rather than argued: a sender asking for 64 streams gets its exact share of 4 while three other senders keep all of theirs; a flooder enqueuing 6400 cells keeps 16 and is served 4 times in 16 emissions like everyone else; and against a live node under a continuous flood that drove 4527 cache rejections, a second operator's two-cell batch was still admitted and completed",
+    "neither layer changes when anything is emitted -- the scheduler asks for one cell per tick on a fixed cadence whether the queue is empty or overflowing, and the rotation decides only which cell. A source outside the signed set gets no line and no share, so a Sybil cannot buy relay capacity by sending",
+    "8 mutations killed, including the per-sender cache share removed from the node entirely, a queue share widened to the whole capacity, a rotation that never rotates, a stream whose creator is not recorded, and a full line evicting its own oldest instead of refusing"
    ],
    "blockers": [
     "the economic half of the analysis: costing an attack in money needs deployment parameters that do not exist yet",
-    "fair access under Sybil is bounded per session but not allocated fairly; availability under sustained flood is not claimed and a flood can push a small node past its lateness budget",
+    "availability under sustained flood is now allocated rather than merely bounded, and the remaining half of this blocker is the lateness budget: a flood still costs receive-side work, and nothing here measures how close a small node comes to its cadence deadline under one on constrained hardware. That needs a host this project does not have",
     "red-team saturation by a party other than the implementer; the eclipse, Sybil, amplification and abusive-peer tests are all authored here"
    ]
   },
