@@ -98,11 +98,15 @@
     "https://github.com/Jtensetti/nomad-anytrust-mix-sim/commit/35aa0f84769023b92d108e511bad7af47c34bbd1",
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
     "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
-    "encrypting to a small-order or identity public key is refused at every entry point (nomad-anytrust-mix-sim 60ccdb4). rejectSmallOrder existed and validateThresholdCommittee used it, but Encrypt never did, so a caller holding a bare PublicKey that never passed committee validation -- uplink.Session -- could encrypt to the identity and put the plaintext on the wire as y = m + r*0. An evaluator recovered a full fragment with no key material; the check now lives in publicPoint"
+    "encrypting to a small-order or identity public key is refused at every entry point (nomad-anytrust-mix-sim 60ccdb4). rejectSmallOrder existed and validateThresholdCommittee used it, but Encrypt never did, so a caller holding a bare PublicKey that never passed committee validation -- uplink.Session -- could encrypt to the identity and put the plaintext on the wire as y = m + r*0. An evaluator recovered a full fragment with no key material; the check now lives in publicPoint",
+    "a third-party verification tool exists and is a tool rather than a library function (nomad-anytrust-mix-sim a397537, cmd/nomad-mix-verify): it takes a published transcript file and the committee's identity keys, holds no key, opens no socket and needs no membership. It is tested by building and running the binary, because the gap between 'the package works' and 'the command works' is where a flag name or an exit code goes wrong and is what an outsider hits first",
+    "the committee's keys are supplied separately rather than read from the transcript: a transcript that named its own signers would authenticate nothing, and the tests substitute a stranger's key into the list to show the distinction is enforced",
+    "the tool states the limit of its own verdict and a test requires it to: a pass means each round's output is a re-randomised permutation of its input, signed by the mixer named for that position. That is correctness, not unlinkability, which needs one honest mixer and which no transcript can show -- a committee that colluded end to end would publish one that verifies",
+    "the verifier fails closed on thirteen shapes of wrong transcript, including a flipped proof byte, a flipped receipt signature, a broken chain, reordered rounds, a dropped first or last round, another epoch, another committee and another encryption key, with a positive control so the refusals are not a verifier that refuses everything",
+    "two defects were found by writing it: the wire encoding pads with fresh randomness, so encoding one batch twice gave different bytes and the chain could not be read from a published file at all -- transcripts encode with zero padding, and nothing in one is secret for padding to hide; and truncation is detectable only against the committee the caller names, which the test originally defeated by trimming its own key list to fit"
    ],
    "blockers": [
     "separately administered production shuffle committee",
-    "third-party verification tool",
     "independent cryptographic review"
    ]
   },
