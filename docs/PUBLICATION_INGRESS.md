@@ -88,10 +88,74 @@ entry operator, bound to network, epoch, topology digest and operator slot,
 so a captured session cannot be replayed into another epoch or against
 another operator.
 
+## Session establishment, in band
+
+The session used to begin with a secret both parties already had: the
+publisher read 32 bytes from a file and the entry operator read the same 32
+bytes from its own. How they came to be the same bytes was outside the
+protocol, and it needed a channel that distributes a per-publisher secret to
+a named operator before anything can be published -- a channel that knows who
+publishes what.
+
+The publisher now agrees with the entry operator's static X25519 key from the
+signed topology, which is the same `kex_key` the pairwise hop keys already
+use. The first cell of a session carries the handshake:
+
+| Region | Bytes | Content |
+|---|---:|---|
+| Sequence | 8 | big-endian counter, cleartext, as in every uplink cell |
+| Ephemeral key | 32 | the publisher's X25519 public key, cleartext |
+| Sealed body | 1160 | AES-256-GCM over 1144 zero bytes, and its tag |
+
+The additional data is the sequence and the ephemeral key together. The
+sealed region **must be all zero** and is checked: a handshake is an
+introduction and carries nothing else, so there is no room in it for a covert
+channel from a party the operator cannot identify.
+
+Three values are derived from the agreement, by HKDF-SHA-256 with the
+topology digest as salt and an info string of the domain, the network
+identifier length-prefixed, the epoch, the entry operator slot and the
+ephemeral public key:
+
+| Domain | Produces |
+|---|---|
+| `nomad-uplink-handshake-v1` | the key that seals the handshake cell |
+| `nomad-uplink-handshake-secret-v1` | the 32-byte session secret, fed unchanged into the existing session-key derivation |
+| `nomad-uplink-handshake-id-v1` | the public session identifier the airlock derives deposit slots from |
+
+They must be three distinct domains. The session identifier is public -- it
+appears in airlock state an operator can see -- so a domain collision with
+the secret would publish key material.
+
+Feeding the derived secret into the unchanged `nomad-uplink-session-v1`
+derivation is deliberate: the data path, its published test vectors and its
+second implementation do not move because the way the secret is obtained
+changed.
+
+**The handshake is one-sided, and that is the direction this system needs.**
+The publisher authenticates the operator and proves nothing about itself. The
+entry operator must not learn who is publishing -- that is what the airlock
+exists for -- so its only guarantee is that somebody who verified the topology
+is speaking to it, and everything that bounds abuse afterwards is per session
+rather than per identity.
+
+A responder refuses an ephemeral key it has already accepted in this epoch. A
+handshake is a cell like any other, so a replay would otherwise establish a
+second session on the same key, and the data path's nonces come from a
+sequence: the same key twice is the same nonces twice. It also bounds how many
+sessions it will hold, because accepting handshakes without a limit turns a
+cheap cell into unbounded state.
+
+On the wire a handshake is 1200 bytes with an 8-byte counter, like every other
+uplink cell, so an observer cannot tell a session beginning from a session
+continuing.
+
 ## What is still open
 
-- The uplink is specified and cell-level tested, but not yet wired to a
-  running client, an entry operator service, or the deposit mailbox.
+- The uplink is wired to a running publisher (`cmd/nomad-publish`) and its
+  session is established in band across a real process boundary. What is not
+  wired is an entry operator *service*: the responder exists and is exercised,
+  but no daemon runs it against the deposit mailbox.
 - `EpochDescriptor.uplink_profile` remains reserved and must stay empty
   until this profile is finalized; the descriptor already refuses a
   non-empty value.

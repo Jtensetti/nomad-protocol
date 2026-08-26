@@ -2,6 +2,48 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-018 (2026-08-26): The uplink session is established in band, one-sided
+
+The publisher read a shared secret from a file and the entry operator read the
+same bytes from its own. That is a real deployment and it needs a channel that
+distributes a per-publisher secret to a named operator before anything can be
+published -- a channel that knows who publishes what, which is the fact the
+whole airlock exists to keep from existing.
+
+DEC-015 deferred this on the grounds that the 1200 bytes were spent and an
+in-band handshake was a wire-format change. Two things changed that. The
+wire-format cost was paid anyway for DEC-016, so the corpus and the second
+implementation were already being regenerated. And the premise was wrong in a
+way worth naming: it assumed the handshake had to fit *alongside* a fragment.
+It does not. The first cell of a session carries the introduction instead of a
+fragment, at the cost of one cell per session, and on the wire it is 1200 bytes
+with an 8-byte counter like every other cell.
+
+**One-sided, deliberately.** The publisher authenticates the operator against
+the `kex_key` in the signed topology and proves nothing about itself. The
+instinct is to make a handshake mutual; here mutual authentication would hand
+the entry operator exactly the identity it must not have. Its only guarantee is
+that somebody who verified the topology is speaking to it, and everything that
+bounds abuse afterwards is per session.
+
+**The session secret goes through the unchanged derivation.** The handshake
+produces the same thing the file used to: 32 bytes fed into
+`nomad-uplink-session-v1`. The data path, its published vectors and its second
+implementation do not move because the way the secret is obtained changed.
+
+**Three separated domains, and the reason is not symmetry.** The session
+identifier is public -- the airlock derives deposit slots from it, so it appears
+in state an operator can see. A domain collision between it and the session
+secret is a one-character edit that publishes key material. It is a distinct
+domain, and a test requires all three derivations to differ, because that is
+the kind of defect no round-trip test notices.
+
+**What was rejected:** an unauthenticated first cell with the key in the clear
+and no tag (nothing binds the introduction to the epoch); a mutual handshake
+(gives the operator an identity); and putting the ephemeral key in the 24 bytes
+of existing padding (it does not fit, and shrinking the inner ciphertext to make
+it fit would change the mix layer for the benefit of the link layer).
+
 ## DEC-017 (2026-08-26): The canonical topology encoding is specified, not inherited
 
 The bytes every topology signature is computed over were the output of Go's
