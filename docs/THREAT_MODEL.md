@@ -62,47 +62,57 @@ And conditions that are permanent by nature — a firewall verdict, a
 destination the kernel will never accept, an exhausted or unreadable sequence
 space — are not lost-cell conditions at all; they stop the node immediately.
 
-### The operator-to-operator hop header is not encrypted
+### The operator-to-operator hop cell is encrypted per link
 
-The 48 bytes after the mix ciphertext in every relay cell are authenticated
-but sent in the clear. A passive observer of a link reads, without attacking
-anything:
+Version 1 of the hop header authenticated the 48 bytes after the mix
+ciphertext and sent them in the clear, and left the mix ciphertext itself
+untouched. A passive observer of a link read, without attacking anything, the
+work flag, the stream ID, the batch coordinates and the hop sequence — and
+could separate work from cover a second way, because mix ciphertext parses as
+compressed group elements while a cover cell's uniform random bytes do not.
 
-- the **work flag**, which separates relayed work from cover perfectly. This
-  is known and is why publisher traffic uses a different cell profile
-  (`PUBLICATION_INGRESS.md`); `live/uplink/distinguisher_test.go` measures the
-  separation.
-- the **stream ID**, 16 bytes derived from the batch payloads. A relay
-  re-seals a cell with its own sender slot and sequence and leaves the rest of
-  the header as it arrived, so the same identifier appears at every hop the
-  batch takes. Measured in
-  `live/node/linkability_test.go`: cells emitted by a relay carry the ingress
-  stream ID unchanged, so an observer links a batch's ingress hop to its
-  egress hop by reading bytes 1164..1180. No correlation attack is needed.
-- the **batch coordinates**, ordinal and size.
-- the **hop sequence**, a per-sender counter. It is public by construction —
-  an observer counting datagrams on a link has it anyway — but it must stay a
-  count of what was *sent*. A number issued to a cell that then failed at the
-  socket would leave a gap, and a gap is an exact per-cell count of the
+Both leaks were measured before they were fixed, and the measurements are kept:
+
+- the **stream ID** is 16 bytes derived from the batch payloads, so it was the
+  same value at every hop a batch took. `live/node/linkability_test.go` sent a
+  marked batch into a live relay and found the identifier in the cells the
+  relay emitted. It now runs the same experiment and requires zero, with a
+  positive control that finds the identifier when it is present.
+- the **work flag and payload structure** separated work from cover perfectly
+  by two independent classifiers. `live/uplink/distinguisher_test.go` keeps
+  both measurements: perfect separation on a cell in memory, and neither
+  classifier better than guessing once the cell is sealed.
+
+Version 2 encrypts the whole cell — payload and routing metadata — under the
+pairwise link key, with a keystream bound to the topology digest, epoch,
+receiver, network identifier and hop sequence. What crosses a link is a uniform
+pseudorandom 1200-byte string apart from two fields:
+
+- the **magic**, four bytes, so a peer can refuse a version it was not built
+  for rather than downgrade to it.
+- the **hop sequence**, a per-sender per-link counter. It is public by
+  construction — an observer counting datagrams on a link has it anyway — and
+  it is the keystream input, so it must be readable before decryption. It must
+  stay a count of what was *sent*: a number issued to a cell that then failed
+  at the socket would leave a gap, and a gap is an exact per-cell count of the
   sender's local send failures, readable by the receiving peer. A sequence
   number is therefore returned when a cell does not reach the socket;
   `live/node/resourcelimit_test.go` reads the sequences off the wire and
   requires an unbroken run across a run with drops in it.
 
-What this does and does not mean. It does not break the reader claim: relay
-work is scheduled by public replication policy, not by any reader's activity,
-so the observable is the same whichever object a reader wants. It does not
-break publisher anonymity at the airlock either, because the shuffle changes
-the payloads and the stream ID is a hash of them, so the identifier on the far
-side of the mix is unrelated to the one on the near side.
+The sequence does not link hops. A relay draws a fresh number from the
+outbound link's own sequence and re-encrypts under that link's key, so nothing
+in what leaves an operator resembles what arrived.
 
-What it does mean is that the relay fabric provides **no unlinkability between
-hops** for the traffic it carries, and nothing here bounds what that reveals
-about operator relay patterns over a long horizon. Encrypting the header under
-the existing pairwise hop key would remove the property, at the cost of a wire
-format change that invalidates the published conformance vectors — a decision
-for the protocol freeze, not a change to make quietly before it. Recorded as
-an open design question rather than as a defended position.
+**What this does not claim.** Encryption is per link, so any operator on the
+path sees the plaintext payload and the routing metadata: this is unlinkability
+against a passive observer of a link, not against a participating operator, and
+the anytrust argument for the committee is what covers that. It says nothing
+about traffic volume or timing, which the constant-rate fabric covers
+separately. And an observer who watches two links and correlates arrival and
+departure *times* is not addressed here at all; that is the correlation
+question `PROD-17` tracks, and cover traffic rather than encryption is what
+bears on it.
 
 ## Reader-side target
 

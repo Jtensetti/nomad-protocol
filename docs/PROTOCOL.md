@@ -41,44 +41,81 @@ specification (PROD-03), which is what that criterion is for.
 ### Hop header
 
 The mix layer treats bytes 1152..1200 as padding and never parses them, so the
-link layer uses them. The header authenticates one hop; it is **not**
-end-to-end and carries no confidentiality — see `THREAT_MODEL.md` for what a
-link observer therefore reads.
+link layer uses them. The header authenticates and encrypts one hop; it is
+**not** end-to-end. A relay decrypts a cell on the link it arrived on and
+encrypts it again on the link it leaves by, so an operator on the path sees the
+plaintext payload while a passive observer of any single link does not.
 
 All integers are big-endian. Offsets are relative to the start of the header,
 that is byte 1152 of the cell.
 
 | Offset | Bytes | Field |
 |---:|---:|---|
-| 0 | 4 | magic, exactly `4E 48 43 01` (`"NHC"` and version 1) |
-| 4 | 2 | sender operator slot |
-| 6 | 2 | ordinal, this cell's index within its batch |
-| 8 | 2 | batch size |
-| 10 | 2 | flags; bit 0 set means the cell carries work |
-| 12 | 16 | stream ID |
-| 28 | 4 | hop sequence, per sender per link |
+| 0 | 4 | magic, exactly `4E 48 43 02` (`"NHC"` and version 2) |
+| 4 | 4 | hop sequence, per sender per link, in the clear |
+| 8 | 24 | encrypted routing metadata |
 | 32 | 16 | authentication tag |
+
+Bytes 0..1152 of the cell — the mix ciphertext — are encrypted too. What
+crosses a link is a uniform pseudorandom string of 1200 bytes, except for the
+4-byte magic and the 4-byte sequence.
+
+The 24 encrypted routing bytes decrypt to:
+
+| Offset | Bytes | Field |
+|---:|---:|---|
+| 0 | 2 | sender operator slot |
+| 2 | 2 | ordinal, this cell's index within its batch |
+| 4 | 2 | batch size |
+| 6 | 2 | flags; bit 0 set means the cell carries work |
+| 8 | 16 | stream ID |
 
 A **cover** cell has flags 0, and its stream ID, ordinal and batch size are all
 zero. A **work** cell has bit 0 of flags set, a non-zero stream ID, a batch
 size of 2..256, and an ordinal strictly below the batch size. Any other flag
 bit set is invalid. A zero hop sequence is invalid. A receiver rejects a cell
-whose sender slot is not the peer it received it from.
+whose decrypted sender slot is not the peer it received it from.
 
-The stream ID of a work cell is the first 16 bytes of
+Version 1 sent this header in the clear. Because the stream ID is a hash of the
+batch payloads it was the same value at every hop, so a passive observer
+followed a batch across the fabric by reading it; and because the work flag was
+readable, cover traffic told an observer nothing it did not already know. Both
+were measured before they were fixed. A version 1 cell is refused, not
+downgraded to: see the downgrade rule in `nomad-testnet/conformance/COMPATIBILITY.md`.
 
-    SHA256("nomad-live-stream-v1" || uint16(batch size) || payload_0 || ... || payload_n)
+### Hop keystream
 
-over the batch's 1152-byte ciphertexts in ordinal order, so it is stable across
-hops. A relay re-seals a cell with its own sender slot and its own hop sequence
-and leaves the remaining fields as they arrived.
+The keystream is HMAC-SHA-256 in counter mode. No block cipher is used
+anywhere in this format: an implementation needs SHA-256 and nothing else.
+
+The per-cell key is the full 32-byte HMAC-SHA-256 under the pairwise key, over:
+
+    "nomad-hop-link-stream-v2"
+    topology digest                      (32 bytes)
+    epoch                                (8 bytes)
+    receiver operator slot               (2 bytes)
+    length of the network identifier     (2 bytes)
+    network identifier                   (that many bytes)
+    hop sequence                         (4 bytes)
+
+Block *i* of the keystream is HMAC-SHA-256(per-cell key, uint32(*i*)), and the
+keystream is block 0 || block 1 || ... The first 1152 bytes encrypt the
+payload; the next 24 encrypt the routing metadata. **The two regions are not
+contiguous in the cell** — the magic and the sequence sit between them — so the
+order matters and is normative: the payload first, the routing metadata
+continuing the same keystream.
+
+Encryption is XOR. That is sound only because no two cells on one link share a
+per-cell key: the hop sequence is drawn from a durable reservation that never
+reissues a value within an epoch, and exhaustion rotates the epoch rather than
+wrapping. An implementation that reuses a hop sequence produces a two-time pad.
 
 ### Hop authentication tag
 
 The tag is the first 16 bytes of HMAC-SHA-256 under the pairwise key the two
 operators share for the epoch. It is computed over, in order:
 
-    "nomad-hop-cell-v1"
+    "nomad-hop-cell-v2"
     topology digest                      (32 bytes)
     epoch                                (8 bytes)
     receiver operator slot               (2 bytes)
@@ -86,14 +123,31 @@ operators share for the epoch. It is computed over, in order:
     network identifier                   (that many bytes)
     cell[0 .. 1184]                      (the cell up to but excluding the tag)
 
+The order is encrypt-then-MAC: the tag covers the ciphertext, the magic, the
+sequence and the encrypted routing metadata. A receiver recomputes the tag over
+the cell exactly as it arrived — there is nothing to zero, because the tag's
+own 16 bytes are outside the covered range — compares in constant time, and
+decrypts nothing until it matches. The tag covering the header is what stops a
+header being spliced from one cell onto another's payload.
+
 Binding the digest, epoch, receiver and network identifier means a cell cannot
 be replayed into a different epoch, network or peer even when the pairwise key
 is unchanged. An all-zero pairwise key is invalid, as is an authentication
 context with a zero digest, an empty network identifier or a zero epoch: each
 fails closed rather than authenticating everything.
 
-The tag region is zeroed before the tag is computed, so a verifier recomputes
-over the cell with those 16 bytes cleared. Comparison is constant-time.
+A cell is left unmodified whenever verification fails, including when the tag
+matches but the decrypted sender slot or metadata is wrong, so an
+implementation that ignores an error never holds plaintext it was refused.
+
+The stream ID of a work cell is the first 16 bytes of
+
+    SHA256("nomad-live-stream-v1" || uint16(batch size) || payload_0 || ... || payload_n)
+
+over the batch's 1152-byte **plaintext** ciphertexts in ordinal order, so it is
+stable across hops even though its encrypted form is not. A relay re-seals a
+cell with its own sender slot, its own hop sequence and its own link key, and
+leaves the routing fields as they arrived.
 
 ### Hop replay window
 

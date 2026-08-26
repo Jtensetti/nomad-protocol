@@ -2,6 +2,43 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-016 (2026-08-26): The hop cell is encrypted per link. Supersedes half of DEC-015
+
+DEC-015 deferred two wire-format questions to the freeze on the grounds that
+each would invalidate the conformance corpus and the second implementation, and
+that spending that cost twice was worse than spending it once. The reasoning
+was sound and the conclusion was wrong for the first of the two, for a reason
+DEC-015 did not weigh: the freeze is what the deferral was waiting for, and the
+unencrypted header was itself a blocker on the freeze. Deferring a change to
+the moment that the change is a precondition for is not a deferral, it is a
+deadlock.
+
+**Taken now: the hop cell is encrypted under the pairwise link key** — the
+whole cell, payload and routing metadata, not only the header. Encrypting the
+header alone would have left the second distinguisher in place: a work cell
+carries mix ciphertext, which parses as compressed group elements, while a
+cover cell is uniform random, and that separated the two perfectly without
+reading a single header byte.
+
+The cost DEC-015 named was paid rather than avoided. The corpus was
+regenerated, the second implementation was ported, and both directions of the
+cross-implementation check pass on the new format. That cost turned out to be a
+day's work and it bought the evidence back: porting the second implementation
+found a real specification gap (the two encrypted regions are not contiguous,
+so "encrypt the payload and the metadata" has two readings that produce
+different bytes), which is exactly what the second implementation exists for.
+
+**The keystream is HMAC-SHA-256 in counter mode, not a block cipher.** That is
+a protocol decision. It means an implementation needs SHA-256 and nothing else
+to speak this format, which the second implementation demonstrates by being
+written against the Python standard library, where there is no AES. At twenty
+cells per second per link the arithmetic is free.
+
+**Still deferred: the Ristretto-style group encoding.** DEC-015's second
+question stands as recorded. It is a performance change with no privacy
+consequence, the parallelised seal already clears the deployed interval, and
+nothing about the freeze depends on it.
+
 ## DEC-015 (2026-08-25): Two wire-format questions are deferred to the freeze, not settled quietly
 
 Both were found by measurement this session, both have a clear technical

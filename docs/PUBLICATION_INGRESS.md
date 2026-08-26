@@ -26,12 +26,20 @@ run over 16 work cells and 16 cover cells:
 | Header flag | `Flags & FlagWork` in the cleartext hop header | 32/32 |
 | Ciphertext structure | payload region parses as compressed group elements | 32/32 |
 
-Both separate work from cover perfectly. The hop header is authenticated
-but not encrypted, so bytes 1152..1199 state in the clear whether a cell
-carries work, along with its stream identifier and batch coordinates. A
-work payload is a batch of ElGamal ciphertext points, while cover is
-uniform random, so even with the header removed the two are trivially
-separable.
+Both separated work from cover perfectly on the version 1 profile. The hop
+header was authenticated but not encrypted, so bytes 1152..1199 stated in
+the clear whether a cell carried work, along with its stream identifier and
+batch coordinates; and a work payload is a batch of ElGamal ciphertext
+points while cover is uniform random, so even with the header removed the
+two were trivially separable.
+
+Hop cell version 2 encrypts the whole cell per link (see DEC-016), and
+`live/uplink/distinguisher_test.go` now runs both classifiers against sealed
+cells and requires both to fail. The measurement above is kept as the
+before, on a cell in memory, because it is what the uplink profile was
+designed against and because the two profiles solve different problems: the
+relay profile is now indistinguishable to an observer of a *link*, while the
+uplink profile is indistinguishable to the receiving operator as well.
 
 **This does not contradict the reader claim the project already makes.**
 Operator relay work is driven by public replication policy, so the
