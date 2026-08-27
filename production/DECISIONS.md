@@ -2,6 +2,72 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-020 (2026-08-27): A refused deposit destroys publication work, and only a retained sealed cell can retry
+
+Running the publication path as separate processes for the first time showed
+that a publisher loses a fixed share of its work every epoch, silently, and that
+neither side reports it.
+
+The mechanism. A publisher emits at a constant cadence, by design, whether or
+not it has work and whether or not anybody is listening. The airlock's deposit
+window closes before the release boundary, by design, so the shuffle chain and
+threshold decryption have a fixed budget. The two are independent, so every cell
+emitted between the cutoff and the next epoch is refused. Measured across real
+processes: 38-43% of cells in a short run at a three-second period; at the
+default one-minute period with a fifteen-second cutoff it is 25% of every
+period in steady state.
+
+Being refused would be harmless if the publisher could send the work again, and
+`PUBLICATION_AIRLOCK.md` says exactly that: deposits are idempotent so "a client
+that cannot tell whether its uplink cell arrived -- and it cannot, since the
+uplink carries no acknowledgement that would distinguish work from cover --
+resends freely". The idempotence is real. What the specification does not say,
+and what decides whether the property is usable, is *what* a client has to keep
+in order to resend.
+
+Two candidates, and only one works:
+
+- **Retransmitting the byte-identical sealed cell** is idempotent. The airlock
+  recognises the payload as one it already holds and consumes no second slot.
+- **Re-sealing the same fragment** is not. The inner layer is a fresh
+  encryption to the committee on every seal, so the second attempt presents a
+  *different* payload for a held deposit slot, and the airlock refuses it as a
+  conflict. It is right to refuse: a different payload for a held sequence is
+  indistinguishable from an overwrite attempt, and resolving it silently would
+  drop whichever publication lost.
+
+The implementation keeps neither. `publish.Queue.Next` removes the fragment from
+disk as it hands it out, and `deposit.Drain.Emit` seals it and retains nothing.
+So the retry the airlock's idempotence exists to support cannot be performed at
+all, and a work cell refused for any reason -- a closed window, a full epoch, a
+datagram lost in transit -- is publication work destroyed.
+
+This is recorded rather than fixed, deliberately. The fix changes what the
+publisher holds and when it emits, which is the component the core invariant
+constrains most tightly, and a wrong fix here is worse than the defect: the
+obvious one -- keep the fragment and seal it again -- is precisely the case the
+airlock refuses. Designing it, implementing it and judging it in the same breath
+as discovering it is what the planner/implementer/evaluator separation exists to
+prevent.
+
+The shape a fix has to fit: the publisher retains the sealed cell rather than
+the fragment; it retransmits it verbatim; the choice between retransmitting and
+sealing fresh cover depends only on the public schedule and the publisher's own
+queue, never on feedback from the operator, because there is none and inventing
+one would be a private-state-dependent signal; the emission rate does not change,
+since one cell goes out per tick either way; and what is retained is bounded,
+because an unbounded retry buffer is a memory leak in the process that holds the
+publication queue.
+
+Two smaller things came out of the same run. Re-sealing produces different bytes
+on the wire, so a retransmission is not distinguishable from any other cell by
+repetition -- a concern worth checking and, having checked it, not a finding.
+And `live/entry`'s first counters could not express any of this: one called
+"deposited" counted cells the airlock had silently dropped, and one called
+"refused" mixed authentication failures with cells that merely arrived outside a
+window. A counter that cannot distinguish an attack from a schedule is not
+instrumentation.
+
 ## DEC-019 (2026-08-26): Descriptors are distributed through a transparency log, and an unwitnessed chain cannot reach a publisher verdict
 
 PROD-15's open blocker was that the recovery drill's step 6 showed a reader who

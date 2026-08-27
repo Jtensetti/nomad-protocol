@@ -91,6 +91,40 @@ actually demonstrates and, equally, what it does not.
   no composed-system load.
 - Supports (PARTIAL): PROD-28; contributes a current measurement to PROD-18.
 
+## Publication path across real processes
+
+### The entry operator as a service, with a wire capture
+
+- Commit: `Jtensetti/nomad-testnet@bb113e1f15444dbf94fbd103738040a10b001c5d`
+- Branch: `claude/nomad-production-ready-dxv4ql`
+- Artifacts: `cmd/nomad-entry/`, `live/entry/`,
+  `cmd/nomad-entry/boundary_e2e_test.go`, `live/deposit/retransmit_test.go`,
+  `.github/workflows/timing-campaign.yml` (gated campaign).
+- Demonstrates:
+  - the entry-operator role has a process at all, which it did not before:
+    it terminates uplinks, deposits into the airlock, seals on the public
+    schedule and writes batches a shuffle chain can collect;
+  - a session established in band across a real process boundary, from a
+    shipped publisher binary to a shipped operator binary over UDP;
+  - a packet capture of the publication path on a real interface: one sender,
+    every datagram exactly 1200 bytes, one destination, mean interval within
+    0.2% of the configured cadence, handshake included;
+  - the capture judged by the same fail-closed rule the relay fabric's capture
+    is judged by, rather than by a second implementation of the rule.
+- **Finding, recorded as a release blocker (DEC-020):** 38-43% of emitted cells
+  arrived outside a deposit window and were destroyed. At the default schedule
+  this is 25% of every period in steady state. The airlock's idempotence exists
+  so a client can retry, but only a byte-identical retransmission of the sealed
+  cell is idempotent -- re-sealing a fragment is refused as a conflict -- and
+  the publisher retains neither. `live/deposit/retransmit_test.go` pins both
+  directions of that contract.
+- Does NOT demonstrate: separate hosts. Loopback is a real interface and these
+  are real processes, but WAN loss, reordering and a network adversary are not
+  exercised (EB-3). The shuffle chain's mixers are still one process. The
+  release period, cutoff and batch size are still per-operator flags and belong
+  in the signed topology.
+- Supports (PARTIAL): PROD-18, PROD-17; narrows PROD-07.
+
 ## Existing evidence (pre-2026-08-20 baseline)
 
 ### Live testnet with distributed DKG (single-admin Docker fixture)

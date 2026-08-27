@@ -80,6 +80,9 @@ Levels, weakest first:
 
 | Claim | Boundary required | Tests | Level |
 |---|---|---|---|
+| The entry operator terminates uplinks as a separate process | two binaries, real socket | `TestThePublicationPathAcrossRealProcesses` | boundary, single host |
+| The publication path emits fixed-size cells at cadence on a real interface | packet capture | same test, judged by `scripts/verify-pcap.py` | boundary, single host |
+| A refused deposit can be retried | idempotence contract | **CONTRADICTED - `live/deposit/retransmit_test.go` shows only a byte-identical retransmission is idempotent, and the publisher retains nothing to retransmit. See DEC-020.** | finding |
 | Publish cannot reach a socket, transport or scheduler | package graph, transitively | in-package architectural test + CI gate | structural |
 | The queue is bounded, crash-safe, idempotent, encrypted at rest | unit + restart | publish queue tests | unit |
 | Drain order leaks no publication timing | unit | content-derived order test | unit |

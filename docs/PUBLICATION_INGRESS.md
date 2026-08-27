@@ -152,10 +152,11 @@ continuing.
 
 ## What is still open
 
-- The uplink is wired to a running publisher (`cmd/nomad-publish`) and its
-  session is established in band across a real process boundary. What is not
-  wired is an entry operator *service*: the responder exists and is exercised,
-  but no daemon runs it against the deposit mailbox.
+- The entry operator service exists: `cmd/nomad-entry` runs the responder
+  against the deposit mailbox, and the publication path has been exercised as
+  two separate processes on a real socket with a packet capture. What is not
+  exercised is separate *hosts* -- loopback is a real interface and these are
+  real processes, but WAN loss, reordering and a network adversary are not.
 - `EpochDescriptor.uplink_profile` remains reserved and must stay empty
   until this profile is finalized; the descriptor already refuses a
   non-empty value.
@@ -163,8 +164,19 @@ continuing.
   the client is online) are not yet fixed. Participation visibility is
   already inside the declared threat model, but the exact rate is a
   deployment decision that needs the WAN campaign in Workstream E.
-- No packet-level two-world capture of a running publisher exists yet; the
-  current evidence is cell construction, not a wire capture.
+- A packet-level capture of a running publisher now exists, judged by the same
+  fail-closed rule the relay fabric's capture is judged by. It is a single-world
+  capture: the two-world comparison, which is what would establish that private
+  activity does not change the wire, is still missing for this path.
+- **A refused deposit destroys publication work.** A publisher emits at a
+  constant cadence across a deposit window that closes, so a fixed share of
+  every period is refused -- 25% at the default schedule. The airlock is
+  idempotent so a client can retry, but only a byte-identical retransmission of
+  the sealed cell is: re-sealing a fragment produces a fresh encryption to the
+  committee, which is a different payload for a held slot and is refused as a
+  conflict. `publish.Queue.Next` removes the fragment as it hands it out and
+  `deposit.Drain` retains nothing, so the retry cannot be performed. This is a
+  release blocker; see DEC-020 for the shape a fix has to fit.
 
 ## Non-claims
 
