@@ -15,29 +15,47 @@ GitHub Actions has assigned **no runner** to `nomad-testnet` since
 seconds with no logs and `runner_id: 0`. The usual cause is an Actions
 spending or minutes cap.
 
-**While that holds, no gate can reach MET, however good the evidence is.**
-This is the single highest-value thing to fix, ahead of the Scaleway work,
-because it gates every promotion rather than one workstream.
+**Correction (2026-08-21).** The rule reads "GitHub Actions **or external
+test report**", so the outage does not cap promotions: a complete, digested
+external run of the same suites satisfies item 4. The first such report is
+`production/reports/2026-08-21-full-suite/`.
+Restoring Actions remains worthwhile -- a hosted run is cheaper to audit than
+a maintainer-produced log -- but it no longer gates every promotion.
+
+**Correction (2026-08-24).** PROD-08 is PARTIAL again. The report proved the
+older commit it ran, but inspection of the complete criterion found missing
+automatic descriptor assembly/activation and a forward-secrecy experiment
+that never attacks retained live DKG state after later static-key compromise.
+Draft PR #16 now adds safe detached signing/assembly as well as lifecycle
+substrate, but public exchange/gathering, READY, automatic import/activation
+and the later-compromise experiment remain. Exact head `5ac2bfa` also needs its
+own successful run; Actions run `32746518775` had no executable steps.
+
+**Update (2026-08-24).** Draft head `74c830c` closes those two engineering
+gaps: automatic public exchange/signature gathering/READY import and the
+retained-live-DKG later-compromise experiment now pass locally, including
+non-adjacent historical key-reuse rejection. PROD-08 remains PARTIAL because
+exact-head run `32757136789` again executed zero steps and no independently
+administered WAN recovery/erasure drill exists.
 
 ## Class A — evidence complete, waiting only on rule 4
 
-Nothing here needs more engineering. Each satisfies rules 1, 2, 3 and 5 and
-flips to MET on a green run.
+No criterion is currently in this class.
 
 | Gate | Evidence | Note |
 |---|---|---|
-| PROD-08 | epoch lifecycle: membership, rotation, forward secrecy, erasure, 5-operator recovery drill, all with adversarial tests, on the production path, with published vectors | staged; spec is now normative v1 |
+| — | — | — |
 
 Candidates that still need an evidence audit before being listed here:
 PROD-02 (the claim/test matrix now supplies the traceability its blocker
-named), PROD-09 (dependency gates plus the shaper process boundary), and
-PROD-12 (the Byzantine pollution campaign).
+named) and PROD-09 (dependency gates plus the shaper process boundary).
 
 ## Class B — real work still to do, and I can do it
 
 | Gate | What is missing |
 |---|---|
 | PROD-01 | conformance schema, remaining golden vectors, compatibility matrix, signed spec tag |
+| PROD-08 | exact-head lifecycle CI or external report, plus an independently administered WAN lifecycle/key-compromise recovery drill with witnessed erasure |
 | PROD-07 | active-adversary fault injection; signed blame reports (the shuffle receipts already make a faulty mixer identifiable) |
 | PROD-15 | site recovery drill; the SiteID spec is still DRAFT |
 | PROD-16 | cross-platform vectors; mutation, truncation, rollback and parser-differential tests |
@@ -85,7 +103,8 @@ the infrastructure exists. Any plan that promises it sooner is wrong.
 
 ## Suggested order
 
-1. Restore GitHub Actions. Nothing else can be banked until then.
+1. Make the required workflow execute and pass on each exact draft head; do
+   not substitute a report from an older commit.
 2. Add `SCW_PROJECT_ID` as a repository secret — the one WAN run that executed
    failed on exactly this, and no instance has ever been provisioned.
 3. Merge the WAN tooling stranded on `agent/scaleway-wan`.

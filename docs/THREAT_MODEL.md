@@ -15,6 +15,29 @@ Depending on the experiment, the adversary may:
 
 The adversary is not assumed able to break standard cryptographic primitives.
 
+### Where each capability stands
+
+Every capability below states what is assumed, what is excluded, and where the
+evidence is. `production/CLAIM_TEST_MATRIX.md` carries the per-claim rows; a
+capability marked *not defended* has no row above `none` there, and the
+project must not claim it.
+
+| Capability | Position | Evidence |
+|---|---|---|
+| Global passive observation | Targeted. Cell size, destination and count are independent of private activity; **cell timing is not** — a reproducible difference is measured. | CLAIM_TEST_MATRIX reader path; the timing row is CONTRADICTED, see EVIDENCE_INDEX E-08 |
+| Malicious peers | Targeted. A peer that is not in the signed topology gains nothing by existing, and abusive peers are refused per reason at no storage cost. | eclipse, Sybil and abusive-peer rows, adversarial |
+| Compromised minority mixers | Targeted, under the anytrust assumption: privacy holds while at least one mixer in the chain is honest, and correctness holds against a minority under the `t`-of-`n` threshold. A majority-compromised committee is **excluded** — it can decrypt, and no protocol mechanism here prevents that. | shuffle-chain forgery, substituted-signer, non-re-randomising and partial-chain rows, adversarial |
+| Replay | Targeted, at three boundaries: cells, shuffle chains across epochs and committees, and decoder admissions. | chain-replay, abusive-peer and duplicate-budget rows, adversarial |
+| Delay and drop | Targeted for the invariant that matters: loss never produces catch-up traffic. Availability under sustained loss is **not claimed**. | burst-ceiling row; ADMISSION_AND_RATE_CONTROL.md |
+| Injection | Targeted. Systematic pollution is refused before admission against signed commitments; dense coded pollution is **not preventable** over GF(2^8) and is bounded by budget and caught at object verification. | pollution rows, adversarial; POLLUTION_AND_RESOURCES.md |
+| Sybil pressure | Targeted structurally rather than economically: admission consults a signed topology, never a population, so identities cannot be bought into relevance. Fair *allocation* among admitted sessions is **not claimed**. | Sybil and per-session quota rows, adversarial |
+| Endpoint fallbacks | Targeted at the shipping networkless macOS client and adapter: no Nomad failure mode is permitted to fall back to ordinary networking. Release-binary packet/DNS capture is still required before the stronger whole-binary egress claim is closed. | browser security gate, adapter failure-mode row; release capture remains open |
+| Long-horizon correlation | **Not defended, and not claimed.** The adversary is assumed capable of it; no mechanism here bounds intersection over repeated sessions, and no measurement has been run. Requirement E-10 is NOT_STARTED. | none |
+
+The last row is the one most likely to be over-read. Fixed-rate cover bounds
+what a single observation reveals; it says nothing about what many
+observations reveal in aggregate, and Nomad has not measured that.
+
 ## Reader-side target
 
 For two private reader states `R0` and `R1` under the same public traffic-class state, the target is that observable network behavior does not depend on which reader state is active.
@@ -23,9 +46,9 @@ Achieving this requires more than fixed packet sizes. Cadence, peer selection, c
 
 ## Publisher-side target
 
-After a publication has crossed a future anonymous deposit/airlock and has been independently replicated, protocol metadata should not provide a direct mapping from public object to original endpoint.
+After a publication crosses the constant-rate publication airlock, threshold mixing and protocol-defined release boundary, and has been independently replicated, protocol metadata should not provide a direct mapping from public object to original endpoint.
 
-This does **not** claim perfect pre-deposit publisher anonymity. Selective isolation before first deposit can create an availability oracle.
+The current in-process publication path and correlation campaign are evidence for only part of that target. They do **not** establish distributed WAN publisher anonymity or defend against long-horizon correlation, compromised-mixer observation between hops, or unbounded descriptor-distribution delay.
 
 ## Endpoint boundary
 
@@ -39,15 +62,17 @@ The following are outside the network-protocol claim and require separate endpoi
 
 ## Work required before deployment claims
 
-- independent review of the Kyber shuffle integration and a threshold
-  committee key/decryption protocol,
-- packet-capture tests under WAN loss, congestion, churn and active delay/drop,
+- independent review of the Kyber shuffle/DKG/threshold-decryption integration and cryptographic parameter choices,
+- packet-capture tests under WAN loss, congestion, churn, active delay/drop, suspend/resume and process stalls,
 - long-horizon intersection analysis,
 - cache/availability side-channel analysis,
 - basin inversion and membership-inference analysis,
-- Firefox/Chromium engine and background-service isolation tests,
-- publication-airlock and SiteID/key-lifecycle specifications,
-- independent cryptographic and systems-security review.
+- release-binary packet/DNS egress capture for every supported client platform,
+- distributed publication-airlock experiments across separately administered hosts and regions,
+- bounded SiteID descriptor distribution plus transparency/equivocation evidence,
+- independent cryptographic, systems, browser and privacy assessment.
+
+Firefox and Chromium forks are not production targets unless explicitly reactivated; their historical integration-contract documents are not evidence for a shipping client.
 
 ## Bounded v0.1 evidence
 

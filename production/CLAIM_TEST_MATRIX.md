@@ -36,10 +36,25 @@ Levels, weakest first:
 | Split-brain fails closed, halt survives persistence failure | negative tests | equivocation, halt-fails-open, cross-process regressions | adversarial |
 | Rollback to a burned epoch is rejected | negative tests | high-water-mark regression | adversarial |
 | Rotation timing takes no private input | determinism test | `TestPlanIsDeterministicAndPublicOnly` | unit |
-| Retired shares are refused | production path | share-service guard tests; `Chain.ServesEpoch` | unit |
-| Retired epoch material is unrecoverable after erasure | adversarial experiment | `TestForwardSecrecyAfterErasure` | adversarial |
-| Compromise recovery works end to end | drill | `TestRecoveryDrill` (5-operator, 3-of-5) | integration |
+| Next-epoch DKG, descriptor assembly and activation complete automatically | production lifecycle across restart/failure | draft PR #16 head `74c830c` joins public-schedule DKG to immutable GET-only artifact exchange, outgoing quorum plus all incoming activations, READY import and boundary-only activation; missing-certificate, restart, invalid-artifact and crossed-boundary cases fail closed | adversarial, local multi-process mailboxes; hosted exact-head CI and independent/WAN run absent |
+| An operator signs only one fully validated descriptor in its exact role | independent operator ceremony and hostile drafts | detached assembly, invalid-draft-before-journal, prefilled-signature, transplant and second-valid-draft regressions | adversarial, local exact-content; hosted exact-head CI blocked |
+| Public DKG retry state cannot be confused by durable discard evidence | restart after failed attempt | `TestCompletedAttemptScanAllowsDiscardEvidence`; malformed evidence-name negative test | adversarial, unit; local race passed, hosted exact-head CI blocked |
+| Retired shares are refused | production path | share service refreshes the persisted chain before startup, work and HTTP delivery; retirement tests | integration code in draft PR #16; local race passed, hosted exact-head CI blocked |
+| Retired epoch material is unrecoverable after later credential compromise | live operator persistence + adversarial compromise after retirement | `TestForwardSecrecyAfterErasure` removes threshold shares; `TestRetainedDealResistsLaterEpochCredentialCompromise` persists the production DKG store's canonical deal envelope, proves the retired key decrypts it as a control, then proves the complete next-epoch secret cannot decrypt or join retired membership; non-adjacent historical key reuse is rejected | adversarial, local production-store boundary; independent witnessed erasure/WAN run absent |
+| Compromise recovery works end to end | independent multi-operator drill | `TestRecoveryDrill` (five in-process operators, 3-of-5) | protocol integration; no independent administration/WAN |
 | No machine holds a complete decryption key | process + host separation | Compose share isolation | integration, single host |
+
+## Admission and directory
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| A topology must be attested by every operator it lists | negative tests | stripped attestation and dropped operator both refused; each survivor's attestation covers the whole document | adversarial |
+| A superseded topology version is refused | negative test | version-downgrade case | adversarial |
+| Traffic class and threshold cannot be weakened below the profile | negative tests | off-profile cell size, sub-floor threshold, sub-floor operator count | adversarial |
+| A node will not accept a topology older than one it has served | rollback across restart | persisted per-network watermark; refusal verified at the binary boundary | adversarial |
+| Two topologies for one network epoch fail closed | negative test | equivocation refused rather than last-writer-wins | adversarial |
+| A watermark the node cannot parse is not permission to proceed | negative tests | truncated, wrong-version, zero-epoch, short-digest and unknown-field states all refuse | adversarial |
+| The admission format is described well enough to interoperate | a consumer that is not this codebase | signed-topology golden vectors exist; **nothing outside this repository has parsed them** | none |
 
 ## Publisher identity
 
@@ -79,7 +94,36 @@ Levels, weakest first:
 | One depositor cannot name or squat another's slot | derivation + negative tests | IDs derived from (session, sequence); a foreign session cannot collide across 16 sequences | adversarial |
 | One session cannot occupy the whole batch | quota test | per-session bound enforced silently, other sessions unaffected | adversarial |
 | The airlock cannot reach a socket or scheduler | package graph, transitively | in-package architectural test (mutation-verified) + CI gate | structural |
-| Failure and retry add no traffic | capture under failure | **none** | none |
+| Failure and retry add no traffic | capture under failure, four conditions | success, timeout, restart with a durable queue, adversarial loss: every world emits the same cell count, size and destination as an idle publisher | adversarial, in-process |
+| Failure and retry do not shift emission timing | capture under failure, four conditions | judged by the full preregistered rule in CI, with a measured noise floor of 0.0003 to 0.0038 against a 0.02 tolerance; restart is compared against restart-without-work, since a restart is observable by construction | adversarial, in-process |
+| A publisher can hold the cadence it is given | per-cell cost against the cell interval | **CONTRADICTED — sealing one cell takes ~87 ms against a 50 ms deployed interval and a 5 ms permitted minimum; half the cost is a discarded companion mix column. See EVIDENCE_INDEX.** | finding |
+| A queued object reaches a sealed batch across the uplink | end-to-end path | queue to drain to ingress to airlock to seal, with the fixed batch size preserved | integration |
+| Emission count does not depend on having work | busy versus idle publisher | a full queue and no queue at all emit the same number of identically sized cells over the same ticks; the test fails if either run was not actually mixed | adversarial, in-process |
+| The queue is never read on the emission path | design + package graph | a filling goroutine holds a one-slot buffer; the tick does a non-blocking receive and touches no disk | structural |
+| The entry operator cannot separate work from cover | cell inspection | one cell size, one inner-layer size, only threshold decryption distinguishes them | adversarial |
+| Deposit order does not predict release position | correlation experiment with positive control | no defence 1.00, seal only 0.18, full path 0.21, chance 0.25 over 25 trials | adversarial, in-process |
+| The shuffle chain's own contribution to unlinkability | adversary observing between hops or controlling mixers | **none — the experiment above defeats its adversary with the seal alone and does not reach the chain's purpose** | none |
+
+## Accountability
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| A mixer that signs an unsound round can be named | forgery + attribution tests | `AttributeFault` names the signer; the receipt covers context, input, output and proof digests together | adversarial |
+| Blame is verifiable by a third party, not testimony | independent re-derivation | `VerifyFaultReport` re-derives the fault from the transcript; a fabricated report against an honest chain is refused | adversarial |
+| Blame cannot be moved onto an honest mixer | negative test | a genuine report re-pointed at a neighbour fails verification | adversarial |
+| An impersonated mixer is not blamed for the forgery | negative test | a receipt failing under the key it names marks that mixer a victim | adversarial |
+| Broken linkage is not pinned on one neighbour | negative test | charged to the chain assembler; linkage checked before soundness so a mixer handed the wrong input is not accused | adversarial |
+| A stopped mixer can be reported | availability report | a quorum of distinct certified observers each sign a non-receipt bound to a deadline the public timetable fixes | adversarial |
+| An availability report cannot evict an honest operator | negative tests | below quorum establishes nothing; a repeated signer, an uncertified key and self-accusation do not count; an accusation cannot be re-pointed | adversarial |
+| Statements cannot be moved to another round or deadline | negative tests | the round context and deadline are inside the signed message; verified by rewriting a report *and* every statement in it consistently, which the report-level consistency check alone does not catch | adversarial |
+| A falsely accused operator can answer, and the answer names its accusers | refutation | the accused produces its own sound round for that exact position; a round from another position, another mixer's round and an unsound round are all refused | adversarial |
+| A stopped mixer can be shown to have *withheld* | — | **not decidable: asynchrony makes withholding and a dropped packet indistinguishable, so the report is deliberately non-attributable** | n/a |
+| Reporting availability does not leak reader activity | privacy boundary | every certified operator is judged at every deadline so report volume cannot track load; two observations of one position are byte-identical; CI holds the observer's graph to mix and topology | adversarial |
+| Selective failure is detected | serving some peers and not others | **none** | none |
+| Faults are attributed against a live committee | active-adversary injection | **none — constructed transcripts and a unit-tested delivery source only; needs a running committee where an operator actually stops** | none |
+| A vanished operator's share is not rerouted to a survivor | two-world at the surviving peer | the survivor receives exactly its half of a two-peer rotation with the other operator absent, and the sender counts every scheduled emission as sent | adversarial |
+| Private activity during an outage does not change what a peer sees | two-world at the surviving peer | idle and busy outage worlds deliver identical counts, sizes and destinations | adversarial |
+| An outage is survivable across regions | regional outage test | **none — B-09 NOT_STARTED; loopback only** | none |
 
 ## Network coding and resources
 
@@ -90,7 +134,11 @@ Levels, weakest first:
 | A malicious symbol cannot exceed the generation budget | Byzantine campaign | 50/90/100% campaigns, all budgets asserted | adversarial |
 | Replay drains no budget | unit | duplicate test | unit |
 | Coded-symbol pollution is prevented | per-symbol verification | **not claimed; see POLLUTION_AND_RESOURCES.md** | none |
-| Sybil, eclipse, amplification bounded | simulation | **none** | none |
+| Eclipse is structurally impossible | invariant test | no peer discovery exists; peer set is a function of the signed topology and is byte-identical after a flood from unnamed addresses and correctly sealed cells from the wrong socket | adversarial |
+| Sybil identities buy nothing | invariant test | 64 fresh identities leave the peer set unchanged; admission consults a signed document, never a population | adversarial |
+| Amplification is bounded well below 1 | flood campaign | 0.0003-0.0008 outbound/inbound across four flood types, up to 396 MB in for 118 KB out | adversarial |
+| Abusive peers are rejected for their own reason at no cost | negative tests | malformed, unauthenticated, misdirected, cross-epoch and replayed each rejected, nothing stored | adversarial |
+| Availability under flood | sustained campaign | **not claimed — a flood can push a small node past its lateness budget; see ADMISSION_AND_RATE_CONTROL.md** | none |
 | Backpressure does not alter private-sensitive cadence | wire trace under load | **none** | none |
 
 ## Operational output
@@ -114,12 +162,39 @@ Levels, weakest first:
 | Release is reproducible | two independent builders | comparison tool only; **no second builder** | none |
 | Dependencies are scanned and gated | CI | govulncheck reachability gate | integration |
 | Build has an SBOM and provenance | release artifacts | generators; provenance unsigned outside CI | integration |
-| Update cannot roll back | updater tests | **no updater** | none |
+| Update cannot roll back | updater tests | a persisted watermark refuses anything not strictly newer, pre-release ordering included, so a signed 1.2.0-alpha.1 cannot install over 1.2.0 | adversarial |
+| Two signed artefacts for one version are refused, not resolved | negative test | equivocation is an error rather than a choice, because resolving it silently is how a build made for one person reaches them | adversarial |
+| A genuine manifest does not authorise a different file | negative test | size checked before hash, so a padded artefact fails on length | adversarial |
+| Corrupting the watermark does not disable rollback protection | negative test | an unreadable watermark refuses the install rather than reading as absent | adversarial |
+| The updater cannot give the browser network access | dependency direction | the update package fetches nothing, and a test fails if its graph gains net, net/http, net/url or os/exec | adversarial |
+| Updates are verified against a genuine release key | release key custody | **none — no release key exists (EB-7); the mechanism is exercised against test keys only** | none |
+| A user is protected without doing this manually | installer integration | **none — nothing invokes the verifier when a disk image is mounted** | none |
+
+## Long-horizon correlation
+
+The threat model assumes an adversary that correlates observations over long
+periods. Nothing here bounds it.
+
+| Claim | Boundary required | Tests | Level |
+|---|---|---|---|
+| Repeated sessions do not intersect to identify a reader | long-horizon campaign over many sessions | **none — E-10 NOT_STARTED** | none |
+| Repeated publications do not intersect to identify a publisher | long-horizon campaign across epochs | **none — E-10 NOT_STARTED** | none |
+| Cover traffic bounds aggregate leakage, not just per-observation leakage | analysis + campaign | **none; no analysis exists** | none |
+
+Fixed-rate cover bounds what one observation reveals. It says nothing about
+what many reveal in aggregate. This is the largest unmeasured area in the
+project and the easiest to over-read from the per-observation results above.
 
 ## How to read the gaps
 
 Every row at `none` is a claim the project must not make. Several of them —
 publish/no-publish equivalence, browser egress capture, reproducibility with
-a second builder, blind two-world classification — are the specific reasons
-no PROD gate is MET, and they are gated on external resources (EB-1, EB-3,
-EB-4) rather than on further design.
+a second builder, blind two-world classification, and every row in the
+long-horizon section — are gated on external resources (EB-1, EB-3, EB-4) or
+on unstarted work rather than on further design.
+
+They are also why the great majority of PROD gates are not MET. PROD-12 is the
+only MET gate. PROD-08 now has the complete local automatic lifecycle and live
+later-compromise boundaries its earlier review found missing, but remains
+PARTIAL because exact-head hosted/external evidence and an independently
+administered WAN recovery/erasure drill do not exist.

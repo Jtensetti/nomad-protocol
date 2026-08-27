@@ -1,10 +1,10 @@
 # Nomad production status
 
-Last updated: 2026-08-20. Authoritative gate statuses live in
+Last updated: 2026-08-24. Authoritative gate statuses live in
 [`production/readiness.json`](production/readiness.json); this document
 explains them in prose. Where the two disagree, the registry wins.
 
-**Nomad is not production ready.** 0 of 30 production gates are MET. This
+**Nomad is not production ready.** 1 of 30 production gates are MET. This
 document says what exists, what it is evidenced to do, and what it does not
 do.
 
@@ -19,11 +19,16 @@ core and no production deployment. Concretely:
   created through authenticated Pedersen DKG, bounded immutable caches, and
   a networkless materializer that hands verified objects to a sandboxed
   macOS browser with no network entitlement.
-- **A complete epoch and key lifecycle** (Workstream C): canonical
-  descriptors with published vectors, chained membership transitions
-  authorized by a quorum of the previous committee, automatic rotation on a
-  public schedule, retirement, key erasure with a forward-secrecy
-  experiment, revocation, and a recovery drill that runs in CI.
+- **A partial epoch and key lifecycle substrate** (Workstream C): canonical
+  descriptors with published vectors, chained membership transitions,
+  fail-closed retirement guards, revocation and transactional erasure, and a
+  public-schedule DKG controller in draft PR #16 head `74c830c`. The draft now
+  automatically exchanges immutable public artifacts, gathers the outgoing
+  quorum and every incoming activation, imports READY before the public
+  boundary, rotates exact epoch-secret files and rejects reuse from any earlier
+  epoch. A retained-live-DKG later-compromise test passes locally. Independent
+  operator/WAN execution and a successful exact-head CI/external report are
+  still missing; the draft remains unmerged.
 - **A publisher identity system** (Workstream D): self-certifying SiteIDs,
   rotation, offline recovery authority, rollback and equivocation handling,
   and four explicit client identity states.
@@ -34,8 +39,12 @@ core and no production deployment. Concretely:
   are pure functions of public parameters, whose batch size does not vary
   with how many people published, and which requires a full shuffle chain
   authenticated to the certified committee before per-column threshold
-  release. The distributed form of that chain does not exist, and two
-  deposit-ID findings from the review are still open.
+  release. A publisher-side deposit path now drives that chain end to end in
+  one process, campaigned under success, timeout, restart and loss against two
+  idle controls, and judged in CI by the whole preregistered rule. It is one
+  process on one host: replication is not exercised, and a measured finding
+  stands that a publisher cannot seal cells as fast as the deployed cadence
+  requires.
 - **Bounded network coding** (Workstream G): enforced per-generation CPU,
   memory, byte, symbol and lifetime budgets, with pre-admission verification
   of systematic symbols.
@@ -66,6 +75,10 @@ Only these, and only at the level stated:
 | A partial or reordered shuffle chain is refused | adversarial, ten deviations |
 | One operator cannot link ingress to release | measured at chance against a positive control, in-process |
 | A failed browser load never falls back to ordinary networking | adversarial, thirteen failure modes |
+| A vanished operator's share is not rerouted, and private activity during the outage changes nothing a peer sees | adversarial at a real socket, loopback; mutation-verified |
+| An unavailable operator can be reported by a quorum, and answer | adversarial, protocol level; **never claims withholding, which asynchrony makes undecidable** |
+| A signed release cannot roll the browser back, and the updater cannot fetch | adversarial + dependency gate; **no release key exists** |
+| Two operators cannot occupy one address under different spellings | adversarial, admission boundary |
 
 ## Against which threat model?
 
@@ -84,8 +97,13 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
   verifies the wrong site correctly.
 - **Endpoint security.** A compromised OS, malware in the browser domain, or
   seizure of plaintext is outside the claim.
-- **Erasure substrate.** Key erasure guarantees file destruction within an
-  encrypted volume, not physical media destruction.
+- **Erasure substrate.** The implemented overwrite-and-unlink primitive can
+  claim only filesystem-visible destruction inside an encrypted volume, not
+  physical-media destruction. Local adversarial evidence now shows that the
+  complete next-epoch secret cannot decrypt a retained production-store DKG
+  deal for the retired epoch, with retired-key decryption as its positive
+  control. It does not substitute for independently witnessed erasure or a WAN
+  compromise drill.
 
 ## What is NOT protected?
 
@@ -125,10 +143,36 @@ object an endpoint is reading or publishing, not whether it uses Nomad.
 
 ## Which PROD criteria are MET?
 
-**None.** 0/30. The registry currently holds 18 PARTIAL, 11 NOT_MET and 1
-BLOCKED. Substantial protocol work has moved several criteria forward
-internally, but none has the boundary-level evidence its own rule demands,
-so none has been promoted.
+**One.** 1/30: PROD-12. The registry holds 25 PARTIAL, 3 NOT_MET and 1
+BLOCKED besides it.
+
+- **PROD-12** (generation-bound, pollution-resistant network coding): source
+  commitments under the authority signature, a decoder that refuses polluted
+  systematic symbols before admission and enforces per-generation budgets, two
+  fuzz targets, and a Byzantine campaign of 72 trials from 0 to 100 per cent
+  pollution producing zero accepted corruptions.
+
+PROD-12 was promoted on an external test report rather than GitHub Actions,
+which the evidence rule permits in the same clause ("GitHub Actions **or**
+external test report"). It
+does **not** claim pollution cannot deny a generation: a dense coded symbol
+cannot be verified before admission over GF(2^8), a third of the campaign's
+trials were denied, and the first version of the budget fuzzer asserted
+correctness under hostile input and was refuted within seconds.
+
+Defects found and fixed during this cycle, rather than assumed absent: a
+silent wrong-decode in the RLNC decoder that returned a mixture of source
+symbols as one symbol with a nil error, on the production materializer path;
+a signed topology carrying one key twice being accepted, where Go's last-wins
+rule differs from parsers that keep the first; and a stale topology being
+replayable because nothing remembered which epoch the node had already served.
+Each has a regression that fails against the pre-fix code.
+
+The structural defect behind the first was worse than the defect: the six
+vendored component modules in nomad-testnet, and the three pinned snapshots in
+Nomad-browser, carried no tests at all and were invisible to `go test ./...`.
+What shipped was untested by the repository that ships it. All nine now carry
+their standalone repositories' suites and are gated in CI.
 
 Three adversarial reviews during this work each found exploitable defects in
 code that looked finished, and had passing tests: a single-operator
@@ -148,7 +192,7 @@ independent assessment would find than about what has been fixed.
 
 ## Which remain blocked, and on what?
 
-Six external dependencies, detailed in
+Eight external dependencies, detailed in
 [`production/EXTERNAL_BLOCKERS.md`](production/EXTERNAL_BLOCKERS.md):
 
 | ID | Blocked on | Gates |
@@ -159,6 +203,66 @@ Six external dependencies, detailed in
 | EB-4 | Independent assessors and red team | PROD-04, PROD-29, PROD-30 |
 | EB-5 | A second implementation by another author | PROD-03 |
 | EB-6 | A second human release approver | PROD-30 |
+| EB-7 | A project release key for the signed specification tag | PROD-01 |
+| EB-8 | Working GitHub Actions runner capacity (or exact-head external report) | evidence rule 4 across active gates |
+
+**No gate is still NOT_MET for want of engineering.** Three are: PROD-03
+needs an implementer who is not this project, PROD-28 needs thirty days of
+soak to elapse, and PROD-30 needs a monitored beta and a second approver.
+PROD-29 is BLOCKED on an external assessor. Everything else has moved to
+PARTIAL with a specific blocker recorded against it.
+
+That is a statement about the NOT_MET column and not about readiness. Most of
+the twenty-five PARTIAL criteria are substantially incomplete, and the pattern
+across their blockers is worth reading as one thing rather than twenty-five:
+nothing here has been reviewed by anyone who did not build it, no experiment
+has run across genuinely separate administrative domains, and the largest
+claimed property — that repeated use does not accumulate into an
+identification — has never been measured at all.
+
+**Two gates need a second party rather than an external one.** PROD-02 (a
+reviewed threat model) and PROD-27 (a privacy review) have finished artifacts
+and need someone who did not write them to judge them. Neither requires
+independence in the sense PROD-04 and PROD-29 do; a maintainer can close
+either without any outside dependency.
+
+## How much are the gates themselves worth?
+
+This is the question a reader should ask before believing any row above, and
+the honest answer got worse on inspection rather than better.
+
+A sweep across every repository, run because the registry claimed things CI
+was supposedly enforcing, found four gates that were not gating:
+
+- **The browser's entitlement check ran on no branch it was pushed to.** It
+  needs PlistBuddy and `swift`, so it runs only on a macOS runner, and the
+  only macOS workflow triggered on push for one branch that is not the branch
+  the work is on. PROD-23 and F-01 both cited "entitlement gates in CI".
+- **The supply-chain manifest pinned 29 of 46 vendored files.**
+  `sha256sum --check` verifies what is listed and never asks whether
+  everything shipped is listed. `rlnc/bounded.go` — the budget enforcement
+  the materializer relies on to bound a pollution attack — was among the
+  seventeen that could have been edited in place with the gate still green.
+- **The publication campaign logged its own precondition and returned**,
+  while CI went on to apply the full preregistered timing rule to whatever
+  captures the run produced. A run that failed to keep its cadence would have
+  handed CI captures the rule cannot interpret.
+- **`go test -race ./...` was failing outright** in nomad-testnet, timing out
+  at Go's ten-minute package default, because two statistical experiments ran
+  under a race detector that changes the cost of the thing they measure.
+
+Two more defects were found in code the gates were supposed to be watching: a
+cadence test that failed when the scheduler *correctly* refused to burst on a
+stalled host, and a topology admission check that compared endpoint strings,
+so two operators could occupy one address under different spellings and still
+be counted as two independent operators.
+
+All six are fixed and each fix was verified by reintroducing the regression it
+exists to catch. The reason to record them here rather than only in the
+evidence index is that they are evidence about the evidence: this project's
+gates have been wrong at a rate that should inform how much weight the table
+above carries, and every one of them was found by a party that is not
+independent. PROD-04 and PROD-29 exist for what that party cannot see.
 
 ## What exact external action is most urgent?
 

@@ -10,7 +10,8 @@ recorded in the amendment log at the bottom, with the reason, and invalidates
 every result gathered under the previous version. Results are re-gathered,
 not reinterpreted.
 
-Version: 1. Registered: 2026-08-20. No results examined under this version.
+Version: 2. Registered: 2026-08-21. Version 1 was registered 2026-08-20; the
+results gathered under it are void, for the reason given in the amendment log.
 
 ## Hypotheses
 
@@ -48,6 +49,45 @@ timestamps. Per capture, per direction, per peer:
 6. connection lifecycle events: sockets opened or closed during the window;
 7. total bytes;
 8. any non-Nomad traffic from the measured process, including DNS.
+
+## Sample definition
+
+The features above are extracted **per flow**, where a flow is one (source
+address, destination address) pair. That is what "per direction, per peer"
+means operationally, and it is the unit every test below is applied to.
+
+Pooling a capture's packets into a single series instead is not a weaker
+version of this; it measures something else. A capture taken on a host holds
+that host's emissions and its peers' arrivals interleaved, and the two streams
+have independent phase. Restarting the node between worlds re-randomises that
+phase, which shifts the pooled inter-arrival distribution regardless of what
+the node did.
+
+**Windows.** The count test compares equal-length windows. Each world's window
+is an integer number of nominal cell intervals, and opens half an interval
+before that flow's first cell in that world. Anchoring on a cell instead would
+let jitter decide whether the closing cell falls inside, so two honest worlds
+would differ by one cell and the count test would report the ruler's edge as a
+leak. At half an interval, gaining or losing a cell requires jitter of half an
+interval, which the inter-arrival tests reject on their own.
+
+**Which flows carry the verdict.** The claim under test is that private
+activity does not modulate the observable events a node *creates*. That claim
+is evaluated on the flows sourced at the measured host.
+
+Flows the host receives are also tested and reported in full, but they are a
+joint function of the sender and of the path between them, and a lossy hour on
+a third party's backbone is not evidence about this node's scheduler. They are
+therefore reported under a separate verdict and a distinct non-zero exit
+status: visible, never silently dropped, and never folded into the measured
+node's result.
+
+A finding on a received flow is attributed, not excused. Every campaign
+captures at both ends of every link, so a difference in what B received is
+checked against B's sender's own capture of the same cells. If the sender
+emitted the same count in both worlds and the receiver saw different counts,
+the difference is in the path; if the sender's own emissions differ, that is a
+finding against the sender, at the sender.
 
 ## Decision rule
 
@@ -110,3 +150,16 @@ of shorter runs.
 | Version | Date | Change | Results invalidated |
 |---|---|---|---|
 | 1 | 2026-08-20 | Initial registration | none (no results existed) |
+| 2 | 2026-08-21 | Added the sample definition above: per-flow extraction, window placement, and which flows carry the verdict. No threshold changed. | WAN campaign nomad-wan-20260821-123801 (all three hosts) |
+
+Version 2 is a clarification of what the analysis is applied to, not of what
+counts as a failure; every threshold in the decision rule is unchanged from
+version 1. It was written because the first multi-region WAN campaign returned
+FAIL on all three hosts and the cause was the instrument: the analysis script
+pooled each capture's flows into one series, which version 1 did not ask for
+and which the "per direction, per peer" wording excluded. The campaign's
+results are void rather than reinterpreted, per the amendment rule, and the
+measurement was re-run under this version.
+
+Re-analysing void captures is diagnosis, and is reported as diagnosis. It does
+not become a result by having been recomputed with a correct instrument.

@@ -14,6 +14,7 @@ REQUIRED = [
     "docs/PROTOCOL.md",
     "docs/SECURITY_PROPERTIES.md",
     "docs/THREAT_MODEL.md",
+    "PRODUCTION_STATUS.md",
 ]
 FORBIDDEN_STALE = [
     "Payload-preserving mix crypto | none | missing",
@@ -108,6 +109,36 @@ if not score:
     errors.append("production DoD must contain the machine-checkable score")
 elif int(score.group(1)) != met_count:
     errors.append("production DoD score does not match readiness registry")
+
+# PRODUCTION_STATUS.md is the prose deliverable people read instead of the
+# registry, so it is the one most likely to keep saying something the registry
+# stopped meaning. It drifted to a stale "0 of 30" once; this makes that a
+# build failure rather than a discovery.
+production_status = documents.get("PRODUCTION_STATUS.md", "")
+if not production_status:
+    errors.append("PRODUCTION_STATUS.md is missing")
+else:
+    headline = re.search(r"\*\*Nomad is not production ready\.\*\* (\d+) of 30 "
+                         r"production gates are MET\.", production_status)
+    if met_count == 30:
+        if "not production ready" in production_status:
+            errors.append("PRODUCTION_STATUS.md still says not production ready at 30/30")
+    elif not headline:
+        errors.append("PRODUCTION_STATUS.md must carry the machine-checkable headline")
+    elif int(headline.group(1)) != met_count:
+        errors.append(f"PRODUCTION_STATUS.md says {headline.group(1)} of 30 MET, "
+                      f"registry says {met_count}")
+    counts = {status: 0 for status in allowed_statuses}
+    for item in criteria:
+        counts[item.get("status")] = counts.get(item.get("status"), 0) + 1
+    breakdown = re.search(r"registry holds (\d+) PARTIAL, (\d+) NOT_MET\s+and (\d+)\s+BLOCKED",
+                          production_status)
+    if breakdown:
+        stated = tuple(int(value) for value in breakdown.groups())
+        actual = (counts["PARTIAL"], counts["NOT_MET"], counts["BLOCKED"])
+        if stated != actual:
+            errors.append(f"PRODUCTION_STATUS.md breakdown {stated} does not match "
+                          f"registry {actual}")
 
 for relative, text in documents.items():
     base = (ROOT / relative).parent
