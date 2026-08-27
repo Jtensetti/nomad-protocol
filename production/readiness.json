@@ -364,7 +364,7 @@
    ],
    "blockers": [
     "replication is not exercised: the criterion names it and the campaign does not reach it",
-    "the seal cost is now 12 ms against a 50 ms deployed interval, which is real headroom, but still above the 5 ms the topology permits as its shortest cadence, and the parallel speedup is a function of core count -- on one core the cost is unchanged at 36 ms. Removing the cost rather than spreading it needs a prime-order group encoding (Ristretto-style), which is a wire-format decision and not an optimisation, and it should be settled before the protocol freeze alongside the hop-header question",
+    "the seal cost measures 9.5-13 ms across runs against a 50 ms deployed interval (live/capacity, shared container), which is real headroom, but still above the 5 ms the topology permits as its shortest cadence, and the parallel speedup is a function of core count -- on one core the cost is unchanged at 36 ms. Removing the cost rather than spreading it needs a prime-order group encoding (Ristretto-style), which is a wire-format decision and not an optimisation, and it should be settled before the protocol freeze alongside the hop-header question",
     "single host: the publisher and entry operator are separate processes on loopback, which is a real interface and real process isolation, but not separate hosts. WAN loss, reordering and a network adversary are not exercised (EB-3)",
     "PUBLICATION WORK IS DESTROYED (DEC-020): a publisher emits at a constant cadence across a deposit window that closes, so 25% of every period at the default schedule is refused -- measured at 38-43% across real processes in a short run. The airlock is idempotent so a client can retry, but only a byte-identical retransmission of the sealed cell qualifies; re-sealing a fragment is refused as a conflict, and the publisher retains neither the fragment nor the sealed cell. This is a release blocker and is recorded rather than fixed, because the fix changes the publisher's emission logic and needs evaluator separation"
    ]
@@ -573,14 +573,15 @@
     "what the hardware actually decides is measured instead: the margin by which per-cell work fits inside the cadence. TestCapacityReport measures hop seal, hop open, the relay path, the raw-cache write, the publisher's uplink seal and the handshake, and deploy/capacity-report.json carries the artifact with its environment attached",
     "TestTheRelayPathFitsInsideTheCadence asserts the relay path for every link fits the interval with a wide margin, so a change that puts a signature, a disk write or a network round trip on the per-cell path is caught",
     "TestTheReportedDeploymentIsTheDeployedOne fails if the report's assumed cadence, operator count or cache-stream default stops matching deploy/compose.yaml and cmd/nomad-node; each of the three drift cases was confirmed to fire",
-    "the arithmetic is checked against hand-computed values rather than against its own re-derivation, and Report.Validate refuses to publish a capacity report that lacks an environment or a statement of what it does not establish"
+    "the arithmetic is checked against hand-computed values rather than against its own re-derivation, and Report.Validate refuses to publish a capacity report that lacks an environment or a statement of what it does not establish",
+    "the entry-operator role now has a deployment: cmd/nomad-entry constructs uplink.NewResponder with a bounded session limit, which is what the earlier 'no deployed value to measure' blocker was about"
    ],
    "blockers": [
     "no 30-day soak. Every figure in SLO.md comes from tests measured in seconds, in a container, alongside other work: they establish that a bound exists and is enforced and say nothing about drift, leaks or degradation over weeks, which is what a soak is for. This cannot be compressed and is why the criterion is not MET",
     "no regional-failure exercise: the drill is three processes on one host's loopback. Node loss is exercised, regional failure is not, and that needs multi-region infrastructure (EB-3)",
     "no incident history: these objectives have been tested only by exercises this project designed and ran",
     "the capacity figures are not capacity targets: every measurement comes from a shared development container running other work concurrently, each cost is measured in isolation rather than with the scheduler, socket and cache contending, and nothing runs long enough to speak to drift. They are what the implementation costs today, not what an operator should expect from their hardware, and closing that needs the soak and a dedicated host",
-    "concurrent publishers has no deployed value to measure: no command in cmd/ constructs an uplink responder -- live/deposit accepts an already-established session and the session limit is a parameter of uplink.NewResponder that nothing sets -- so the entry-operator role has no capacity figure because it has no deployment"
+    "concurrent publishers is now a deployed parameter rather than an absent one: cmd/nomad-entry constructs the uplink responder with a --sessions bound, so the figure exists and its cost is measured. What is not measured is the bound under real concurrency -- the boundary test runs one publisher, and many publishers against one entry operator needs hosts this project does not have"
    ]
   },
   {
