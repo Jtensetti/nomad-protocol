@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated": "2026-08-26",
+ "updated": "2026-08-28",
  "status_values": [
   "NOT_STARTED",
   "PARTIAL",
@@ -253,13 +253,13 @@
      "id": "A-07",
      "summary": "timeout/loss/restart/retry create no extra private-dependent traffic",
      "status": "PARTIAL",
-     "note": "deposits are idempotent by ID and a restart re-derives the same window and accepts the resend, so retry and restart add no airlock-level event; no wire capture under failure"
+     "note": "the publisher no longer emits work outside the public deposit window, so a shut window costs a deferred fragment rather than a destroyed one and adds no wire event either way (nomad-testnet live/deposit window gate, DEC-022); a client resend is now explicitly forbidden rather than relied on -- the uplink sequence is cleartext and strictly increasing, so a retransmission tells the entry operator the publisher had work refused, and re-sealing under the same sequence is an AES-GCM nonce reuse, refused by Drain.Emit before sealing; loss from a full epoch or a dropped datagram remains undetectable by design and is not claimed; no wire capture under failure"
     },
     {
      "id": "A-08",
      "summary": "duplicate deposits idempotent",
      "status": "VERIFIED",
-     "note": "idempotent by deposit ID with a constant-time comparison and a conflicting payload refused rather than overwritten; resends consume no extra slot, tested including across a simulated operator restart. Note the ID namespace itself is unauthenticated (open finding under A-05)"
+     "note": "idempotent by deposit ID with a constant-time comparison and a conflicting payload refused rather than overwritten; a duplicate consumes no extra slot, tested including across a simulated operator restart. This is duplicate suppression for a datagram the network duplicated, NOT a client retry mechanism: a client-initiated retransmission repeats a cleartext sequence on the wire and is forbidden (DEC-022). Note the ID namespace itself is unauthenticated (open finding under A-05)"
     },
     {
      "id": "A-09",
