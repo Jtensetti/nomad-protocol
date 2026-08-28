@@ -1640,3 +1640,147 @@ index exists to keep, and it went unexamined for days of pushes.
 `agent-efficient-ci` skill states that a substantial job failing in seconds did
 not run. Twenty-odd pushes went out under that rule without anyone checking the
 result against it. Writing the check down is not the same as performing it.
+
+## The publisher stopped destroying a quarter of its work, and the fix DEC-020 specified could not be used
+
+`nomad-testnet` `live/deposit`, `cmd/nomad-publish`, `cmd/nomad-entry`.
+Decisions DEC-020 (the defect) and DEC-022 (the rejection and the replacement).
+
+DEC-020 measured the defect across real processes and specified a fix: the
+publisher retains the sealed cell and retransmits it verbatim, relying on the
+airlock's idempotence. Implementing it found the shape unusable.
+
+**Why the specified fix was rejected.** An uplink cell is eight *cleartext*
+sequence bytes followed by one authenticated ciphertext, and the sequence is
+durable and strictly increasing. A verbatim retransmission therefore repeats a
+cleartext value on the wire an epoch after its first appearance. Cover is never
+retransmitted, so the repeat is a reliable signal that the publisher had a work
+cell refused -- readable by the entry operator, which is the party the two-layer
+construction exists to blind. Idempotence at the airlock makes the second
+deposit harmless to the batch and does nothing about the link.
+
+Re-sealing, DEC-020's other candidate, is worse than it recorded. The AEAD nonce
+is derived from the sequence, so sealing a second payload under the same
+sequence is a nonce reuse: the XOR of the two inner layers, and through GHASH
+the authentication key. DEC-020 described only the airlock's conflict refusal,
+which arrives after the cells are on the wire. `Drain.Emit` now refuses a
+repeated sequence with `ErrSequenceReused` before sealing.
+
+**What was implemented.** The publisher derives the public deposit window from
+the signed topology the operator anchors to, and does not take work off its
+durable queue while that window is shut. Nothing is retransmitted because
+nothing is sent.
+
+**Evidence at the boundary.** Seven tests in `live/deposit`, all five mutations
+killed:
+
+| mutation | test that failed |
+|---|---|
+| fill gate removed | work is not taken from the queue after the cutoff |
+| emit gate always open | a buffered fragment is held across the cutoff |
+| window fails open on an unusable schedule | an unusable schedule reports shut |
+| sequence guard removed | a sequence is never sealed twice |
+| deferred never counted | a buffered fragment is held across the cutoff |
+
+`TestTheWindowGateIsInvisibleOnTheWire` compares all four combinations of
+{work, no work} x {window open, window shut} and requires an identical cell
+count, size and sequence in every one, so the gate cannot become the signal it
+exists to prevent.
+
+**Evidence on the production path.**
+`cmd/nomad-entry` `TestThePublicationPathAcrossRealProcesses`, two operating
+system processes on a real socket with a packet capture, gated behind
+`NOMAD_TIMING_CAMPAIGN=1`. The queue directory is sampled every 50 ms and a
+fragment count that falls between two samples *both* inside a shut deposit
+window is publication work destroyed -- measured from the filesystem, with no
+access to either process's internals.
+
+- with the fix: 0 fragments lost, 83 sample intervals examined, mean cell
+  interval 200.2 ms against a 200 ms cadence;
+- with both gates removed, which is the pre-fix publisher: **19 fragments lost
+  across four consecutive shut windows** (52->48, 38->33, 23->18, 8->3), the
+  test failing with each one named.
+
+**Two things this test got wrong first, both recorded because the second one
+passed.** The original object was 4096 bytes, which is nine fragments; the
+queue drained inside the first open window, so the shut-window check examined
+an empty directory and reported success for having nothing to look at. The
+first mutation run passed against the pre-fix code and that is how it was
+found. The object is now 24576 bytes -- 54 fragments against at most ~43
+emissions in the run -- and the positive control counts only intervals with
+work still queued, so an empty queue can no longer be mistaken for a clean one.
+
+**What is not claimed.** Work is still lost when an epoch is full, a
+per-session quota is exhausted, or a datagram is dropped. The publisher cannot
+detect any of these, by design. The mechanism for them is re-submission as a
+fresh publication, which needs the read path and is not implemented. The
+window closure was the dominant term and it is now zero.
+
+## FINDING: the live Compose gate had been checking a version this code stopped writing
+
+`nomad-testnet` `scripts/compose-e2e.sh`,
+`cmd/nomad-fixture-publisher/compose_gate_test.go`.
+
+The first `live-compose` job to run since the outage failed on
+`live descriptor is not the certified DKG format`. The gate asserts
+`nomad-batch-descriptor-v2`; `live/batch` has written
+`nomad-batch-descriptor-v3` since commit `2093d26` on 2026-08-24 -- the same day
+CI stopped executing. Every live run since would have failed on a version
+string rather than on anything the gate exists to check.
+
+The literal is fixed, and a test now pins all three version literals in the
+script to the constants the code exports, comparing the *set* of versions the
+script mentions per object rather than only checking that the current one
+appears: after a bump, an added `-v4` beside a left-behind `-v3` is still a
+stale gate. Both mutations -- reverting the descriptor literal, and adding a
+second version alongside the correct one -- fail the test.
+
+A gate that pins a wire version by string literal in a shell script has no
+compiler to catch it. The outage is why this was invisible for four days; it is
+not why it happened.
+
+## FINDING: the unlinkability experiment was too noisy to trust and too blunt to catch anything
+
+`nomad-testnet` `live/deposit/correlation_test.go`.
+
+`TestPublisherToObjectMappingIsNotRecoverableFromDepositOrder` failed on a
+routine run at 0.52 against a chance rate of 0.25. It is a security gate on the
+airlock's weakest unlinkability claim, so the failure was treated as a finding
+until the arithmetic said otherwise.
+
+**It was chance, and that is the finding.** The null here is exact: under
+anonymity the released order is a uniform permutation of the four publishers,
+so the adversary's hits per trial are that permutation's fixed-point count.
+Convolved over 12 trials, P(hits >= 25 of 48) = 6.7e-4. The observed 0.52 was
+25 hits. Five repeat runs gave 0.27, 0.21, 0.25, 0.17, 0.17 for the full path,
+centred on chance as they should be. Nothing about the shuffle chain or the
+seal was wrong.
+
+**What was wrong was the gate.** Two defects that pull in opposite directions,
+which is why neither was visible on its own:
+
+- It fired when nothing was wrong about once in 1500 runs. For a security gate
+  that is often enough to train a reader to dismiss it, and the usual response
+  to a security gate crying wolf is to loosen the threshold.
+- It could barely detect what it exists to detect. Against a true recovery rate
+  of 0.5 -- double chance, a serious linkage defect -- the "twice chance"
+  threshold had about 50% power at 12 trials. A threshold strict enough to fix
+  the false failures would have had 1.5%.
+
+Both are the same shortage of observations. The measurement now runs 40 trials
+(160 observations) and fails at a cutoff computed from the exact null at a
+stated false-failure budget of 1e-6: 74 hits. That budget buys a gate that
+fails by chance less than once in a million runs and still detects a doubled
+recovery rate 85% of the time. The control keeps 12 trials -- full linkage
+scores 1.00, nowhere near a boundary -- so the cost is bounded.
+
+The cutoff is computed in the test rather than written down, and a second test
+pins the computation against values derived independently (74 at 40 trials, 51
+at 24, 32 at 12, and 25 at 12 for a 1e-3 budget, which is the threshold the
+experiment used to run at). A magic number would have been exactly the original
+defect: a threshold with no stated relationship to the distribution it was
+thresholding.
+
+**Not a change to what is claimed.** The property, the adversary modelled, and
+the limits recorded with the original measurement are unchanged. What changed
+is that a pass now means something and a failure is worth reading.
