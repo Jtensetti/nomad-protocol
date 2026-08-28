@@ -174,47 +174,70 @@ only the listed action. Never fabricate these.
   are in place and enforced; the specification content is written. What is
   missing is a signature over it, and only custody prevents that.
 
-## EB-8: GitHub Actions is not executing for this account
+## EB-8 (RESOLVED 2026-08-28): Actions jobs were not dispatched -- account billing
 
-- **Missing:** the ability to run any workflow. Since 2026-08-24, every
-  workflow run in every Nomad repository completes as `failure` between three
-  and five seconds after it is created.
-- **What was established here:** the failed job records no steps, produces no
-  log (the log endpoint returns 404) and carries no check-run output, which is
-  the shape of a job that was never dispatched to a runner rather than one
-  that ran and failed. Every workflow file in all eight Go repositories parses
-  and declares jobs and triggers (`scripts/check-workflows.py`). The action
-  pins (`actions/checkout@v7`, `actions/setup-go@v7`) resolve to tags that
-  exist and are unchanged since the first workflow commit -- including in
-  `nomad-testnet` run 32301972409, which executed for 280 seconds and
-  succeeded on 2026-08-19 with those same pins. So the cause is upstream of
-  the workflow content.
-- **Why not autonomous:** the remaining candidates are account-level -- an
-  Actions spending limit or billing block, or Actions disabled for the
-  repositories. Both are settings only the account owner can read and change,
-  and neither is visible through the API scopes available here.
-- **Where obtained:** GitHub Settings -> Billing and licensing -> Plans and
-  usage (Actions minutes and any spending limit), and each repository's
-  Settings -> Actions -> General (whether Actions are permitted).
-- **Verification afterward:** push any commit and confirm the run executes for
-  longer than its setup -- for these repositories, tens of seconds at minimum
-  -- and that job logs are retrievable. A run that fails in under five seconds
-  with no logs has not tested anything.
-- **What this costs the registry meanwhile:** every criterion whose evidence
-  reads "checked in CI" is, right now, a statement about a workflow file that
-  is not being executed. The one CI run cited by ID in this registry
-  (nomad-testnet 32301972409) predates the outage and remains valid. Nothing
-  in this session's work has been verified remotely; it was verified locally,
-  and the evidence entries say which.
-- **Already complete:** local verification is not blocked by this. Every
-  repository's `go build`, `go vet` and `go test -race ./...` run here, and
-  the `agent-efficient-ci` skill's ladder exists precisely so that remote CI
-  is the last check rather than the first.
+- **Was missing:** the ability to run any workflow. From 2026-08-24, workflow
+  runs on this session's branches completed as `failure` three to eight
+  seconds after creation.
+- **Cause, established from the run record:** GitHub attached exactly one
+  annotation to each failed job, and it says what happened:
+
+  > The job was not started because recent account payments have failed or
+  > your spending limit needs to be increased. Please check the 'Billing &
+  > plans' section in your settings
+
+  (`nomad-testnet` check-run 98432458214, on run 33046757052, head
+  `bb113e1f`.) The observable shape matches: the jobs record zero steps, not
+  even `Set up job`, so nothing was ever dispatched to a runner.
+- **How it was resolved:** the account owner made the repositories public on
+  2026-08-28. GitHub-hosted runner minutes are free for public repositories,
+  so the spending limit stopped applying. The first successful run afterwards
+  was `nomad-protocol` 33171161765; all nine repositories have executed real
+  jobs since.
+- **Verification:** a run that executes for longer than its setup and whose
+  job logs are retrievable. On 2026-08-28, eight of nine repositories ran for
+  25-312 seconds with full logs. This entry stays as a record; it is not a
+  live blocker.
+
+### A wrong correction, recorded because it is in published history
+
+Between the diagnosis above and this resolution, this session replaced the
+correct diagnosis with an incorrect one, and committed it to nine
+repositories in `ci: pin actions/checkout and actions/setup-go to SHAs that
+exist` (`nomad-testnet` bd271e8 and its siblings). That message asserts:
+
+- "v7 is not a version either action has". False.
+  `git ls-remote https://github.com/actions/checkout` resolves `refs/tags/v7`
+  to `3d3c42e5` (v7.0.1, tagged 2026-07-17), and `actions/setup-go` resolves
+  `refs/tags/v7` to `b7ad1dad` (v7.0.0, 2026-07-15). Both existed throughout.
+- "this is what GitHub does when it cannot resolve an action reference".
+  False for this failure shape. An unresolvable action still produces a
+  `Set up job` step and a log; these jobs had neither.
+- "Making the repositories public did not change the failure, which is what
+  ruled the billing theory out". This was asserted without an observation
+  behind it. There is no run in the record between the repositories becoming
+  public and the pin change, so nothing had ruled anything out.
+
+What actually made the canary run go green was the visibility change, not the
+pin change; the two were minutes apart and the pin was given the credit.
+
+The pins were kept -- pinning a CI action by digest is right for a project
+that verifies its own dependency digests -- but they were moved back to the
+v7 releases the workflows originally used and that ran successfully in
+`nomad-testnet` 32301972409 on 2026-08-19. The v4.2.2/v5.3.0 pins were a
+two-major downgrade adopted on a false premise, and they were also what
+raised the Node 20 deprecation warnings in the 2026-08-28 runs.
+
+The generalisable error is not the wrong guess. It is that a diagnosis was
+overwritten on the strength of an argument rather than an observation, when
+the observation was one API call away: the annotation on the failed check-run
+had been sitting there, in plain language, since 2026-08-24.
 
 ## What none of these are
 
-None of these seven is a design problem, and none is waiting on further
-engineering here. Each names a person, a credential, a machine or an elapsed
+None of the seven open blockers is a design problem, and none is waiting on
+further engineering here. (EB-8 is retained as a resolved entry, not counted
+among them.) Each names a person, a credential, a machine or an elapsed
 duration. Where a blocker sits between "the work is done" and "the gate is
 MET", the work is described above as already complete so that the external
 party performs exactly one action and no more.

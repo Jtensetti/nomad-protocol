@@ -1614,6 +1614,19 @@ including in the run that succeeded. What is left is account-level -- an
 Actions spending limit, or Actions disabled -- and neither is readable through
 the API scopes available here. It is recorded as EB-8.
 
+**RESOLVED 2026-08-28, and one sentence above was wrong.** The cause was the
+account spending limit, as this entry guessed. It was not unreadable here: the
+failed check run carried a single annotation stating it in plain language --
+"The job was not started because recent account payments have failed or your
+spending limit needs to be increased" (`nomad-testnet` check-run 98432458214
+on run 33046757052). The claim that it was invisible through the available
+API scopes was never tested; the annotations endpoint was simply not queried.
+The owner made the repositories public on 2026-08-28, which makes runner
+minutes free, and eight of nine repositories then executed real jobs of 25 to
+312 seconds. Mid-outage this session also replaced this correct diagnosis with
+an incorrect one and committed it to nine repositories; that is recorded in
+EB-8.
+
 **Why this belongs in an evidence index rather than a bug tracker.** This
 project's registry uses "checked in CI" as an evidence phrase in many places.
 For the last several days that phrase has described a workflow file rather

@@ -2,6 +2,25 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-021 (2026-08-28): CI actions stay pinned by digest, at v7
+
+The 2026-08-24 to 2026-08-28 Actions outage was an account spending limit
+(EB-8), not an unresolvable action reference. This session concluded the
+opposite mid-outage and downgraded actions/checkout and actions/setup-go from
+v7 to v4.2.2/v5.3.0 across nine repositories on that false premise.
+
+Digest pinning is kept, because a project that verifies its own dependency
+digests should not run CI actions from a floating tag. The versions are moved
+back to v7.0.1 and v7.0.0 -- what the workflows used before the outage, proven
+by nomad-testnet 32301972409 -- which also clears the Node 20 deprecation
+warnings the downgrade introduced. actions/upload-artifact and
+actions/download-artifact are pinned to the digest of the v4 they already
+floated on; their major version is deliberately not changed here, since
+nothing indicates a problem with it and the artifact pair must stay matched.
+
+The correction is recorded in EXTERNAL_BLOCKERS EB-8 rather than by amending
+the commits, which are published and referenced.
+
 ## DEC-020 (2026-08-27): A refused deposit destroys publication work, and only a retained sealed cell can retry
 
 Running the publication path as separate processes for the first time showed
