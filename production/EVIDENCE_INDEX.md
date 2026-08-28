@@ -1845,3 +1845,47 @@ mixer at all -- which is the assumption failing, not the chain.
 so the non-race `go test ./live/deposit/` step in `ci.yml` is the only place
 either executes. That step now says so: deleting it would leave the airlock's
 privacy claims with no CI evidence while every other gate still went green.
+
+## CI is executing again, and here is what actually ran
+
+Every Nomad repository has a green workflow run on
+`claude/nomad-production-ready-dxv4ql`, the first since 2026-08-19. These are
+the immutable references DoD rule 4 asks for, and they are recorded because
+the phrase "checked in CI" appears throughout this registry and for five days
+described a workflow file rather than an execution.
+
+| repository | workflow | run | head | result | duration |
+|---|---|---|---|---|---|
+| `nomad-protocol` | docs | 33177681189 | `7e06d1d` | success | 9s |
+| `nomad-testnet` | ci | 33177617429 | `886cef3` | success | 1417s |
+| `Nomad-browser` | ci | 33173939279 | `fcb1c42` | success | 78s |
+| `Nomad-browser` | macOS verification build | 33173939316 | `fcb1c42` | success | 68s |
+| `nomad-anytrust-mix-sim` | ci | 33173941033 | `23143dd` | success | 219s |
+| `nomad-constant-rate-fabric` | ci | 33173943020 | `17f0d11` | success | 44s |
+| `nomad-local-reconstruction` | ci | 33173945012 | `534600e` | success | 52s |
+| `nomad-rlnc` | ci | 33173947255 | `17a85b6` | success | 37s |
+| `nomad-selection-firewall` | ci | 33173948850 | `1efa909` | success | 36s |
+| `nomad-semantic-basins` | ci | 33173952340 | `9d77a01` | success | 60s |
+
+`nomad-testnet` run 33177617429 is the one that carries weight: 888s in the
+unit job and 502s in `live-compose`, with the cross-implementation attestation
+check, the vulnerability gate's own fail-closed test, the deposit-path
+experiments and the multi-process fabric-to-cache network all green in the same
+run.
+
+**What this does and does not do.** It satisfies DoD rule 4 -- the relevant
+workflow succeeded -- for every criterion whose evidence cites CI. It moves no
+criterion to MET. Rule 4 is one of six, and every non-MET gate is held by a
+substantive blocker that a green pipeline does not touch: a reviewer who did
+not write the document, a second implementer, independent cryptographic review,
+a macOS or Windows runner, separate hosts, a release key, or assessors who
+cannot be self-appointed. Green CI removes an obstacle to claiming evidence; it
+produces none.
+
+**Four defects surfaced in the first four runs after the outage**, all now
+fixed and recorded above: an operator attestation check that had never executed
+and was verifying the wrong bytes; a vulnerability gate that could not tell a
+finding from an unreachable database; a live Compose gate asserting a wire
+version the code stopped writing four days earlier; and an unlinkability
+experiment miscalibrated in both directions at once. Three of the four share a
+shape: a check that cannot run reports the same thing as a check that passes.
