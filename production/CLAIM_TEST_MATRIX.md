@@ -111,8 +111,9 @@ Levels, weakest first:
 | Emission count does not depend on having work | busy versus idle publisher | a full queue and no queue at all emit the same number of identically sized cells over the same ticks; the test fails if either run was not actually mixed | adversarial, in-process |
 | The queue is never read on the emission path | design + package graph | a filling goroutine holds a one-slot buffer; the tick does a non-blocking receive and touches no disk | structural |
 | The entry operator cannot separate work from cover | cell inspection | one cell size, one inner-layer size, only threshold decryption distinguishes them | adversarial |
-| Deposit order does not predict release position | correlation experiment with positive control | no defence 1.00, seal only 0.18, full path 0.21, chance 0.25 over 25 trials | adversarial, in-process |
-| The shuffle chain's own contribution to unlinkability | adversary observing between hops or controlling mixers | **none — the experiment above defeats its adversary with the seal alone and does not reach the chain's purpose** | none |
+| Deposit order does not predict release position | correlation experiment with positive control | no defence 1.00, seal only 0.231, full path 0.250, chance 0.250 over 40 trials; fails at 74 of 160 hits, a threshold from the exact null at a 1e-6 false-failure budget | adversarial, in-process |
+| The shuffle chain's own contribution to unlinkability | adversary inside the committee, handed every corrupt mixer's permutation | every mixer corrupt 1.000, one honest mixer 0.131, chance 0.125, over 20 trials of 8 publishers and 5 mixers; fails at 46 of 160 hits | adversarial, in-process |
+| A publisher does not emit work into a shut deposit window | queue sampled every 50 ms across two real processes | 0 fragments lost over 83 intervals inside shut windows; 19 lost across four shut windows with the gate removed | adversarial, cross-process |
 
 ## Accountability
 

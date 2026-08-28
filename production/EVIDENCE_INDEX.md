@@ -1784,3 +1784,64 @@ thresholding.
 **Not a change to what is claimed.** The property, the adversary modelled, and
 the limits recorded with the original measurement are unchanged. What changed
 is that a pass now means something and a failure is worth reading.
+
+## What the shuffle chain contributes, measured against a corrupt committee
+
+`nomad-testnet` `live/deposit/chain_contribution_test.go`. PROD-17.
+
+The registry recorded the chain's own contribution to unlinkability as tested
+by nothing, and `CLAIM_TEST_MATRIX` said so in as many words. The reason was
+specific rather than an omission: the correlation experiment models an entry
+operator matching arrival order to release position, and `Seal` defeats that
+adversary before any mixer runs -- it orders by deposit ID and randomises
+placement. So the experiment measured the airlock and never reached the chain.
+
+The chain exists for an adversary inside the committee, and that is what this
+measures, against the anytrust assumption `airlock.VerifyChain` states
+mechanically: the chain is unlinkable if at least one shuffler is honest.
+
+| configuration | recovery rate |
+|---|---|
+| every mixer corrupt | 1.000 |
+| exactly one honest mixer | 0.131 |
+| chance | 0.125 |
+
+20 trials of 8 publishers and 5 mixers, the honest mixer's position drawn per
+trial so the result is not one arrangement reported as the property. Fails at
+46 of 160 hits, a cutoff from the exact null at the same 1e-6 false-failure
+budget the recalibrated correlation experiment uses.
+
+**The adversary is given more than a real one has.** It holds every corrupt
+mixer's permutation, which for a corrupt mixer is definitional -- it chose it.
+Here they are recovered by decrypting each round's input and output. That also
+subsumes an adversary who merely observes the batch between hops, which holds
+strictly less: re-randomised ciphertexts without the permutation.
+
+**The batch carries no cover, deliberately.** Every cover column decrypts to
+the same reserved empty fragment, so two of them are indistinguishable and no
+permutation can be read off the plaintexts at all. Filling the batch with eight
+distinct markers also hands the adversary the easiest batch it will ever see,
+which is the right direction for a test of whether it still fails.
+
+**The control was a tautology first, and that is worth recording.** The
+adversary's composition and the "truth" were both derived by composing the
+per-round permutations, so the all-corrupt configuration agreed with itself
+whether or not that composition described the chain. Truth is now matched end
+to end from the plaintexts entering and leaving the chain, independently of
+what the adversary composes, so the two derivations have to agree for real.
+This is the fifth time in this project a test has been found passing for a
+reason other than the one claimed, and the second in this session.
+
+Verified by mutation: giving the adversary the honest mixer's permutation as
+well fails at 160 of 160.
+
+**Still not measured**, stated because the earlier unlinkability claim here was
+withdrawn for being read wider than its measurement: an adversary correlating
+across epochs, one with side information about who submits when, one attacking
+the shuffle proofs rather than the permutation, and a committee with no honest
+mixer at all -- which is the assumption failing, not the chain.
+
+**Where it runs.** Both this and the correlation experiment skip under `-race`,
+so the non-race `go test ./live/deposit/` step in `ci.yml` is the only place
+either executes. That step now says so: deleting it would leave the airlock's
+privacy claims with no CI evidence while every other gate still went green.
