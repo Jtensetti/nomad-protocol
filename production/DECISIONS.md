@@ -2,6 +2,73 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-022 (2026-08-28): DEC-020's retry is rejected; the publisher does not emit work into a shut window
+
+DEC-020 recorded that a publisher destroys a fixed share of its work every
+epoch and specified the shape of a fix: retain the sealed cell, retransmit it
+verbatim, choose between retransmitting and fresh cover from the public
+schedule alone. Implementing it found that the shape does not hold, on a
+ground DEC-020 did not consider.
+
+**Why verbatim retransmission cannot be used.** An uplink cell is eight
+cleartext sequence bytes followed by one authenticated ciphertext
+(live/uplink/session.go). The sequence is durable and strictly increasing
+(live/uplink/sequence.go). Retransmitting a cell verbatim therefore repeats a
+cleartext value on the wire, an epoch after its first appearance. Cover is
+never retransmitted, because there is no reason to. So the repeat is a
+reliable signal that this publisher had a work cell refused -- readable by a
+passive observer and, more importantly, by the entry operator, which is the
+party the two-layer construction exists to blind. That is private activity
+modulating an externally observable event, which the core invariant forbids
+outright. The airlock's idempotence does not help: it makes the second deposit
+harmless to the batch, not invisible on the link.
+
+**Why re-sealing is worse than DEC-020 said.** DEC-020 describes re-sealing
+the same fragment as producing a different payload that the airlock refuses as
+a conflict. It is also an AES-GCM nonce reuse: the nonce is derived from the
+sequence, so sealing twice under one session key and one sequence encrypts two
+different plaintexts under one key and nonce, giving their XOR and, through
+GHASH, the authentication key. The airlock's refusal arrives after the cells
+are already out. `deposit.Drain` now refuses a repeated sequence before
+sealing, with `ErrSequenceReused`, in the one place that holds the state to
+see it.
+
+**What is implemented instead.** The publisher does not hand work to the
+emission path while the deposit window is shut. The window is public schedule
+policy anchored to the signed topology, so publisher and operator derive the
+same boundaries from the same bytes. `deposit.Drain` takes an
+`airlock.Schedule`, the filling goroutine does not call `Queue.Next` outside
+the open window, and `Emit` leaves a buffered fragment alone and seals cover.
+
+This satisfies every constraint DEC-020 named, and one it did not:
+
+- the emission rate does not change -- one cell per tick either way, sealed
+  identically, and no sequence is ever repeated;
+- the decision depends only on the public schedule and the clock, never on
+  feedback from the operator, of which there is none;
+- what is retained is bounded, at the one slot the buffer always had;
+- nothing is retransmitted, because nothing was sent.
+
+**What it does not fix.** Work is still lost when an epoch is full, when a
+per-session quota is exhausted, or when a datagram is dropped in transit. The
+publisher cannot detect any of these -- by design, since an acknowledgement
+would be the signal. The mechanism for those is re-submission as a *fresh*
+publication: a new sequence and a fresh seal, indistinguishable from a first
+publication, decided by the publisher failing to observe its own object in a
+release. That needs the read path, is not implemented, and is not claimed.
+The window closure was the dominant term -- 25% of every period at the default
+schedule, 38-43% measured at a three-second period -- and it is now zero.
+
+**Loss on shutdown.** At most one fragment, whatever sits in the one-slot
+buffer, and it is gone: `Queue.Next` unlinks as it hands out and nothing puts
+a fragment back. Holding it across a restart to emit later would be catch-up
+traffic, which is the worse failure. Recorded as accepted, not as fixed.
+
+Planner, implementer and evaluator here were the same session, which is a
+weaker separation than the process asks for. The evaluator pass is recorded
+as QA, not as independent review, and the rejection of DEC-020's shape is the
+part most in need of a second reader.
+
 ## DEC-021 (2026-08-28): CI actions stay pinned by digest, at v7
 
 The 2026-08-24 to 2026-08-28 Actions outage was an account spending limit

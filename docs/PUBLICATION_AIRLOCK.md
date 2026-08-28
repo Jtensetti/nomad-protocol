@@ -57,9 +57,35 @@ them keyed by a client-chosen deposit ID.
   ID derived from content or from a publisher — and could permanently block a
   publisher by squatting its ID.
 - **Idempotent.** Re-offering the identical payload for the same sequence
-  succeeds without consuming a second slot. A client that cannot tell whether
-  its uplink cell arrived — and it cannot, since the uplink carries no
-  acknowledgement that would distinguish work from cover — resends freely.
+  succeeds without consuming a second slot.
+
+  This is duplicate suppression at the operator, not a client retry
+  mechanism, and the earlier text here said otherwise. It read: a client
+  "cannot tell whether its uplink cell arrived — and it cannot, since the
+  uplink carries no acknowledgement that would distinguish work from cover —
+  resends freely". A client must not resend. An uplink cell begins with its
+  sequence number in **cleartext**, the sequence is durable and strictly
+  increasing, and cover is never resent — so a repeated sequence, arriving an
+  epoch after the first, tells the entry operator that this publisher had a
+  work cell it wanted back. That is the one fact the whole construction exists
+  to keep from the entry operator, and no amount of idempotence at the airlock
+  removes it from the wire. What the property is actually good for is the
+  network duplicating a datagram, which no one chose and which is not
+  correlated with having work.
+
+  Re-*sealing* the fragment for the same sequence is worse than useless: it is
+  an AES-GCM nonce reuse under the session key, since the nonce is derived
+  from the sequence. It yields the XOR of the two inner layers and, through
+  GHASH, the authentication key. The airlock would refuse the second deposit
+  as a conflict, but only after the damage was on the wire. `live/deposit`
+  refuses a repeated sequence before sealing, in the one place that holds the
+  state to see it.
+
+  What a client does instead: it does not emit work outside the deposit
+  window at all. The window is public schedule policy, so the publisher
+  computes it from the same signed bytes the operator does and leaves the
+  fragment on its durable queue until the window is open. Nothing is
+  retransmitted because nothing was sent. See DEC-020 and DEC-022.
 - **Conflicts are refused, not resolved.** A different payload for a held
   sequence is an error. Overwriting would silently drop whichever publication
   lost. Reporting it is safe because a caller can only collide with its own
@@ -179,7 +205,11 @@ Claimed, and evidenced by tests at the package boundary:
 - deposits are idempotent with a constant-time comparison, conflicts are
   refused, capacity does not grow, and a malformed or small-order deposit is
   refused before it takes a slot;
-- a restart re-derives the same window and accepts the client's resend;
+- a restart re-derives the same window and accepts a duplicate of the same
+  deposit;
+- a publisher does not hand work to its emission path while the deposit
+  window is shut, so the fragment stays on its durable queue instead of
+  becoming a refused cell, and no uplink sequence is ever sealed twice;
 - sealed position carries no stable information about arrival order;
 - a chain in which no certified member participated is refused, as is one
   with a substituted signer, a borrowed receipt, a round that does not

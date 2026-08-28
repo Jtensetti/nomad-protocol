@@ -922,3 +922,67 @@ external in every case: a reviewer who did not write the document (PROD-02), a
 second implementer (PROD-03, PROD-19), independent cryptographic review
 (PROD-04), a macOS runner (PROD-09, PROD-23), a Windows runner (PROD-16), a
 release key (PROD-01), and assessors who cannot be self-appointed (PROD-29).
+
+## 2026-08-28: what a working CI found, and one diagnosis that had to be withdrawn
+
+CI ran for the first time since 2026-08-19. The cause of the outage was the
+account spending limit, which the repositories going public removed. Four
+things follow from having the gates actually execute.
+
+**A diagnosis of my own had to be withdrawn.** Mid-outage I replaced the
+correct explanation with a wrong one -- that `actions/checkout@v7` and
+`actions/setup-go@v7` did not exist -- and committed it to nine repositories.
+Both tags existed throughout. The evidence against it had been sitting on the
+failed check run the whole time, as a single annotation in plain English:
+"The job was not started because recent account payments have failed or your
+spending limit needs to be increased." I never queried the annotations
+endpoint before concluding it could not answer. The failed jobs also recorded
+*zero* steps, not even `Set up job`, which an unresolvable action reference
+does not produce -- I had written that shape down in EB-8 myself and then
+argued against my own observation. The pins stayed, since digest-pinning CI
+actions is right for this project, but moved back to v7. EB-8 and the evidence
+index carry the correction; the commits are published and referenced, so
+nothing was rewritten.
+
+**A cross-implementation check that had never run, and was wrong.** The first
+green testnet run failed on operator attestations. The Python second
+implementation verified them against `sha256(draft_domain || draft)` while Go
+signs a domain-separated message over `{"document", "operator_id"}`: wrong
+domain, and no operator identifier at all, so every operator in an epoch would
+have signed identical bytes and one cooperating signer's attestation would
+have verified under every other name. It had never executed, because
+`cryptography` panics in the container and the import guard set
+`SIGNATURES_CHECKABLE = False` -- the tool reported a clean pass while checking
+nothing. Both halves are fixed: the message is correct, and the fallback now
+loads an RFC 8032 transcription instead of disabling verification. Verified by
+mutation: restoring either half of the defect fails the test.
+
+**A vulnerability gate that would have passed on a bad day.** `govulncheck`
+403'd against vuln.go.dev in one of eight simultaneous jobs. It exits non-zero
+both for "found vulnerabilities" and "could not fetch the list", so the
+tempting fix softens both. The retry is now scoped to the database fetch
+alone; a finding is never re-run; an unreachable database fails the run saying
+nothing was scanned. `scripts/test-scan-vulnerabilities.sh` stubs the scanner
+and pins all four behaviours in every repository's CI. The tool is also pinned
+now: `@latest` meant CI installed whatever the proxy served and ran it over
+the source it was gating.
+
+**DEC-020's fix was rejected and replaced (DEC-022).** The recorded shape --
+retain the sealed cell and retransmit it verbatim -- cannot be used. The
+uplink sequence is eight *cleartext* bytes at the head of every cell, durable
+and strictly increasing, and cover is never retransmitted, so a repeat tells
+the entry operator that this publisher had work refused. Re-sealing is worse
+than DEC-020 said: it is an AES-GCM nonce reuse, not merely a conflict the
+airlock refuses. What is implemented instead is prevention: the publisher
+computes the public deposit window from the same signed bytes the operator
+does and does not take work off its durable queue while the window is shut.
+Nothing is retransmitted because nothing was sent, and the dominant loss term
+-- 25% of every period at the default schedule -- is zero. Loss from a full
+epoch or a dropped datagram remains, is undetectable by design, and is not
+claimed as fixed.
+
+**The pattern in three of these four.** A check that cannot run reports the
+same thing as a check that passes. The attestation verifier, the vulnerability
+scanner on an unreachable database, and CI itself for five days each produced
+a clean-looking result while testing nothing. Only the last one was noticed at
+the time, and even that was diagnosed twice before it was diagnosed right.
