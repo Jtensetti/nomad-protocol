@@ -2169,6 +2169,23 @@ networkless gate had already been silently disabling an older one.** When an
 environment refuses a capability, the first question is which existing gates
 depended on it.
 
+**Confirmed on the runner.** nomad-semantic-basins run 33425374448 and
+Nomad-browser run 33425494592 are both green with
+`NOMAD_REQUIRE_CAPABILITY_GATES=1` set, which makes a skip a failure. So these
+runs did not merely pass; they establish that the capture actually executed on
+a GitHub runner, through the sudo mechanism, for the first time. The browser
+run additionally covers the strace-based runtime boundary and the python3
+URL-decision cross-check under the same requirement, with both tools installed
+by an explicit step so a runner image that drops one fails the install rather
+than the gate.
+
+The general mechanism, rather than the individual fix: an environment that can
+run a capability-dependent gate says so, and under that declaration a missing
+capability is a failure. Both directions were verified locally -- with the
+variable set and tcpdump hidden the test fails naming the reason; with it unset
+the same environment skips green -- so the switch itself is not another check
+that cannot run.
+
 ---
 
 ## The fair-queue flake: the A/B that cleared it had removed the cause
