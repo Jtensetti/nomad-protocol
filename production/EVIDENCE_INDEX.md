@@ -44,6 +44,7 @@ surrounding claims can be trusted.
 - [CI is executing again, and here is what actually ran](#ci-is-executing-again-and-here-is-what-actually-ran)
 - [The composed stack under load, on a real interface](#the-composed-stack-under-load-on-a-real-interface)
 - [Linux client: the networkless claim moves from policy to the kernel](#linux-client-the-networkless-claim-moves-from-policy-to-the-kernel)
+- [PROD-24's egress capture was skipping on every run that gated a merge](#prod-24s-egress-capture-was-skipping-on-every-run-that-gated-a-merge)
 
 <!-- end contents -->
 
@@ -2110,3 +2111,59 @@ independently assessed and not production proven. The Linux release workflow
 produces reproducible `-trimpath` builds for amd64 and arm64 with an SBOM and
 an unsigned provenance attestation; signed provenance remains PROD-25, and the
 release identity remains EB-7.
+
+---
+
+## PROD-24's egress capture was skipping on every run that gated a merge
+
+nomad-semantic-basins `8fa3a57`, Nomad-browser `d48020f` (vendored snapshot).
+
+The criterion's strongest evidence is a packet capture taken inside a network
+namespace with no route off the host: the namespace establishes that nothing
+could leave, the capture that nothing did. The launcher obtained that namespace
+with plain `unshare --net`, which requires CAP_SYS_ADMIN. GitHub's runners are
+not root, so both tests took their skip path every time.
+
+Measured directly rather than inferred:
+
+```
+as root:                              works
+as uid 1000 (what a runner is):       unshare failed: Operation not permitted
+as uid 1000 with --user:              works
+```
+
+The skip message said "an environment limit and not a pass", which is honest,
+and the run was green regardless. The recorded 21 datagrams came from a
+developer machine. PROD-24 is PARTIAL and no MET claim rested on this, but the
+evidence read as though CI produced it, and `readiness.json` now records the
+correction in place.
+
+**The fix is to obtain the namespace, not to relax the test.** Three mechanisms
+are probed in order of least privilege -- an unprivileged user namespace, plain
+`unshare` when already root, and `sudo -n -E unshare --net` where AppArmor
+restricts the first, which is the runner case on Ubuntu 24.04. `-E` is required
+because the child is selected through the environment and sudo clears it.
+Because the mechanism is probed before use, a permission failure afterwards is
+now a failure rather than a skip; only a host offering no mechanism at all, or
+no tcpdump, still skips.
+
+All three verified locally, three passes and no skips each:
+
+| forced mechanism | result |
+|---|---|
+| `userns` | 3 pass, 0 skip |
+| `root` | 3 pass, 0 skip |
+| `sudo` | 3 pass, 0 skip |
+
+**This is the sixth instance of the same pattern**, and the second found today.
+The attestation verifier, the vulnerability scanner on an unreachable database,
+CI itself for five days, a mutation that passed against pre-fix code, a static
+analyser that could not read the module, and now a namespace the test could not
+enter. In every case a check that could not run reported what a check that
+passes reports.
+
+It was found by accident, while reading CI history for an unrelated reason. The
+generalisation worth acting on: **the same restriction that broke the new
+networkless gate had already been silently disabling an older one.** When an
+environment refuses a capability, the first question is which existing gates
+depended on it.
