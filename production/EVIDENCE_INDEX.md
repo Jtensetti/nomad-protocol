@@ -43,6 +43,7 @@ surrounding claims can be trusted.
 - [What the shuffle chain contributes, measured against a corrupt committee](#what-the-shuffle-chain-contributes-measured-against-a-corrupt-committee)
 - [CI is executing again, and here is what actually ran](#ci-is-executing-again-and-here-is-what-actually-ran)
 - [The composed stack under load, on a real interface](#the-composed-stack-under-load-on-a-real-interface)
+- [Linux client: the networkless claim moves from policy to the kernel](#linux-client-the-networkless-claim-moves-from-policy-to-the-kernel)
 
 <!-- end contents -->
 
