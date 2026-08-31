@@ -45,6 +45,7 @@ surrounding claims can be trusted.
 - [The composed stack under load, on a real interface](#the-composed-stack-under-load-on-a-real-interface)
 - [Linux client: the networkless claim moves from policy to the kernel](#linux-client-the-networkless-claim-moves-from-policy-to-the-kernel)
 - [PROD-24's egress capture was skipping on every run that gated a merge](#prod-24s-egress-capture-was-skipping-on-every-run-that-gated-a-merge)
+- [The fair-queue flake: the A/B that cleared it had removed the cause](#the-fair-queue-flake-the-ab-that-cleared-it-had-removed-the-cause)
 
 <!-- end contents -->
 
@@ -2167,3 +2168,46 @@ generalisation worth acting on: **the same restriction that broke the new
 networkless gate had already been silently disabling an older one.** When an
 environment refuses a capability, the first question is which existing gates
 depended on it.
+
+---
+
+## The fair-queue flake: the A/B that cleared it had removed the cause
+
+nomad-testnet run 33424705057 failed `TestAFloodFromOnePeerDoesNotStarveAnother`
+on a GitHub runner, with the test's own diagnosis attached:
+
+```
+delivery was 249 datagrams; a functioning run of this test sees over a
+thousand. Far below that means the receive loop was starved of CPU and the
+datagrams never arrived, which is the harness rather than the node.
+```
+
+**This corrects the entry above it.** Earlier today the same test was recorded
+as a pre-existing flake, on a controlled A/B of six isolated runs each way
+before and after the mix parallelisation: 1 failure of 6 before, 0 of 6 after.
+That A/B ran `live/node` **on its own**, and running it on its own removes
+precisely the condition that matters. The mix is not executing in an isolated
+`live/node` run, so a change to how the mix uses CPU cannot show up in one.
+
+The mechanism, from the failing run's own timings: `go test -race ./...` runs
+up to GOMAXPROCS packages concurrently, and `live/node`'s cadence tests ran
+beside `live/airlock` (254s), `live/materialize` (220s) and `live/deposit`
+(188s). All three drive the mix, whose `Encrypt` now spawns GOMAXPROCS
+goroutines per call, and `live/deposit` gained two experiments today. A receive
+loop competing with that loses datagrams in the kernel before the node can
+refuse them.
+
+So the goroutine-churn mechanism predicted this morning was real after all. The
+prediction was recorded as wrong on evidence that could not have detected it.
+
+**The fix gives the test a machine rather than softening its verdict.** CI now
+runs `live/node` in its own invocation, after the rest of the suite. The
+assertion is untouched, and so is the deliberate choice that a run which could
+not deliver enough traffic fails rather than skips: a machine where this
+property is untested should be visible, not green.
+
+The general lesson is the same one as the capability gates, from the other
+side. There, a check that could not run reported what a passing check reports.
+Here, a check that could not run reported what a *failing* check reports, and
+the A/B written to investigate it had been designed in a way that guaranteed a
+null result.
