@@ -21,6 +21,7 @@ surrounding claims can be trusted.
 - [FINDING: CI has not run since 2026-08-19, and nothing noticed](#finding-ci-has-not-run-since-2026-08-19-and-nothing-noticed)
 - [FINDING: the live Compose gate had been checking a version this code stopped writing](#finding-the-live-compose-gate-had-been-checking-a-version-this-code-stopped-writing)
 - [FINDING: the unlinkability experiment was too noisy to trust and too blunt to catch anything](#finding-the-unlinkability-experiment-was-too-noisy-to-trust-and-too-blunt-to-catch-anything)
+- [FINDING: the fairness gate is marginal, and the measurement says so](#finding-the-fairness-gate-is-marginal-and-the-measurement-says-so)
 
 **Evidence**
 
@@ -1987,3 +1988,52 @@ remains EB-3.
 
 The flood generator is not in the release image, and a test enforces that in
 both directions rather than a comment asserting it.
+
+## FINDING: the fairness gate is marginal, and the measurement says so
+
+`nomad-testnet` `live/node` `TestAFloodFromOnePeerDoesNotStarveAnother`.
+CI run 33390164762 (`go test -race ./...`), 2026-08-31.
+
+The test failed in CI and diagnosed itself, in the words it was given for
+exactly this case: "delivery was 111 datagrams; a functioning run of this test
+sees over a thousand. Far below that means the receive loop was starved of CPU
+and the datagrams never arrived, which is the harness rather than the node."
+
+**It is not a regression.** No commit since the previous green run touched
+`live/node`; the only change reaching it was the vendored mix parallelisation,
+through the replace directive. A controlled A/B, six isolated runs of the test
+each way on one host:
+
+| vendored mix | failures |
+|---|---|
+| before the parallel helper (`b34da09`) | 1 of 6 |
+| after it (`78bce47`) | 0 of 6 |
+
+Nine runs on the current code in total, one failure. The change did not cause
+this and, on this evidence, did not affect it either way.
+
+**The prediction that was wrong, recorded because it was made in advance.**
+The expected mechanism was goroutine churn: `parallel` spawns GOMAXPROCS
+goroutines per call, `EncryptCell` runs per seal, and `Encrypt` costs 11 times
+more under `-race` than uninstrumented (1.57 s against 0.14 s, batch of eight).
+That reasoning predicted the parallel build would fail more often. It failed
+less. The mechanism is real and the conclusion drawn from it was not.
+
+**What is actually true is worse for the gate than a regression would be.**
+This test fails roughly one run in six to one in nine on a throttled shared
+host, independent of anything in this session. On GitHub runners it passes
+consistently -- every other run today was green -- so the rate there is lower,
+but it is not zero, and a security gate that fails on a healthy tree teaches
+its reader to re-run rather than to read.
+
+It is **not** retuned here, and that is a deliberate refusal rather than an
+omission. The flood is already paced, with a comment explaining that an
+unpaced one starves every peer including the quiet one, and the pacing was
+tuned against CI. The flake rate above was measured on a container that is not
+CI. Retuning a carefully reasoned adversarial test against an unrepresentative
+host is how a gate gets quietly weakened, and the correct next step is a flake
+rate measured on the runner that actually gates the work -- which needs several
+runs there, not one here.
+
+Recorded so the next red run on this test starts from a number rather than
+from a guess.
