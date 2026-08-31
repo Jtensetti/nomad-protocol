@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -250,5 +251,12 @@ for relative, text in documents.items():
 
 if errors:
     print("\n".join(errors), file=sys.stderr)
+    raise SystemExit(1)
+# The evidence index's contents block is generated, so it can go stale in a
+# way nothing else here would notice: a section added without regenerating it
+# is simply absent from the list, and an absent entry looks like no entry.
+if subprocess.run(
+    [sys.executable, str(ROOT / "scripts" / "toc.py"), "--check"]
+).returncode != 0:
     raise SystemExit(1)
 print("Nomad protocol documentation checks passed")
