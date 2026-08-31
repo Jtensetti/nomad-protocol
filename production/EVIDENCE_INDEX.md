@@ -2228,3 +2228,9 @@ side. There, a check that could not run reported what a passing check reports.
 Here, a check that could not run reported what a *failing* check reports, and
 the A/B written to investigate it had been designed in a way that guaranteed a
 null result.
+
+**Confirmed.** nomad-testnet run 33425762694 is green on `11e40cd`, including
+the split test step at 3m54s, the deposit-path campaigns, the operator ceremony
+and the live-compose job. The previous run's test step failed at 4m22s on this
+same test, so the fix cost nothing in wall time and the assertion was never
+touched.
