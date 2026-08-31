@@ -247,3 +247,56 @@ because they need a second party rather than an external one: PROD-02 (a
 reviewed threat model) and PROD-27 (a privacy review). Both artifacts are
 finished; in each case the author must not also be the judge. A maintainer who
 did not write them can close either without any external dependency at all.
+
+## EB-9: A semantic embedding model (PROD-24, reader relevance)
+
+- **Missing:** trained model weights and a runner for them. `basin.Embedder`
+  is the interface; the only implementation in the tree is
+  `basin.LexicalHashEmbedder`, which its own documentation states is a lexical
+  baseline and not a semantic model. No Nomad repository builds, trains or
+  ships a model, and none should: weights are a supply-chain artifact with its
+  own provenance and licensing, not something an agent synthesizes.
+- **Why not autonomous:** the weights are third-party artifacts requiring a
+  license decision, a provenance chain and a size/latency budget chosen for
+  target hardware. Fabricating a "model" here would be exactly the kind of
+  claim this file exists to prevent.
+- **Where obtained:** any sentence-embedding model whose license permits
+  redistribution, published with a digest that can be pinned.
+- **Where configured:** two supported attachment points, both already built.
+  - Out of process, preferred: the sealed loopback service in
+    `nomad-semantic-basins/basin/loopback`. `HTTPEmbedder` accepts literal
+    loopback IPs only, disables proxies, rejects redirects, and seals the
+    request under a service key with no unauthenticated mode. This keeps the
+    browser core socket-free, which is what
+    `TestTheLinuxClientLinksNoNetworkingPackage` and
+    `TestTheSearchIndexLinksNoNetworkingPackage` assert.
+  - In process: any `basin.Embedder`. This links the runtime into the process
+    that holds verified object bytes and would end the socket-free property if
+    the runtime opens sockets, so it needs its own dependency-graph assertion
+    before it is used.
+- **Verification afterward:** pin the weight digest; give the embedder a
+  distinct `search.Provenance` so no ranking it produces can be reported as
+  lexical or vice versa; re-run `TestASearchCostsExactlyOneEmbeddingCall`,
+  which must still show one call per search; measure indexing cost per object
+  and set `Config.Budget` from the measurement rather than the default; re-run
+  the dependency-graph assertions if attached in process.
+- **Already complete:** everything up to the boundary.
+  - `Nomad-browser/search` embeds and tokenizes each object when it is added,
+    so a search is one embedding call and set lookups whatever the corpus size,
+    and a slow model is slow once per object rather than once per keystroke.
+  - `Config.Budget` is required and enforced through the context;
+    `TestAHangingEmbedderIsAbandonedAtItsBudget` pins that an embedder which
+    never returns is abandoned rather than waited on.
+  - `Config.Provenance` is required and travels with every result, so a
+    lexical ranking can never be presented as a semantic one.
+  - An object that fails to embed is left out of the index and counted, never
+    stored with a zero basin that would rank as a real one.
+  - The sealed loopback channel is built and tested (PROD-24).
+
+**Not a blocker on the privacy invariant.** Inference latency depends on the
+query, the object and the number of candidates, all private. It cannot modulate
+an observable event: the packages holding query text are on the private side of
+the Selection Firewall and cannot reach the emission planner, and the fabric
+emits on a fixed cadence regardless of whether inference finished. A slow model
+costs a reader a wait and costs the wire nothing. Attaching a model therefore
+does not reopen PROD-14/17/18; it is a relevance and cost question only.

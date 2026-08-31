@@ -2037,3 +2037,75 @@ runs there, not one here.
 
 Recorded so the next red run on this test starts from a number rather than
 from a guess.
+
+---
+
+## Linux client: the networkless claim moves from policy to the kernel
+
+Nomad-browser `475cb16`, branch `claude/nomad-production-ready-dxv4ql`.
+
+The browser core was always portable Go and was always built and race-tested on
+`ubuntu-latest`; what was macOS-only was the shell. The Linux client
+(`cmd/nomad-browser`) reads and ranks the same verified objects through the Go
+packages directly.
+
+**Three layers, and what each is worth.**
+
+| Layer | What it rests on |
+|---|---|
+| `egress.Policy` denies every network capability | the program declining to act |
+| No networking package in the transitive graph | the binary's contents, asserted over `go list -deps` |
+| An empty network namespace | the kernel, regardless of the binary |
+
+The third is new here. `PrivateNetwork=yes` (systemd unit) or `--unshare-net`
+(bubblewrap) gives the process a namespace with no interface to refuse a
+connection, rather than a system that refuses one. macOS App Sandbox provides
+the first kind; Linux provides the second.
+
+**The gate, and why its control is the load-bearing part.**
+`scripts/verify-networkless.sh`, wired into `ci.yml`. Observing that no
+connection was made proves nothing on its own -- a host with no network reports
+the same thing, and the gate would then pass whether or not the sandbox worked.
+So the script binds a listener on the host, requires a probe to reach it from
+outside the namespace, and only then requires the same probe to fail inside.
+Local run:
+
+```
+control (outside): REACHED
+inside namespace:  UNREACHABLE OSError [Errno 101] Network is unreachable
+client in namespace: 3 verified objects, 3 searchable
+```
+
+It exits 2, distinctly from pass and fail, when unprivileged namespaces are
+unavailable. In CI any non-zero exit fails the step: a gate that could not run
+must not report what a gate that passed reports. `run-sandboxed.sh` likewise
+refuses to start when neither bubblewrap nor `unshare` is available, rather
+than running outside the sandbox it promises.
+
+**Second implementation of object verification.** `objectstore` verifies signed
+objects in Go, independently of the Swift implementation of the same boundary
+in `macos/Sources/NomadBrowser/Models.swift`.
+`TestTheGoVerifierAcceptsTheCorpusTheSwiftClientShips` reads the catalog the
+Swift client ships and requires all three objects to verify. Two divergences
+are recorded at the checks that cause them rather than left to be discovered:
+
+- Rune counts against Swift's grapheme counts. A grapheme cluster is one or
+  more runes, so this side's count is never lower and it is therefore the
+  stricter of the two. `TestTheRuneBoundIsNeverLooserThanAGraphemeBound` pins
+  the direction; if it inverted, the two clients would disagree about what a
+  valid object is.
+- Unknown payload fields are refused here and ignored by Swift's `JSONDecoder`.
+  Refusing is correct -- an unknown field in a signed document is how one
+  object grows a second meaning -- so **the fix belongs on the Swift side**,
+  and `TestUnknownPayloadFieldsAreRefusedHereAndAcceptedBySwift` is the
+  standing statement of what differs until it lands.
+
+**Positive control on the symlink guard.** `TestASymlinkIsNotFollowedOutOfTheCache`
+was mutation-checked: with the `entry.Type().IsRegular()` guard removed the
+test fails, naming the object it followed the link to. The test can fail.
+
+**What is not claimed.** This is implemented and integration tested. It is not
+independently assessed and not production proven. The Linux release workflow
+produces reproducible `-trimpath` builds for amd64 and arm64 with an SBOM and
+an unsigned provenance attestation; signed provenance remains PROD-25, and the
+release identity remains EB-7.
