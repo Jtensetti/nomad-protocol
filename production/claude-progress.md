@@ -986,3 +986,61 @@ same thing as a check that passes. The attestation verifier, the vulnerability
 scanner on an unreachable database, and CI itself for five days each produced
 a clean-looking result while testing nothing. Only the last one was noticed at
 the time, and even that was diagnosed twice before it was diagnosed right.
+
+## 2026-08-31: assertions that could not fail, a Linux client, and a fifth
+## instance of the same pattern
+
+**Five assertions in nomad-testnet were comparing constants.** `fabric.Cell`
+is `[1200]byte` and `Session.Open` returns `[1152]byte`, so `len()` of either
+is resolved at compile time. `if len(cell) != fabric.CellSize` cannot fail.
+Worse, `TestTheWindowGateIsInvisibleOnTheWire` compared `{sequence, size}`
+pairs across the four window/queue combinations with both fields built from
+the loop index and the type: the core window-gate invariant was guarded by a
+tautology. They now compare the cleartext sequence prefix decoded from the
+emitted bytes, and require every inner ciphertext to be non-zero and distinct
+-- a property that can fail, and that a constant cover layer would break.
+
+Found by staticcheck, which had been reporting zero findings across nine
+repositories **while reading none of them**: it exits 0 when it cannot analyse
+a module, and every module's go directive was newer than the release
+staticcheck was built with. It now runs in CI everywhere behind
+`scripts/run-staticcheck.sh`, which proves the tool is analysing with a
+positive control before it trusts a clean run. The control plants SA4000 and
+SA4006 and requires both, because the first fixture written for it reported
+nothing -- against a one-check control that would have been indistinguishable
+from a working one.
+
+**That is the fifth instance of the same pattern**, and the first where the
+detector itself was the thing that could not run. The attestation verifier,
+the vulnerability scanner on an unreachable database, CI for five days, a
+mutation that passed against pre-fix code, and now the static analyser.
+
+**The Linux client exists** (`Nomad-browser/cmd/nomad-browser`). The core was
+always portable Go; the shell was what was macOS-only. Three layers now hold
+the networkless claim, and the third is new: `egress.Policy` declines, the
+client's transitive dependency graph contains no networking package at all,
+and the process runs in a namespace with no interface to refuse a connection.
+`scripts/verify-networkless.sh` binds a listener, requires a probe to reach it
+outside the namespace, and only then requires the same probe to fail inside --
+because "no connection was made" is also what a host with no network reports.
+
+The gate failed its first CI run with exit 2, correctly: Ubuntu 24.04
+restricts unprivileged user namespaces. It was fixed by obtaining the
+namespace a second way, not by softening the gate.
+
+`objectstore` is a second implementation of the object verification boundary
+the Swift client implements, checked against the corpus both ship. It found a
+real divergence: unknown payload fields are refused here and ignored by
+Swift's `JSONDecoder`. Refusing is correct, so **the fix belongs on the Swift
+side** and the divergence is a standing test until it lands.
+
+**EB-9 records the language model.** There is none, and none is claimed:
+`LexicalHashEmbedder` is a lexical baseline by its own documentation.
+Everything up to the boundary is built -- the sealed loopback channel, a
+required latency budget, a required provenance on every ranking, and an index
+that embeds and tokenizes at materialization so one search costs one embedding
+call whatever the corpus size. Attaching a model does not reopen the privacy
+invariant: inference latency is private-state-dependent, but the packages
+holding query text cannot reach the emission planner and the fabric emits on a
+fixed cadence regardless, so a slow model costs a reader a wait and costs the
+wire nothing.
