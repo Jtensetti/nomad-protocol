@@ -18,6 +18,19 @@ on purpose. A packet returned with them filled in by the same session that
 wrote the artifacts would be a fabricated review, which the project's rules
 forbid in as many words.
 
+## The same packet, as a worksheet
+
+<https://claude.ai/code/artifact/e370b9f5-f705-4bf4-954d-4ea680c74bf5>
+
+Every question below, with a mark and a note field per item, a progress
+counter, and a button that assembles the verdict block for pasting back into
+this repository. Marks live in the reviewer's browser and nothing is sent
+anywhere; the page cannot write to the repository, which is why the last step
+is still a paste.
+
+Use either. This file is the reference and the worksheet is the convenience,
+and if they ever disagree, this file is right.
+
 ## How to use this
 
 Each item is a question with a locatable answer, not an invitation to form an
