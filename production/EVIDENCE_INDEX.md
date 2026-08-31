@@ -41,6 +41,7 @@ surrounding claims can be trusted.
 - [The publisher stopped destroying a quarter of its work, and the fix DEC-020 specified could not be used](#the-publisher-stopped-destroying-a-quarter-of-its-work-and-the-fix-dec-020-specified-could-not-be-used)
 - [What the shuffle chain contributes, measured against a corrupt committee](#what-the-shuffle-chain-contributes-measured-against-a-corrupt-committee)
 - [CI is executing again, and here is what actually ran](#ci-is-executing-again-and-here-is-what-actually-ran)
+- [The composed stack under load, on a real interface](#the-composed-stack-under-load-on-a-real-interface)
 
 <!-- end contents -->
 
@@ -1929,3 +1930,60 @@ finding from an unreachable database; a live Compose gate asserting a wire
 version the code stopped writing four days earlier; and an unlinkability
 experiment miscalibrated in both directions at once. Three of the four share a
 shape: a check that cannot run reports the same thing as a check that passes.
+
+## The composed stack under load, on a real interface
+
+`nomad-testnet` `scripts/compose-e2e.sh`, `scripts/verify-load.py`,
+`cmd/nomad-load`. CI run
+[33374193549](https://github.com/Jtensetti/nomad-testnet/actions/runs/33374193549),
+`live-compose` job, 2026-08-31.
+
+PROD-14 claims a resource limit does not change what a node emits. Every
+measurement behind that claim was in-process: a goroutine writing to a channel
+is not a network interface, and a test binary holding both ends is not a
+deployment. The criterion's own blockers said so.
+
+The Compose gate now takes two capture windows on the fabric bridge that differ
+by one thing: whether an unrecognised sender is flooding operator-a's port.
+
+| | quiet | under load | change |
+|---|---|---|---|
+| operator-a (`172.18.0.4`, the target) | 49.998 ms | 50.005 ms | +0.01% |
+| operator-b (`172.18.0.2`) | 49.999 ms | 49.996 ms | -0.01% |
+| operator-c (`172.18.0.3`) | 49.999 ms | 49.996 ms | -0.01% |
+
+Against a 50 ms cadence, under 3000 datagrams a second -- 150 times the
+operator's own emission rate. Peer plans unchanged, all three still emitting,
+`send_dropped` and `health_deferred` zero throughout.
+
+**The controls are the point.** A flood that never arrived produces a second
+quiet window, agrees with the first perfectly, and reads as a pass. So the
+flood is required to be visible twice, and the run records both:
+
+- **on the wire:** 17,961 flood datagrams in the loaded capture, read with the
+  same filter the cadence is read with, against a floor of 2,000;
+- **in the process:** 24,960 datagrams refused at operator-a's peer lookup
+  between the two health snapshots, against a floor of 1,000.
+
+The generator's own report -- 27,000 sent at 2,998/s, none failed -- is
+recorded but is not the evidence. A tool that reported a flood it did not send
+would be believed by nothing here.
+
+`scripts/test-load-verdict.py` builds real libpcap files byte by byte and puts
+the verdict through five cases in the fast unit job: a matching pair is
+accepted, and a flood that never reached the wire, a sender that fell silent
+under load, a cadence beyond tolerance and a changed peer plan are each
+refused. A filter typo therefore fails in seconds rather than after a
+three-minute Compose run.
+
+**What this closes and what it does not.** It closes the criterion's third
+blocker: a real-interface wire trace under load now exists, which is what the
+CLAIM_TEST_MATRIX backpressure row asked for. It narrows the second without
+closing it -- there is whole-system load evidence now, but 3000/s is load, not
+saturation, and nothing here runs the stack to the point of failure to find
+where its limits actually are. It is also still one host: three operators on
+one bridge is real process and interface isolation and is not a network. That
+remains EB-3.
+
+The flood generator is not in the release image, and a test enforces that in
+both directions rather than a comment asserting it.

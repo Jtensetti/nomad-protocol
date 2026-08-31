@@ -20,6 +20,7 @@ Levels, weakest first:
 |---|---|---|---|
 | Emission plan takes no private input | planner API + package graph | selection-firewall tests; Selection Firewall CI gates | structural |
 | Cells are exactly 1200 bytes at fixed cadence | real interface | Compose pcap gate (run 32301972409) | boundary, single host |
+| A resource limit does not change what a node emits | real interface, two windows, one loaded | Compose load gate (run 33374193549): 3000 datagrams/s from an unrecognised sender at 150x the emission rate moves all three operators 0.01% against a 50 ms cadence. The flood is required visible on the wire (17,961 datagrams) and in the process (24,960 peer-lookup refusals), so a flood that never arrived cannot read as a pass | boundary, single host |
 | Lost cells never cause catch-up bursts | real interface under loss/suspension | scheduler unit tests; one-second burst ceiling asserted on every captured world in the node wire campaign | adversarial, loopback |
 | Cell size and destination do not depend on private activity | real socket, work queue empty vs full | `TestWireContentIsIndependentOfPrivateActivity`, mutation-verified | adversarial, loopback |
 | Cell timing does not depend on private activity | real interface, two worlds, blind | **CONTRADICTED — a reproducible difference is measured. See EVIDENCE_INDEX.md. Under a two-sample KS test over inter-arrivals, with a Latin-square rotation removing the position confound, idle and active differ at 1−p = 0.993 against a 0.517 control spread, reproduced on a second measurement.** | finding |

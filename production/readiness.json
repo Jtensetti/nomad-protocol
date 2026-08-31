@@ -254,8 +254,8 @@
    ],
    "blockers": [
     "a resource limit does change the work/cover mix, and that mix is no longer readable on the wire: hop cell v2 encrypts the whole cell per link (DEC-016) and both classifiers that separated work from cover are now at chance on sealed cells. Public replication policy still drives the mix, so this was never a reader-privacy claim; what changed is that it is not observable to a link observer either",
-    "no whole-system load evidence: memory and the emission path are bounded in process, but nothing runs the composed multi-process Compose stack to its limits. That gate exists in CI and cannot run in the current environment, which has no usable container runtime",
-    "the emission comparison is loopback, single host, sub-second: it establishes size, burst and destination set deterministically, and rate only under the campaign gate on a quiet machine. No real-interface wire trace under load exists, which is what the CLAIM_TEST_MATRIX backpressure row asks for"
+    "the composed stack now has load evidence but not saturation evidence. The Compose gate runs the multi-process stack under a sustained flood and measures what it emits (see the third blocker), which the criterion had no measurement for at all. It does not run the stack to the point of failure, so where its limits actually are is still unmeasured: 3000 datagrams a second is load, not saturation",
+    "a real-interface wire trace under load now exists (CI run 33374193549, live-compose): two capture windows on the fabric bridge differing only by a 3000/s flood from an unrecognised sender at 150x the operator emission rate, with all three operators moving 0.01% against a 50 ms cadence, peer plans unchanged and send_dropped zero. The flood is required to be visible on the wire (17,961 datagrams in the loaded capture) and inside the process (24,960 peer-lookup refusals), because a flood that never arrived would produce a second quiet window and read as a pass. What remains is EB-3: three operators on one bridge is real process and interface isolation and is not a network"
    ]
   },
   {
