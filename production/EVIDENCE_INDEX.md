@@ -46,6 +46,7 @@ surrounding claims can be trusted.
 - [Linux client: the networkless claim moves from policy to the kernel](#linux-client-the-networkless-claim-moves-from-policy-to-the-kernel)
 - [PROD-24's egress capture was skipping on every run that gated a merge](#prod-24s-egress-capture-was-skipping-on-every-run-that-gated-a-merge)
 - [The fair-queue flake: the A/B that cleared it had removed the cause](#the-fair-queue-flake-the-ab-that-cleared-it-had-removed-the-cause)
+- [A mutation campaign over the verification boundaries, and the two it found](#a-mutation-campaign-over-the-verification-boundaries-and-the-two-it-found)
 
 <!-- end contents -->
 
@@ -2234,3 +2235,73 @@ the split test step at 3m54s, the deposit-path campaigns, the operator ceremony
 and the live-compose job. The previous run's test step failed at 4m22s on this
 same test, so the fix cost nothing in wall time and the assertion was never
 touched.
+
+---
+
+## A mutation campaign over the verification boundaries, and the two it found
+
+Eighteen checks were disabled one at a time and the owning suite re-run. A
+surviving mutant is a check nothing tests: the code would fail open and every
+gate would stay green.
+
+| boundary | check | verdict |
+|---|---|---|
+| Nomad-browser objectstore | publisher signature | killed |
+| Nomad-browser objectstore | SHA-256 commitment | killed |
+| Nomad-browser objectstore | anchored publisher | killed |
+| local-reconstruction manifest | manifest signature | killed |
+| local-reconstruction reconstruct | object signature | killed |
+| **local-reconstruction manifest** | **object signature** | **SURVIVED** |
+| **testnet uplink** | **AEAD authentication** | **SURVIVED** |
+| testnet hop | header tag | killed |
+| testnet airlock | duplicate deposit payload | killed |
+| testnet epoch | approval signature | killed |
+| testnet epoch | erasure statement signature | killed |
+| testnet topology | authority signature (root of trust) | killed |
+| testnet topology | operator attestation | killed |
+| testnet topology | operator identity binding | killed |
+| rlnc bounded decoder | systematic symbol commitment | killed |
+| semantic-basins basin | model attestation digest | killed |
+| mix availability | non-receipt statement signature | killed |
+| model registry | weights digest, NOTICE obligation | killed |
+
+**The uplink one is the serious find.** `Session.Open` is where the entry
+operator establishes that a cell came from the session it claims to; everything
+downstream treats an opened cell as authentic. A mutation that discarded the
+AEAD result on failure and returned the raw ciphertext as plaintext left the
+entire `live/uplink` suite green -- forged cells opened, and nothing said so.
+
+Note what the first, cruder mutation showed: replacing the error return with a
+no-op did *not* survive the security property, because a later length check
+caught every forgery. Defence in depth was holding, and it also hid the gap. It
+took a mutation that produced a well-shaped plaintext to reveal that no test
+was checking authentication at all. **A mutation that a later check absorbs
+proves nothing about the check being mutated.**
+
+Six cases now cover it -- a flipped bit anywhere in the ciphertext, an altered
+cleartext sequence byte, another session's cell, random bytes, a renumbered
+cell, and sequence zero -- and were verified against both mutations.
+
+**The reconstruction one is the same shape.** `signingMessage` covers the
+object signature, so corrupting it also breaks the manifest signature and the
+neighbouring check fires first. Every existing negative case took that path.
+The case that reaches it is a manifest a publisher signed correctly which
+attests to an object signature that does not verify, and the new test asserts
+the manifest signature is valid before requiring the envelope to be refused --
+so what fires is the check under test rather than the one beside it.
+
+**Two lessons, both about controls rather than about these two bugs.**
+
+A check standing behind another check is untested by default. The neighbour
+absorbs the mutation, the suite stays green, and the only way to see it is to
+mutate each one separately and ask which test failed.
+
+And a cross-session test written without varying the shared secret fails
+against correct code. That one was caught because it failed immediately; the
+same mistake in the passing direction is what this whole campaign exists to
+find.
+
+Also fixed while writing the model layer: a determinism check in the new tests
+compared two identical calls in one expression -- the SA4000 shape found in the
+airlock this morning, made again, and caught this time by the staticcheck gate
+added earlier today rather than by a person.
