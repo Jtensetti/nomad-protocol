@@ -2,6 +2,44 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-023 (2026-08-31): the networkless client and a loopback model service cannot be the same build
+
+Semantic search needs an embedding model. The architecture for attaching one is
+now in place (nomad-semantic-basins basin/model, Nomad-browser search), and
+implementing it surfaced a fork that has to be decided rather than left to
+whoever wires a model up first.
+
+**The two ways to run a model.** In process, through a runtime linked into the
+binary. Or out of process, through the sealed loopback service in
+basin/loopback, which is what PROD-24 built and which keeps multi-gigabyte
+weights out of the address space that holds verified object bytes.
+
+**Why the second is not available to the Linux client.** That client's central
+claim is that it cannot reach the network, and the claim is asserted over its
+transitive dependency graph: no net, no net/http, no crypto/tls, and no os/exec
+either. A loopback service needs a socket, so linking a client to one makes the
+claim false. Starting the service as a subprocess needs os/exec, which is
+excluded for the same reason. There is no arrangement in which the networkless
+client talks to a local model server and remains networkless.
+
+**Decision.** The two are separate builds, and neither pretends to be the other.
+
+- The networkless client ranks lexically until an in-process runtime exists,
+  and says so in its banner rather than letting a word match read as an
+  understanding of meaning.
+- A build that wants the loopback service opts into the socket explicitly and
+  cannot claim the dependency-graph guarantee.
+- Verification is deliberately separated from inference. cmd/nomad-model hashes
+  files and reads a manifest, needs no runtime, and therefore links neither a
+  network stack nor os/exec -- so a reader can check what a pack is without
+  giving the checker the capability the pack itself may need.
+
+**What is not decided.** Which in-process runtime to adopt. A cgo GGUF or ONNX
+runtime would put a large native dependency inside the most safety-critical
+process in the system, and that needs its own dependency-graph assertion and
+its own review before it is chosen. Recording the fork now so that the choice
+is made deliberately rather than arrived at.
+
 ## DEC-022 (2026-08-28): DEC-020's retry is rejected; the publisher does not emit work into a shut window
 
 DEC-020 recorded that a publisher destroys a fixed share of its work every

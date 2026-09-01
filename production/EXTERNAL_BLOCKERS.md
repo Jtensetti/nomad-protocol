@@ -270,10 +270,17 @@ did not write them can close either without any external dependency at all.
     browser core socket-free, which is what
     `TestTheLinuxClientLinksNoNetworkingPackage` and
     `TestTheSearchIndexLinksNoNetworkingPackage` assert.
-  - In process: any `basin.Embedder`. This links the runtime into the process
-    that holds verified object bytes and would end the socket-free property if
-    the runtime opens sockets, so it needs its own dependency-graph assertion
-    before it is used.
+  - In process: any `basin.Embedder`, or a `model.Runtime` behind the adapter
+    layer. This links the runtime into the process that holds verified object
+    bytes and would end the socket-free property if the runtime opens sockets,
+    so it needs its own dependency-graph assertion before it is used.
+
+  **These two are not interchangeable for the Linux client**, and DEC-023
+  records why: that client's networkless claim is asserted over its dependency
+  graph, which excludes `os/exec` as well as every networking package, so it
+  can neither speak to a loopback service nor start one. Attaching a model to
+  it requires the in-process route. Which runtime that should be is
+  deliberately still open.
 - **Verification afterward:** pin the weight digest; give the embedder a
   distinct `search.Provenance` so no ranking it produces can be reported as
   lexical or vice versa; re-run `TestASearchCostsExactlyOneEmbeddingCall`,
@@ -281,6 +288,25 @@ did not write them can close either without any external dependency at all.
   and set `Config.Budget` from the measurement rather than the default; re-run
   the dependency-graph assertions if attached in process.
 - **Already complete:** everything up to the boundary.
+  - The model-agnostic architecture (nomad-semantic-basins `basin/model`):
+    manifests, a registry that verifies packs against their digests, built-in
+    `gemma`, `e5`, `qwen` and `plain` adapters, and a fingerprint over
+    everything that can move a vector. A model family this build has never
+    heard of is added by writing an adapter; nothing else moves. The catalogue
+    names EmbeddingGemma 300M as the recommended default with
+    multilingual-e5-small and Qwen3-Embedding-0.6B as first-class alternatives,
+    and deliberately carries **no digests**: writing plausible ones for weights
+    nobody measured would produce a registry that verifies packs against
+    invented numbers, which is worse than no verification because it looks
+    verified. A draft manifest does not validate, so there is no path from a
+    catalogue entry to a loadable model that skips measuring the real files.
+  - Licensing enforced rather than described. E5 is MIT and Qwen is Apache
+    2.0; EmbeddingGemma is under Gemma Terms, which oblige a redistributor to
+    pass the terms on and carry a NOTICE. `LoadPack` refuses a pack declaring
+    that obligation without one, and does not refuse an MIT pack for lacking a
+    NOTICE it does not need.
+  - One index per fingerprint (`Nomad-browser/search`), so two models' vectors
+    are never compared and switching models is reversible.
   - `Nomad-browser/search` embeds and tokenizes each object when it is added,
     so a search is one embedding call and set lookups whatever the corpus size,
     and a slow model is slow once per object rather than once per keystroke.
