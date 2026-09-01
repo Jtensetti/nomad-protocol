@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated": "2026-08-28",
+ "updated": "2026-09-01",
  "status_values": [
   "NOT_STARTED",
   "PARTIAL",
@@ -609,7 +609,8 @@
     {
      "id": "F-08",
      "summary": "DNS capture shows zero browser-originated DNS; packet capture shows zero ordinary networking",
-     "status": "NOT_STARTED"
+     "status": "PARTIAL",
+     "note": "measured 2026-09-01 (Nomad-browser f96e650, capture_test.go): the client loads and searches the corpus inside a network namespace with loopback up, and the packets that namespace's interfaces carried come to zero, against a control run carrying 64 in the same namespace. DNS included, since a DNS query is a packet. A tcpdump capture was tried first and abandoned: in a user namespace it reported '48 packets received by filter, 0 packets captured' on roughly two runs in three, and every one of those zeros is indistinguishable from this criterion's own claim. /proc/net/dev has no attach to race and needs no privilege. Three controls: all three namespace mechanisms carry 64; a client made to emit is caught; a counter stubbed to zero is caught by the control. PARTIAL rather than VERIFIED because it measures the Go client on Linux only -- the macOS client and the engine forks are not covered, and per DEC-013 the forks are parked."
     },
     {
      "id": "F-09",

@@ -47,6 +47,7 @@ surrounding claims can be trusted.
 - [PROD-24's egress capture was skipping on every run that gated a merge](#prod-24s-egress-capture-was-skipping-on-every-run-that-gated-a-merge)
 - [The fair-queue flake: the A/B that cleared it had removed the cause](#the-fair-queue-flake-the-ab-that-cleared-it-had-removed-the-cause)
 - [A mutation campaign over the verification boundaries, and the two it found](#a-mutation-campaign-over-the-verification-boundaries-and-the-two-it-found)
+- [F-08: the client emits nothing, measured rather than argued](#f-08-the-client-emits-nothing-measured-rather-than-argued)
 
 <!-- end contents -->
 
@@ -2305,3 +2306,70 @@ Also fixed while writing the model layer: a determinism check in the new tests
 compared two identical calls in one expression -- the SA4000 shape found in the
 airlock this morning, made again, and caught this time by the staticcheck gate
 added earlier today rather than by a person.
+
+---
+
+## F-08: the client emits nothing, measured rather than argued
+
+Nomad-browser `f96e650`, `capture_test.go`.
+
+Three claims about the client's networking now exist, and they rest on
+different things:
+
+| claim | rests on |
+|---|---|
+| `egress.Policy` denies every capability | the program declining to act |
+| no networking package in the transitive graph | the binary's contents |
+| the process runs in an empty namespace | the kernel |
+| **it puts nothing on the wire** | **a count of what it emitted** |
+
+The fourth is new. The client loads and searches the corpus inside a namespace
+whose loopback is deliberately **up** -- so packets can be carried and a zero is
+a measurement rather than an absence of opportunity -- and the packets that
+namespace's interfaces carried come to zero, against a control run in the same
+namespace carrying 64. DNS is included, because a DNS query is a packet.
+
+**A tcpdump capture was tried first and abandoned. That is the finding.** In a
+user namespace tcpdump reported:
+
+```
+0 packets captured
+48 packets received by filter
+0 packets dropped by kernel
+```
+
+It saw the traffic and wrote none. The same invocation produced 32 packets or
+0 depending on the run, roughly two runs in three, in both directions and
+independently of `-race`. Two separate causes were found and neither was
+sufficient: tcpdump drops to an unprivileged user and loses the ability to
+capture inside a user namespace (`-Z root` fixes that, measured as 24 packets
+with the flag and 0 without), and the attach itself races a fixed sleep, which
+waiting for tcpdump's own "listening on" did not reliably fix.
+
+**Every one of those zeros is indistinguishable from this criterion's claim.**
+An instrument that reports "nothing was emitted" when it is not working, used
+to establish that nothing was emitted, is the same shape as the five other
+findings in this file. `/proc/net/dev` has no attach to race, needs no external
+tool and no privilege, and counts every frame the namespace carried. Eight
+consecutive runs, plain and `-race`, reported 64 for the control every time.
+
+**Three controls**, because a counter that always says zero passes this test
+perfectly:
+
+| control | result |
+|---|---|
+| all three namespace mechanisms carry control traffic | 64 packets each |
+| a client made to emit | caught, "put 64 packets on the wire" |
+| the counter stubbed to zero | caught by the control, "the counters are not measuring" |
+
+**Not claimed.** This measures the Go client on Linux. The macOS client is not
+covered, and neither are the engine forks, which DEC-013 parks. It also cannot
+see a packet that was never emitted for want of a route -- but no frame exists
+in that case, so no instrument could. That the client has nowhere to reach is
+the namespace gate's claim; this one is that it does not even try.
+
+**The same two bugs were fixed in the PROD-24 capture** (nomad-semantic-basins
+`e9b299e`), which had the identical tcpdump invocation and counted tcpdump's
+stderr as packet lines. It was not a false green there only because it guards
+`lines == 0` and so failed loudly; on CI it had always run as real root through
+the sudo mechanism, where the privilege drop does not bite.
