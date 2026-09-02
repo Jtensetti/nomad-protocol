@@ -3305,6 +3305,27 @@ verdict after it. Inconclusive arms are now counted and the loop continues;
 the run still fails, and it fails reporting how many arms could not be
 evaluated and how many were rejected, which are different facts.
 
+**The first complete dataset**, from run
+[33660034588](https://github.com/Jtensetti/nomad-testnet/actions/runs/33660034588),
+the first with that fix: 40 pairs compared where the previous run managed one
+before aborting. 11 rejected, 7 unevaluable.
+
+| arm | idle vs active | idle vs idle (control) |
+|---|---|---|
+| baseline | 8 findings of 8 | 0 findings of 8 |
+| disk-pressure | 2 findings of 8 | 0 findings of 8 |
+| cpu-starvation | 1 finding, 3 unevaluable | 0 findings, 4 unevaluable |
+
+The control arm never fires and the baseline treatment arm always does. That
+is a cleaner separation than a single run showed, and it is what makes the
+treatment result mean something: a rule that rejected idle against idle would
+be measuring the host.
+
+Note that this is the preregistered rule in `scripts/two-world-analysis.py`,
+which is a different measurement from the in-test KS statistic quoted above.
+The two do not have the same discriminating power, and the noisy control
+belongs to the in-test statistic, not to this table.
+
 **Not claimed.** Nothing here is softened. Inconclusive fails, a finding
 fails, and the finding is still a release blocker.
 
