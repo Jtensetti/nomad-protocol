@@ -3,6 +3,64 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02g: the first Windows run
+
+PROD-16 recorded that Windows was "built but not tested: no Windows runner
+executes the suite, so the LockFileEx path compiles and has never run." A
+runner now does, scoped to `live/epoch`, and it gated a release on its first
+push. It found two things on that first run, neither of them the lock.
+
+**F-26: the epoch chain store had never worked on Windows.** Twenty-two tests
+failed, every one that mutates the store, all on `sync ...: Access is denied.`
+`os.File.Sync` on a directory handle is `ERROR_ACCESS_DENIED` there; Windows
+has no equivalent of fsync on a directory, so this was never going to work and
+nothing had ever asked. Nine places did that flush -- five named helpers, no
+two alike, and four inlined inside larger functions, which is why grep found
+five and a gate looking for the shape found nine. `live/durable` is the only
+copy now, the Windows build's weaker guarantee is stated rather than implied,
+and DEC-026 records the position instead of leaving it to be inferred.
+
+The lock tests, which were the reason the job existed, passed. `LockFileEx`
+has now executed.
+
+**F-27: a Windows checkout was not the commit.** The same run failed the epoch
+vector comparison on bytes that are identical in the repository:
+`core.autocrlf=true` rewrites LF to CRLF on checkout. The test failure is the
+small consequence; the large one is that `conformance/wire-vectors.json` is
+sealed by a digest and cited as PROD-01 and PROD-03 evidence, so a second
+implementer verifying it on Windows would have got a different digest for the
+same commit with nothing to explain why. `* -text` in all nine repositories.
+
+**IPv6 reached the wire.** PROD-21 said "no live IPv6 run anywhere", which was
+accurate: `live/topology` has thorough IPv6 tests and every one is about a
+document. Two nodes now exchange cells over `::1` -- a sealed cell stored, an
+unnamed IPv6 source refused, a replay refused -- and the test asserts the
+addresses are IPv6 before asserting anything about them. It skips where there
+is no IPv6 stack, which is this development container, and fails where
+`NOMAD_REQUIRE_CAPABILITY_GATES=1` says the environment has one. CI was the
+first place it ran.
+
+**F-23 and F-24, earlier the same day**, in `nomad-testnet`'s dependency
+policy: an exception written for requirements nobody builds also licensed the
+root module, and every check read `go.mod` as text rather than asking the
+toolchain what compiles.
+
+**The pattern this checkpoint adds.** The previous two came from asking "if
+this check were deleted, what would fail?" This one came from a different
+question: *has this ever executed?* A build target is not a tested target, and
+the gap between them held a store that could not write and a corpus that was
+not portable.
+
+Commits: nomad-testnet 5845278, d0f9d7f, 85d461d, 2598f2b; nomad-protocol
+d0973f8; Nomad-browser 9a18a05; nomad-rlnc 3ecedbf; nomad-selection-firewall
+a1ed9cd; nomad-semantic-basins df45010; nomad-local-reconstruction 3650c28;
+nomad-constant-rate-fabric 2269a68; nomad-anytrust-mix-sim 1d99367.
+
+Evidence: F-23 through F-27 and DEC-026.
+
+Next: workstream B governance protocol (EB-2 bounded), workstream F
+browser/materializer boundary, workstream H release engineering.
+
 ## Checkpoint 2026-09-02f: the controls were not controlling
 
 The module-graph gates added at the end of the last checkpoint each carried a

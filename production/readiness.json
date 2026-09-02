@@ -303,7 +303,7 @@
     "a control gives the cross-check a corpus with one decision inverted and requires it to fail naming the URL, so it cannot pass on a corpus it never read; and the check refuses a one-sided corpus, since one that only denied things is satisfied by an implementation that denies everything"
    ],
    "blockers": [
-    "Windows is built but not tested: no Windows runner executes the suite, so the LockFileEx path compiles and has never run. It is not a supported platform, and the honest status is that cross-platform means eight build targets and two tested architectures"
+    "Windows is now partly tested: a windows-latest job runs live/epoch on every push and gates the release, so the LockFileEx chain lock has executed and passes. Its first run found that the epoch store had never worked on Windows at all -- directory fsync is ERROR_ACCESS_DENIED there (F-26) -- and that a Windows checkout was not the commit (F-27). The job is scoped to that one package: the rest of the suite assumes a POSIX host in places, and a job that ran everything and was allowed to fail would be worse than no job. Windows remains unsupported for operators (DEC-026), and cross-platform still means eight build targets, two tested architectures, and one tested package on a third platform"
    ]
   },
   {
@@ -425,7 +425,7 @@
    "blockers": [
     "three independently administered operators and regions",
     "WAN IPv4/IPv6, NAT, churn and partition evidence",
-    "no live IPv6 run anywhere: the development container has no IPv6 stack at all, so dual-stack behaviour on the wire is untested and needs the same multi-region infrastructure EB-3 covers"
+    "IPv6 now reaches the wire on loopback: two nodes exchange cells over ::1, a sealed cell is stored, an IPv6 source the topology does not name is refused, and a replay is refused, with the test asserting the addresses are IPv6 before asserting anything about them. That is loopback and not a WAN -- NAT, path MTU, dual-stack address selection and IPv6 across a real network still need the multi-region deployment this cannot provide (EB-2). The development container has no IPv6 stack at all, so the test skips there and fails where NOMAD_REQUIRE_CAPABILITY_GATES=1 declares the environment has one"
    ]
   },
   {
@@ -516,7 +516,7 @@
     "6 mutations killed: an unreviewed direct dependency, an unreviewed transitive one inside a vendored component, a silent version bump, a replace pointing at /tmp, an approved entry nothing uses, and a requirement with no go.sum entry"
    ],
    "blockers": [
-    "what a repository can establish about malicious dependencies is now established: the set is closed, reviewed, content-addressed and verified. What it cannot is that a listed module's upstream source is benign -- nothing here reads it -- and the policy file says so in its own text rather than leaving the gap to be inferred",
+    "what a repository can establish about malicious dependencies is now established: the set is closed, reviewed, content-addressed and verified against what the toolchain actually resolves rather than against go.mod's text. That last part was added after the fact (F-23, F-24): the earlier version of this line was written about a check whose components exception also licensed the root module, so the shipped build could be downgraded to a version approved only for a vendored component with nothing red. What no repository can establish is that a listed module's upstream source is benign -- nothing here reads it -- and the policy file says so in its own text rather than leaving the gap to be inferred",
     "provenance is generated but not signed: signing needs a key no repository may hold, and no release key exists yet (EB-7)",
     "determinism is established; independence is not. A second builder on their own machine getting the same bytes is not something this project can establish about itself (EB-2). docs/REPRODUCIBILITY.md records the procedure and the trap: Go stamps the commit hash and dirty flag by default, so a git checkout and an exported tarball differ from identical source",
     "the macOS .dmg is out of scope for the determinism check: codesign and hdiutil embed timestamps and a signature is not reproducible by construction, so reproducing the shipped installer would mean comparing the unsigned payload, which is not implemented"

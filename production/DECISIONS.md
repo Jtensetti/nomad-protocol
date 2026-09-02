@@ -2,6 +2,37 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-026 (2026-09-02): Windows keeps its build target and stays unsupported for operators
+
+The first Windows CI run showed that every mutation of the epoch chain store
+fails there. The cause is not a bug in the store: `os.File.Sync` on a directory
+handle is `ERROR_ACCESS_DENIED` on Windows, because Windows has no equivalent
+of fsync on a directory. Nine places in nomad-testnet did that flush, each with
+its own copy of the code, and all nine failed the same way.
+
+`live/durable.Directory` is now the only copy, and its Windows implementation
+does not flush. Two ways to read that, and this records which one is meant.
+
+It is **not** a bypass of a check. Directory fsync is a durability primitive,
+not a verification: nothing is being accepted that would otherwise be refused,
+and the validation around it -- a missing path, a path that names a file -- is
+identical on both platforms deliberately, so a Windows build never accepts
+input a unix build rejects.
+
+It **is** a weaker guarantee. On unix a rename becomes durable when the
+containing directory is flushed. On Windows that step is absent and durability
+rests on NTFS metadata journaling, which this project has not measured.
+
+The decision: Windows stays in the build matrix, its epoch tests run in CI so
+the platform-specific paths execute, and it remains not a supported platform
+for running an operator. What is deliberately **not** done is a runtime guard
+making the operator binaries refuse to start on Windows. That would be the
+fail-closed move if Windows were being offered to operators; it is not, the
+registry says so, and adding a refusal would also stop the tests that just
+found this. If Windows is ever offered as an operator platform, the guard is
+the work that has to happen first, and this entry is the record that it was
+considered rather than missed.
+
 ## DEC-025 (2026-09-02): the signature journal's role separation is not tightened here, and why
 
 `epoch.Journal` keys each recorded signature by (network, epoch, role), where

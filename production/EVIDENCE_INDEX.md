@@ -65,6 +65,8 @@ surrounding claims can be trusted.
 - [F-23: the root module could be downgraded to a version approved only for a component](#f-23-the-root-module-could-be-downgraded-to-a-version-approved-only-for-a-component)
 - [F-24: what the dependency checks read is not what compiles](#f-24-what-the-dependency-checks-read-is-not-what-compiles)
 - [F-25: the module-graph controls did not run the scan, and could skip](#f-25-the-module-graph-controls-did-not-run-the-scan-and-could-skip)
+- [F-26: the epoch store had never worked on Windows, and nine copies of one flush hid it](#f-26-the-epoch-store-had-never-worked-on-windows-and-nine-copies-of-one-flush-hid-it)
+- [F-27: a Windows checkout was not the commit](#f-27-a-windows-checkout-was-not-the-commit)
 
 <!-- end contents -->
 
@@ -3174,3 +3176,79 @@ mutation, two different findings, which is why the lists are kept apart.
 
 **Not claimed.** These gates say a module arriving is a decision somebody has
 to write down. They say nothing about whether any listed module is safe.
+
+## F-26: the epoch store had never worked on Windows, and nine copies of one flush hid it
+
+`nomad-testnet` `2598f2b`. Found by CI run
+[33635225945](https://github.com/Jtensetti/nomad-testnet/actions/runs/33635225945),
+the first Windows job this project has ever run.
+
+`windows/amd64` has been in the cross-build matrix since the chain lock was
+written, so `live/epoch` compiled for it. Compiling is not running. The first
+Windows execution failed twenty-two tests, every one that mutates the chain
+store, all with the same line:
+
+```
+sync C:\Users\RUNNER~1\AppData\Local\Temp\...\001: Access is denied.
+```
+
+`os.File.Sync` on a directory handle is `ERROR_ACCESS_DENIED` on Windows.
+There is no supported call that does what fsync on a directory does on unix,
+so this was never going to work and nothing had ever asked.
+
+**Why one defect took nine fixes.** Nine places in the repository flushed a
+directory. Five were named helpers and no two were the same: one swallowed
+`io.EOF` with no comment saying why, three ignored the error from `Close`, one
+reported both. The other four were inlined inside larger functions -- which is
+why grepping for the helper name found five, and why the number nine only
+appeared once a gate looked for the *shape* rather than the name.
+
+`live/durable` is now the only copy. The unix build flushes; the Windows build
+does not, and says so rather than implying the guarantee is the same. The
+validation around the flush is identical on both platforms deliberately, so a
+Windows build never accepts a path a unix build rejects. DEC-026 records the
+position rather than leaving it implied: Windows keeps its build target, its
+epoch tests run in CI so the platform paths execute, and it stays unsupported
+for operators -- with a note on what a runtime refusal would take if that
+changes.
+
+**What the same run confirmed.** The three cross-process chain-lock tests
+passed on Windows, which is the first time `LockFileEx` has executed anywhere.
+That was the reason the job was added; the store defect was found on the way.
+
+**Not claimed.** Nothing here measures NTFS durability. The Windows build's
+weaker guarantee is stated, not characterised.
+
+## F-27: a Windows checkout was not the commit
+
+`nomad-testnet` `2598f2b`, plus `.gitattributes` in the eight sibling
+repositories (`Nomad-browser` `9a18a05`, `nomad-rlnc` `3ecedbf`,
+`nomad-selection-firewall` `a1ed9cd`, `nomad-semantic-basins` `df45010`,
+`nomad-local-reconstruction` `3650c28`, `nomad-constant-rate-fabric` `2269a68`,
+`nomad-anytrust-mix-sim` `1d99367`).
+
+The same first Windows run also failed `TestPublishedVectorsMatch`, which
+compares `live/epoch/testdata` byte-for-byte against its encoder. The bytes are
+identical in the repository. Git's default on Windows is
+`core.autocrlf=true`, which rewrites LF to CRLF on checkout, so the working
+tree and the commit were different files.
+
+The test failure is the small consequence. The large one is that
+`conformance/wire-vectors.json` is sealed by a digest and cited as PROD-01 and
+PROD-03 evidence: a second implementer checking the corpus out on Windows would
+have computed a different digest for the same commit, with nothing in the
+repository to explain the difference. That is a portability defect in the
+evidence, not in a test.
+
+`* -text` in every repository, as a blanket rule rather than a list of
+extensions -- the claim is that a checkout is the commit, so an exception is a
+file where that stops being true. `supplychain` tests both halves: that the
+rule is present, and that no sealed artefact contains a carriage return.
+
+**Two controls, because both scans pass by finding nothing.** The
+carriage-return scan must find one in a file full of them and must not report
+one in a file without. Its binary exemption -- git only translates what it
+judges to be text, using the presence of a NUL byte -- must also be an
+exemption rather than a hole, so a file with a NUL byte must be reported as
+skipped rather than as clean. The first version of the scan had no exemption
+and failed on Python bytecode that git ignores and never committed.
