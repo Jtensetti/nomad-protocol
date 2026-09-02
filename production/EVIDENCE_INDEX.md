@@ -57,6 +57,7 @@ surrounding claims can be trusted.
 - [F-15: a test covering the honest half of a check, and a lock that could name the wrong repository](#f-15-a-test-covering-the-honest-half-of-a-check-and-a-lock-that-could-name-the-wrong-repository)
 - [F-16: the operator's secret-file checks had no tests at all](#f-16-the-operators-secret-file-checks-had-no-tests-at-all)
 - [F-17: the signed fetch plan had no test of any kind](#f-17-the-signed-fetch-plan-had-no-test-of-any-kind)
+- [F-18: a signed topology the two implementations disagreed about](#f-18-a-signed-topology-the-two-implementations-disagreed-about)
 
 <!-- end contents -->
 
@@ -2818,3 +2819,59 @@ letters. Found by the test failing, not by review.
 
 **Not claimed.** This covers the plan document. It says nothing about what the
 partial fetcher does with a valid plan, which is `live/partialfetch`.
+
+## F-18: a signed topology the two implementations disagreed about
+
+`nomad-testnet` `live/strictjson/base64.go`, `live/topology/canonicalb64_test.go`,
+vectors in `runtime/evidence/base64-differential/`.
+
+Go's base64 decoder ignores `\r` and `\n` wherever they appear, and `Strict()`
+does not change that: it constrains the final quantum's padding bits and
+nothing else. The Python reference decodes with `validate=True`, which refuses
+them. Eighteen decode sites across the repository used the Go form.
+
+**Demonstrated on the same bytes, not argued.** `escaped.json` is a signed
+topology with the JSON escape `\n` inserted into its authority signature
+field. It remains valid JSON -- both parsers read it -- so the disagreement is
+about base64 alone:
+
+| implementation | canonical.json | escaped.json |
+|---|---|---|
+| Go, before | accepted | **accepted** |
+| Python reference | accepted | refused, "Only base64 data is allowed" |
+| Go, after | accepted | refused, "invalid base64 or length" |
+
+**Why the signature did not catch it.** Topology verification re-serialises
+what it parsed and checks the signature over that, so a newline inside a field
+that is *part of* the document changes the canonical form and fails the
+signature -- that half was already safe, and is asserted now. The signature
+field itself is excluded from what it signs, so nothing above it could object.
+Same shape as the duplicate-key finding that `strictjson` was written for: an
+ambiguity a signature check cannot see, because each implementation verifies
+against whatever it parsed.
+
+**Impact, bounded.** This is not a forgery: an attacker cannot make a topology
+say something the authority did not sign. It is a split view -- an operator
+running the Go node accepts an operator set that a monitor running the
+reference refuses, decided by whoever distributes the file. That is the
+property PROD-01 and PROD-03 exist to rule out.
+
+`strictjson.DecodeBase64` rejects any character outside the standard alphabet
+before decoding, and all eighteen sites use it. Its test carries a control:
+if the standard decoder ever starts refusing an embedded newline by itself,
+the control skips and says the package should be reconsidered rather than
+silently testing nothing.
+
+**Two vacuous assertions were caught while writing this**, both by the tests
+failing rather than by review: a base64 padding case against a payload whose
+size is divisible by three, so there was no padding to remove; and a URL-safe
+alphabet case against bytes that encode without `+` or `/`. Both now assert
+the variant actually differs from the canonical form before asserting it is
+refused.
+
+**Not claimed.** The cross-implementation *refusal* corpus covers hop cells
+only (`TestBothImplementationsRefuseTheSameCells`, mirrored in
+`crosscheck.py`); `conformance/wire-vectors.json` carries no refusal vectors
+for topology documents. So this differential is regression-tested in Go and by
+the stored vectors, not yet by the two implementations agreeing to refuse the
+same corpus entry. That vector is the next step and is not counted as done.
