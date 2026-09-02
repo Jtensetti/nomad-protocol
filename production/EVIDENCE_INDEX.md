@@ -2869,9 +2869,24 @@ alphabet case against bytes that encode without `+` or `/`. Both now assert
 the variant actually differs from the canonical form before asserting it is
 refused.
 
-**Not claimed.** The cross-implementation *refusal* corpus covers hop cells
-only (`TestBothImplementationsRefuseTheSameCells`, mirrored in
-`crosscheck.py`); `conformance/wire-vectors.json` carries no refusal vectors
-for topology documents. So this differential is regression-tested in Go and by
-the stored vectors, not yet by the two implementations agreeing to refuse the
-same corpus entry. That vector is the next step and is not counted as done.
+**Both implementations now refuse it on the same corpus vector.** The case is
+in `crosscheck.py`'s topology refusal list and mirrored in
+`TestAmbiguousJSONRepresentationsAreRefusedOrCanonical`, both built by
+re-serialising the parsed document rather than editing its text -- a string
+replace aimed at compact JSON silently matches nothing in a pretty-printed
+vector, which is how an earlier version of the Python side reported a mutation
+it had never applied.
+
+The Go mirror was checked against the condition it exists for: with the
+lenient decoder restored, it fails and names the disagreement. The reference
+side refuses the stored `escaped.json` too, so neither half is passing on the
+other's behalf.
+
+`direction_e` now reports its refusal count the way the cell direction does
+("refused 12 ambiguous or malformed ones"), because a list that quietly
+shrinks is a check that quietly stops checking.
+
+**Not claimed.** The two topology refusal lists are not identical -- the cell
+path mirrors its mutations one for one and compares counts, and the topology
+path does not yet. Each side refuses a superset of this case, and that is what
+is established here.
