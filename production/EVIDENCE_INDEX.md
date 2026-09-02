@@ -52,6 +52,7 @@ surrounding claims can be trusted.
 - [F-10: two copies of the strict JSON walk, one weaker than the other](#f-10-two-copies-of-the-strict-json-walk-one-weaker-than-the-other)
 - [F-11: the publisher was destroying its own work at the per-session bound](#f-11-the-publisher-was-destroying-its-own-work-at-the-per-session-bound)
 - [F-12: the publication queue's at-rest encryption kept its key beside the data](#f-12-the-publication-queues-at-rest-encryption-kept-its-key-beside-the-data)
+- [F-13: cache discovery on a public clock, measured across three worlds](#f-13-cache-discovery-on-a-public-clock-measured-across-three-worlds)
 
 <!-- end contents -->
 
@@ -2595,3 +2596,42 @@ at rest and not a running process, and it has no custody story of its own. The
 operator-side secrets -- threshold shares, operator identity keys, the
 authority key -- are still plaintext files at mode 0600 and are untouched by
 this.
+
+## F-13: cache discovery on a public clock, measured across three worlds
+
+`Nomad-browser` `04312b0`, `cmd/nomad-browser/rescan_test.go`.
+
+F-04 asks that cache discovery be a public periodic process independent of
+queries, and was recorded as "periodic reload implemented". It was implemented
+in the Swift client, where the claim rested on a comment; the Linux client
+scanned its object directory once at startup and never again, so an object the
+materializer wrote during a session never appeared at all.
+
+The Linux client now rescans on a fixed interval. Nothing private reaches the
+schedule: no command, no query, no empty result set and no failure changes
+when the next rescan happens.
+
+**Three worlds, because two would have left the corpus untested:**
+
+| world | must match |
+|---|---|
+| searching continuously | rescan count and mean gap |
+| idle | the reference |
+| idle, holding no objects at all | rescan count and mean gap |
+
+The third exists because of a mutation the first version of the test did not
+catch. With busy and idle both running over the same corpus, quartering the
+interval once the directory had objects left the test green -- and an interval
+derived from how much the last scan found is a cadence set by this reader's
+own materialized objects, which is the private state a public periodic process
+must not consult. Same lesson as F-09 and F-12: the mutation that survives
+tells you which world you forgot.
+
+**Four mutations, each killed by the assertion meant for it:** a search
+triggering a rescan, `Index.Sync` never adding, `Index.Sync` never removing,
+and the interval quartering once the directory had objects.
+
+**Not claimed.** This is the Linux client. The Swift client's timer is
+unchanged and still evidenced by a comment; F-03's runtime negative -- a
+capture showing a query produces no IPC -- remains unavailable, because there
+is no IPC to capture and no macOS run to capture it on.

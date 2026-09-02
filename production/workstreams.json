@@ -585,7 +585,7 @@
      "id": "F-04",
      "summary": "cache discovery via public periodic process independent of queries",
      "status": "PARTIAL",
-     "note": "periodic reload implemented"
+     "note": "the Linux client rescans its object directory on a fixed interval that nothing private touches -- no command, query, empty result or failure changes when the next one happens -- and Index.Sync makes the index match the scan without re-embedding content-addressed objects it already holds. Measured across three worlds (searching continuously, idle, idle holding nothing), since two would have left the corpus untested: an interval derived from how much the last scan found survived the two-world version. Four mutations killed. EVIDENCE_INDEX F-13. Before this the Linux client scanned once at startup and never again, and the Swift client's timer -- still unchanged -- is evidenced by a comment rather than a test."
     },
     {
      "id": "F-05",
