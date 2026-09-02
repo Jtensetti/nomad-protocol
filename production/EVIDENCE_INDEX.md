@@ -2887,10 +2887,29 @@ other's behalf.
 ("refused 12 ambiguous or malformed ones"), because a list that quietly
 shrinks is a check that quietly stops checking.
 
-**Not claimed.** The two topology refusal lists are not identical -- the cell
-path mirrors its mutations one for one and compares counts, and the topology
-path does not yet. Each side refuses a superset of this case, and that is what
-is established here.
+**The topology refusal lists are now mirrored**, and the reference's counts
+are floored. The four cases the Go side did not examine -- an unknown outer
+member, an unknown document member, an unrecognised version, and trailing data
+-- are refused here too. `TestCellsFromTheSecondImplementationVerifyHere`
+reads the counts the reference reports for each direction and fails if any
+drops below what it refused before; verified by removing one entry from the
+reference's list, which fails with "refused 10 documents where it refused 12
+before".
+
+That floor also corrected a comment. The cell path claimed "the two counts are
+compared so neither can quietly shrink", and no code compared them. The counts
+are still not equal -- the reference applies its topology list to every
+topology vector and this side applies it once, so requiring equality would be
+requiring the same program -- but neither list can now shrink unseen, which is
+what the comment was reaching for.
+
+**One of the four is provided by a different check than it appears to be.**
+Disabling `topology.Verify`'s explicit trailing-data refusal leaves the
+differential test green: `strictjson.RejectDuplicateKeys` runs first and
+refuses trailing content already. Both had to be disabled together for the
+case to be accepted. The explicit line is kept as depth and now says so, on
+the DEC-025 principle that a check entailed by another should be labelled
+rather than left to look load-bearing.
 
 ## F-19: the fabric's production entry point and its cover cell had no tests
 
