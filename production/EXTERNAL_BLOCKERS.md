@@ -326,3 +326,30 @@ the Selection Firewall and cannot reach the emission planner, and the fabric
 emits on a fixed cadence regardless of whether inference finished. A slow model
 costs a reader a wait and costs the wire nothing. Attaching a model therefore
 does not reopen PROD-14/17/18; it is a relevance and cost question only.
+
+## EB-10: which licence applies where, and to vendored code (project owner)
+
+- **Missing:** a decision by the project owner about the licence split across
+  the nine repositories, and about what an MIT-licensed repository may do with
+  restricted-source code it vendors.
+- **What is true today:** two repositories carry the Nomad Restricted Source
+  License 1.0 -- `Nomad-browser` (`80f2361`) and `nomad-constant-rate-fabric`
+  (`8b00852`), both adopted on their `main` on 2026-08-27 -- and the other
+  seven carry MIT. `nomad-testnet` is MIT and vendors
+  `nomad-constant-rate-fabric` as a byte-for-byte snapshot, so an MIT
+  repository now ships code under the more restrictive licence.
+- **Why not autonomous:** which licence applies to which repository, and
+  whether that combination is permissible, is a decision with legal
+  consequences that belongs to the person who owns the work. An agent
+  vendoring a snapshot is the last party who should be settling it.
+- **Everything up to the boundary:** the vendored tree carries its upstream
+  licence faithfully, because `COMPONENTS.sha256` pins the snapshot by content
+  and replacing the vendored `LICENSE` would make the manifest describe a tree
+  that does not exist upstream. `nomad-testnet COMPONENT_LICENSES.md` records
+  the mismatch and `supplychain/licence_test.go` fails on any vendored licence
+  that differs from the repository's own without being written down, so the
+  next change of this kind cannot arrive as an unread line in a snapshot diff.
+  Three failure paths verified by mutation.
+- **What the owner decides:** whether the seven MIT repositories adopt the
+  restricted licence, whether the two restricted ones revert, or whether the
+  split is intended and the vendoring relationship needs different handling.
