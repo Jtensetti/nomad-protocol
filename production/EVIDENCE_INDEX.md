@@ -54,6 +54,7 @@ surrounding claims can be trusted.
 - [F-12: the publication queue's at-rest encryption kept its key beside the data](#f-12-the-publication-queues-at-rest-encryption-kept-its-key-beside-the-data)
 - [F-13: cache discovery on a public clock, measured across three worlds](#f-13-cache-discovery-on-a-public-clock-measured-across-three-worlds)
 - [F-14: capability gates and the equivocation proof's own refusals](#f-14-capability-gates-and-the-equivocation-proofs-own-refusals)
+- [F-15: a test covering the honest half of a check, and a lock that could name the wrong repository](#f-15-a-test-covering-the-honest-half-of-a-check-and-a-lock-that-could-name-the-wrong-repository)
 
 <!-- end contents -->
 
@@ -2678,3 +2679,39 @@ because the forged proof was refused by the prefix chaining before it ever
 reached the check under test. The test was removed rather than kept as a
 passing assertion about something it does not exercise. Third instance in this
 session of the same lesson, after F-09 and F-12.
+
+## F-15: a test covering the honest half of a check, and a lock that could name the wrong repository
+
+**`TestAnOperatorCannotReportItselfUnavailable` tested the signer, not the
+verifier.** `nomad-anytrust-mix-sim` `e54a0f5`. A non-receipt is an
+accusation: an operator's signed statement that another operator's round did
+not arrive, and a quorum of them establishes an availability fault. The test
+of that name exercised `SignNonReceipt` refusing to sign a statement about
+its own key -- the honest path, and not the one an attacker takes. A
+non-receipt is a struct; a malicious operator assembles and signs it directly.
+`VerifyNonReceipt` is what has to refuse it, and removing its check left the
+suite green.
+
+The test now covers both halves and the report path, since a hand-built
+statement would arrive inside an availability report rather than alone. Two
+mutations, one per half, each caught by its own assertion.
+
+This is the fourth instance in this session of a check that looked tested and
+was not, and the shape is worth naming: **a test that exercises the producing
+side of a rule proves nothing about the verifying side, because an attacker
+does not use the producer.**
+
+**The component lock could have named a commit from the wrong repository.**
+`Nomad-browser` `b5e6605`, `nomad-testnet`. `COMPONENTS.lock` says which
+upstream commit each vendored tree came from -- the one thing no digest can
+establish from inside the repository. Repinning takes that commit as an
+argument, and a stale shell variable produced this repository's own HEAD
+instead: `git rev-parse` run in the wrong directory. It was caught by reading
+the diff, not by any check. Nothing downstream would have caught it, because
+`snapshot_test.go` verifies the tree digest against the manifest and cannot
+verify that a commit resolves in a repository it does not have.
+
+The repin scripts now refuse a commit equal to the repository's own HEAD,
+which is the realistic form of the mistake. **Not claimed:** this does not
+establish that a recorded commit exists upstream. That check needs both
+repositories present and does not exist.

@@ -3,6 +3,58 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02c: four checks that looked tested and were not
+
+This checkpoint is one method applied repeatedly: for each security check,
+delete it and see whether anything fails. Four did not.
+
+**Cache discovery was implemented in the other client.** F-04 read as done on
+the strength of a comment in the Swift client. The Linux client scanned its
+object directory once at startup and never again, so an object the
+materializer wrote during a session never appeared. It now rescans on a fixed
+interval, measured across three worlds -- searching continuously, idle, and
+idle holding nothing. The third world exists because the two-world version
+missed a mutation that quartered the interval once the directory had objects,
+which would be a cadence set by this reader's own materialized objects.
+(F-13.)
+
+**Two cross-implementation checks skipped rather than failed.** A runner image
+that stopped shipping python3 would have retired PROD-03's evidence in
+silence. Both repositories now declare `NOMAD_REQUIRE_CAPABILITY_GATES=1`, the
+mechanism the browser and semantic-basins already used. (F-14.)
+
+**`VerifyEquivocationProof`'s refusals had no negative tests.** A proof is an
+accusation anyone can publish, and a chain that accepts one stops accepting
+the site's descriptors -- so a proof format that only checks shape is an
+attacker-controlled kill switch. Three forgeries now fail: one descriptor
+named twice, a proof relabelled to accuse another site, and a genesis-sequence
+proof built from another site's descriptors. Two remaining checks turned out
+to be entailed by `VerifyDescriptor` and are now labelled as depth rather than
+tested by a test that would pass for the wrong reason -- which the first
+attempt did. (F-14.)
+
+**A test of a rule exercised the side an attacker does not use.**
+`TestAnOperatorCannotReportItselfUnavailable` tested `SignNonReceipt`
+refusing. A non-receipt is a struct; an attacker builds and signs one
+directly, and `VerifyNonReceipt` is what must refuse it. That check had no
+test. (F-15.)
+
+The shape is worth carrying forward: **a test that exercises the producing
+side of a rule proves nothing about the verifying side.**
+
+Also this batch: the component repin scripts now refuse a commit equal to the
+repository's own HEAD, after a stale shell variable nearly recorded
+nomad-testnet's HEAD as the mix snapshot's upstream commit. Caught by reading
+the diff; nothing downstream would have caught it.
+
+Commits: Nomad-browser 04312b0, b5e6605; nomad-testnet a9d752d;
+nomad-local-reconstruction 4bdd45a, 746cc01; nomad-anytrust-mix-sim e54a0f5;
+nomad-protocol d92e8e6, 2e94d8d.
+
+Next priority: Workstream H's remaining PARTIAL items, and B's non-blocked
+ones. The coverage-directed sweep that produced this batch is worth repeating
+on live/topology, live/epoch and live/committee.
+
 ## Checkpoint 2026-09-02b: two loss terms, both found by measuring first
 
 Both items this checkpoint covers started as a feature to build and turned out
