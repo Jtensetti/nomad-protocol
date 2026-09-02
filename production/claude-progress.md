@@ -3,6 +3,67 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02f: the controls were not controlling
+
+The module-graph gates added at the end of the last checkpoint each carried a
+control, on the principle that a scan finding nothing must not be able to pass
+by finding nothing. Turning that principle on the controls themselves is where
+this checkpoint started, and none of the six survived it.
+
+**F-25: the controls did not run the scan they were controlling.** Each gate
+parsed `go list -m all` and filtered; each control ran the same command and did
+a `strings.Contains` on the raw output. So the control proved the *command*
+reports a dependency and said nothing about the gate's parsing -- a filter that
+dropped everything would have passed both. They could also skip: the fixture
+named a real module, so it needed the cache or the network, and skipped when it
+had neither, which is to say it vanished in exactly the environments nobody
+watches. The scan is now shared code, the fixture resolves under `GOPROXY=off`,
+and crippling the scan fails the control.
+
+Rewriting them exposed two gaps. `Nomad-browser` filtered out sibling modules
+before counting, so it asserted no third-party code while saying nothing about
+the three repositories the binary cannot ship without. And the first draft of
+the `nomad-anytrust-mix-sim` gate pinned one list, built from captured output,
+described as "modules the build can reach": it omitted `bitset`, and thirteen
+of its seventeen entries compile into nothing. It failed on its first run
+against its own author. Two lists now -- four modules whose code runs, and the
+seventeen-name graph `go.sum` pins -- and the mutation that proves keeping them
+apart is worth it fails each on a different module.
+
+**F-23 and F-24 are the ones that matter.** `nomad-testnet` already had a real
+dependency policy, stronger than what was being added around it: module and
+version, a written reason, every component's `go.mod`, replaces confined to the
+repository, `go.sum` pinning, checksum-database environment. It had two holes.
+
+Its two policy lists were merged into one set and applied to every `go.mod`, so
+`allowed_older_in_components` -- an exception written for requirements nobody
+builds -- also licensed the root. Downgrading the root's `golang.org/x/sys`
+from `v0.47.0` to `v0.42.0` left the gate green while `go list -m` confirmed
+`v0.42.0` was what the build selected. Five releases of unreviewed code in the
+shipped binary, no diff to the policy file, nothing red.
+
+Underneath that: every check there read `go.mod` as text. Text is what a
+reviewer sees and not what compiles, since version selection picks across the
+whole graph and a `replace` substitutes wholesale. They agreed; nothing made
+them agree. The build is now asked of the toolchain -- the modules that provide
+compiled packages, at the versions selected -- and each must be approved at
+exactly that version, with the components exception given no standing.
+
+**The shape of both checkpoints.** Eleven findings now, F-14 through F-25, from
+one question asked repeatedly: if this check were deleted, what would fail? The
+last three came from asking it of checks written in the previous checkpoint,
+which is the argument for asking it of new work rather than only of old.
+
+Commits: nomad-testnet 5845278; Nomad-browser 2c8179a; nomad-anytrust-mix-sim
+de88b21; nomad-rlnc a02f415; nomad-selection-firewall fd23af0;
+nomad-semantic-basins 3c12524; nomad-local-reconstruction d9bfefe;
+nomad-constant-rate-fabric b927124.
+
+Evidence: F-23, F-24, F-25 in `production/EVIDENCE_INDEX.md`.
+
+Risks unchanged. Next: workstream B governance protocol (EB-2 bounded),
+workstream F browser/materializer boundary, workstream H release engineering.
+
 ## Checkpoint 2026-09-02e: the registry was wrong about itself
 
 The coverage sweep finished the remaining repositories and then turned on the

@@ -62,6 +62,9 @@ surrounding claims can be trusted.
 - [F-20: the release verifier had no test, and the empty-trust-set case is the live one](#f-20-the-release-verifier-had-no-test-and-the-empty-trust-set-case-is-the-live-one)
 - [F-21: the claim matrix cited tests that do not exist](#f-21-the-claim-matrix-cited-tests-that-do-not-exist)
 - [F-22: the Linux client's uninstall story, and the property it rests on](#f-22-the-linux-clients-uninstall-story-and-the-property-it-rests-on)
+- [F-23: the root module could be downgraded to a version approved only for a component](#f-23-the-root-module-could-be-downgraded-to-a-version-approved-only-for-a-component)
+- [F-24: what the dependency checks read is not what compiles](#f-24-what-the-dependency-checks-read-is-not-what-compiles)
+- [F-25: the module-graph controls did not run the scan, and could skip](#f-25-the-module-graph-controls-did-not-run-the-scan-and-could-skip)
 
 <!-- end contents -->
 
@@ -3068,3 +3071,106 @@ the unit ran. None of those is the client writing, and none is claimed away.
 **Not claimed.** The macOS side is unchanged, including that its uninstall
 script has never been executed against a real installed bundle. This covers
 the Linux client only.
+
+## F-23: the root module could be downgraded to a version approved only for a component
+
+`nomad-testnet` `5845278`.
+
+`DEPENDENCY_POLICY.json` carries two lists. `allowed` is what this build ships.
+`allowed_older_in_components` exists because a vendored component's own
+`go.mod` may name an older version of a shared module, which is harmless
+precisely while it stays a requirement nobody builds.
+
+`TestEveryExternalDependencyIsInThePolicy` merged the two into one set and
+applied it to every `go.mod`, the integration root included. The exception was
+therefore wider than its name: any version approved for a component was
+approved for the thing that ships.
+
+**Demonstrated, not argued.** Changing the root requirement for
+`golang.org/x/sys` from `v0.47.0` to `v0.42.0` -- the version the policy
+permits only inside `components/nomad-anytrust-mix-sim` -- left the test
+passing, and `go list -m golang.org/x/sys` then reported `v0.42.0`. Five
+releases of unreviewed code in the shipped build, with no diff to the policy
+file and nothing red.
+
+The root is now held to `allowed` alone. An entry in the components list that
+no component requires is reported as well, so the exception cannot outlive the
+requirement that justified it.
+
+## F-24: what the dependency checks read is not what compiles
+
+`nomad-testnet` `5845278`.
+
+Every check in `supplychain/dependency_test.go` parsed `go.mod` as text. That
+is what a reviewer reads, and it is not what the toolchain builds: minimal
+version selection picks a version across the whole module graph, and a
+`replace` anywhere substitutes a module wholesale. The two agreed at the time
+of writing. Nothing required them to keep agreeing, and F-23 is one way they
+come apart.
+
+`TestTheModulesThatActuallyCompileAreTheApprovedVersions` asks the toolchain
+instead: the modules that actually provide compiled packages, at the versions
+actually selected, each approved at exactly that version.
+`allowed_older_in_components` has no standing there -- the exception is for
+requirements that are not built, so a version reaching the build under it is
+reported with that reason named.
+
+**Mutation.** All four branches were exercised by mutating the policy file and
+running that test alone, so nothing else could absorb the result: an approved
+module removed (`go.dedis.ch/fixbuf`), a version that is not what resolves
+(`golang.org/x/crypto`), an approval nothing compiles against, and a built
+version approved only inside a component. The first draft's failure message
+claimed the module "reaches the build through version selection rather than
+through a requirement anybody wrote" -- untrue for the mutation that produced
+it, since `fixbuf` is in `go.mod`. The message now describes the possibility
+instead of asserting it.
+
+**Not claimed.** Nothing here reads upstream source. The policy says which
+modules and versions were approved, not that any of them is benign.
+
+## F-25: the module-graph controls did not run the scan, and could skip
+
+`nomad-rlnc` `a02f415`, `nomad-selection-firewall` `fd23af0`,
+`nomad-semantic-basins` `3c12524`, `nomad-local-reconstruction` `d9bfefe`,
+`nomad-constant-rate-fabric` `b927124`, `Nomad-browser` `2c8179a`,
+`nomad-anytrust-mix-sim` `de88b21`.
+
+Six repositories assert their module graph, and each carried a control so that
+a scan finding nothing could not pass by finding nothing. The controls did not
+do that.
+
+**They re-implemented the scan.** The gate ran `go list -m all` and filtered
+its output; the control ran the same command and did a `strings.Contains` on
+the raw bytes. So the control established that the command reports a
+dependency, not that the gate's parsing does. A filter that dropped everything
+would have passed both. The scan is now one function the gate and the control
+share, and crippling it to return nothing now fails the control -- which it
+could not do before.
+
+**They could skip.** The fixture required `golang.org/x/sys`, so it needed the
+module cache or the network, and called `t.Skipf` when it had neither: a
+control that disappears in exactly the environments where nobody is watching.
+The fixture now requires a module it replaces with a local directory, resolves
+under `GOPROXY=off`, and has nothing left to skip on.
+
+**Two gaps the rewrite exposed.** `Nomad-browser` filtered out every
+`github.com/Jtensetti/` module before counting, so it asserted no third-party
+code and said nothing about the three sibling repositories the binary cannot
+ship without -- each one a repository whose releases, keys and review the
+browser's release process has to cover. Those are now named, and a fourth
+arriving fails, as does one leaving.
+
+`nomad-anytrust-mix-sim` and `nomad-testnet` are the two repositories that do
+have dependencies, and the first draft of the mix-sim gate pinned a single
+list built from captured `go list -m all` output, calling it "modules the build
+can reach". It was wrong twice: it omitted `github.com/bits-and-blooms/bitset`,
+and thirteen of its seventeen entries compile into nothing. Two lists now, for
+two claims: four modules whose code actually runs, and the seventeen-name
+graph that `go.sum` pins.
+
+Importing a graph-only module as a mutation failed the compiled gate on
+`circl` and the graph gate on `go-ristretto`, `circl`'s own dependency -- one
+mutation, two different findings, which is why the lists are kept apart.
+
+**Not claimed.** These gates say a module arriving is a decision somebody has
+to write down. They say nothing about whether any listed module is safe.
