@@ -3,6 +3,67 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02d: the sweep finds a real interoperability defect
+
+The coverage-directed sweep continued into the remaining packages, and this
+time it turned up something that was not a missing test but a live
+disagreement between the two implementations.
+
+**F-18: a signed topology Go accepted and the reference refused.** Go's base64
+decoder ignores CR and LF wherever they appear, and `Strict()` does not change
+that -- it constrains the final quantum's padding bits and nothing else. The
+Python reference uses `validate=True` and refuses them. Eighteen decode sites
+used the Go form. A topology carrying the JSON escape `\n` inside its
+authority signature -- still valid JSON, so both parsers read it -- verified
+here and was refused there. Shown on the same bytes, with the vectors stored.
+
+The signature could not object: verification re-serialises what it parsed, so
+a newline inside a field that is *part of* the document breaks the signature,
+but the signature field is excluded from what it signs. Same shape as the
+duplicate-key ambiguity `strictjson` was written for, which is where the fix
+went.
+
+Not a forgery. A split view of the operator set, decided by whoever hands over
+the file, which is what PROD-01 and PROD-03 exist to rule out. Both
+implementations now refuse it on the same corpus vector, and the Go mirror was
+checked against the lenient decoder it exists for.
+
+**F-17 and F-19: four more packages with no tests at all.**
+`live/fetchplan`'s signature check, `live/bundle`'s stream commitment, the
+fabric's `Scheduler.Run` -- the entry point `cmd/nomad-publish` and the node
+both call, where every existing test used the finite `RunCells` -- and
+`RandomCell`, which fills the cover cell. Writing the last of those found
+`RandomCellFrom` returning the half-filled cell alongside its error, so a
+caller ignoring the error would emit cover with a constant tail. Every caller
+checks, so it is depth rather than a live defect, and it is one line either
+way.
+
+**Two process corrections, both made after being caught by the thing they
+now guard.**
+
+The mutation harness now verifies that each mutation actually applied before
+running the test. It reported a surviving mutation that had never been
+applied: the string replace matched nothing. A harness that cannot tell
+"survived" from "never ran" reports the first as the second.
+
+The repin guard added in F-15 fired for real within hours, on the same stale
+shell variable, on a different repository. That is the argument for writing
+the guard rather than resolving to be careful.
+
+**Four vacuous assertions were caught by tests failing rather than by review:**
+a base64 padding case against a payload divisible by three; a URL-safe alphabet
+case against bytes that encode without + or /; an upper-case hex case against
+an all-digit identifier; and a regular-file case that a directory fails anyway.
+Each now asserts the variant differs from the canonical form before asserting
+it is refused.
+
+Commits: nomad-testnet a68fd2d, 644daf3; nomad-constant-rate-fabric af4ba45;
+nomad-protocol a81dba3, a5f5014.
+
+Next priority: the topology refusal lists are not mirrored one for one between
+the implementations the way the cell lists are, which is the remaining half of
+F-18. Then Workstream H's non-blocked items.
+
 ## Checkpoint 2026-09-02c: four checks that looked tested and were not
 
 This checkpoint is one method applied repeatedly: for each security check,

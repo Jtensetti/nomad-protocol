@@ -58,6 +58,7 @@ surrounding claims can be trusted.
 - [F-16: the operator's secret-file checks had no tests at all](#f-16-the-operators-secret-file-checks-had-no-tests-at-all)
 - [F-17: the signed fetch plan had no test of any kind](#f-17-the-signed-fetch-plan-had-no-test-of-any-kind)
 - [F-18: a signed topology the two implementations disagreed about](#f-18-a-signed-topology-the-two-implementations-disagreed-about)
+- [F-19: the fabric's production entry point and its cover cell had no tests](#f-19-the-fabrics-production-entry-point-and-its-cover-cell-had-no-tests)
 
 <!-- end contents -->
 
@@ -2890,3 +2891,43 @@ shrinks is a check that quietly stops checking.
 path mirrors its mutations one for one and compares counts, and the topology
 path does not yet. Each side refuses a superset of this case, and that is what
 is established here.
+
+## F-19: the fabric's production entry point and its cover cell had no tests
+
+`nomad-constant-rate-fabric` `af4ba45`.
+
+Two functions this module ships and never tested in its own suite -- the
+module that is vendored into `nomad-testnet` and analysed there separately,
+which is the arrangement that once let a silent wrong-decode ship in a vendored
+decoder.
+
+**`Scheduler.Run` is the production entry point.** `cmd/nomad-publish` and
+`live/node` both call it; every test here used `RunCells`, the finite form. So
+the version that ships had no coverage. What `Run` has to get right that
+`RunCells` does not is stopping, and it is now shown to emit at cadence, to
+return when its context ends, and to emit nothing afterwards -- a catch-up
+burst on shutdown is still a burst.
+
+**`RandomCell` fills a cover cell**, and cover is what makes an emission
+carrying nothing indistinguishable from one carrying work. Writing its first
+test found that `RandomCellFrom` returned the half-filled cell alongside its
+error: on a short read the prefix is entropy and the tail is zeros, so a caller
+that ignored the error would emit cover with a constant tail. It returns the
+zero value now.
+
+**Bounded honestly: not a live defect.** Every caller in the tree checks the
+error, and `crypto/rand.Reader` does not short-read. The finding is that a
+function on the cover path could return something usable-looking together with
+a failure, in a codebase whose rule is that a failed check fails closed.
+
+**Five mutations, each verified as applied before its test ran.** That check
+earned its place immediately: an earlier run of the same harness reported a
+surviving mutation which, on inspection, had never been applied -- the string
+replace had silently matched nothing. A mutation harness that cannot tell
+"survived" from "never ran" reports the first as the second, which is the same
+false green in a different costume.
+
+**The repin guard fired for real.** Resyncing the vendored fabric snapshot, the
+commit passed to the repin script was again this repository's own HEAD from a
+stale shell variable -- the mistake F-15 recorded and guarded a few hours
+earlier. The guard refused it and named it.
