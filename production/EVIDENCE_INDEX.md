@@ -61,6 +61,7 @@ surrounding claims can be trusted.
 - [F-19: the fabric's production entry point and its cover cell had no tests](#f-19-the-fabrics-production-entry-point-and-its-cover-cell-had-no-tests)
 - [F-20: the release verifier had no test, and the empty-trust-set case is the live one](#f-20-the-release-verifier-had-no-test-and-the-empty-trust-set-case-is-the-live-one)
 - [F-21: the claim matrix cited tests that do not exist](#f-21-the-claim-matrix-cited-tests-that-do-not-exist)
+- [F-22: the Linux client's uninstall story, and the property it rests on](#f-22-the-linux-clients-uninstall-story-and-the-property-it-rests-on)
 
 <!-- end contents -->
 
@@ -3031,3 +3032,39 @@ name on the removed list still fails when it appears in the matrix.
 identifiers, so writing it made the check fail until each was listed in
 `removed-tests.txt` with its reason -- which is the mechanism doing what it is
 for, on its first use, against its own author.
+
+## F-22: the Linux client's uninstall story, and the property it rests on
+
+`Nomad-browser` `991d3f0`.
+
+H-10 was documented for macOS only: `uninstall.sh` removes the sandbox
+container and the unsandboxed development locations, cross-checked against the
+Swift sources. The Linux client, added later, had no removal story at all.
+
+It turns out not to need a script. **The client writes nothing** -- it reads
+the object directory, holds its index in memory, and creates no file,
+directory or temporary anywhere.
+
+That is a stronger answer than a cleanup script, and it is now asserted rather
+than observed. `TestTheLinuxClientWritesNothingToDisk` walks every package the
+client links and fails on any standard-library call that creates or modifies a
+path. Because it is a denylist, it carries a control: the detector is pointed
+at a package that does write and must find it, so a detector that listed
+nothing could not pass by finding nothing.
+
+**Why it is worth a test rather than a note.** An index derived from a
+reader's corpus is private -- which objects were materialised for them, and
+what those objects are near. Persisting one is a reasonable thing for a future
+build to want, and it would put that on disk. The test means the removal
+section, the retention reasoning and `run-sandboxed.sh`'s read-only bind of the
+object directory all have to change with it, as a decision rather than a
+discovery.
+
+`linux/README.md` documents removal on that basis and says what the operating
+system keeps regardless: shell history naming the `-trust` key, a core dump if
+the process crashed with `kernel.core_pattern` set, the journal's record that
+the unit ran. None of those is the client writing, and none is claimed away.
+
+**Not claimed.** The macOS side is unchanged, including that its uninstall
+script has never been executed against a real installed bundle. This covers
+the Linux client only.
