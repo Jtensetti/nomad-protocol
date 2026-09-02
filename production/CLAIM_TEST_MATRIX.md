@@ -86,6 +86,7 @@ Levels, weakest first:
 | A refused deposit can be retried | idempotence contract | **CONTRADICTED - `live/deposit/retransmit_test.go` shows only a byte-identical retransmission is idempotent, and the publisher retains nothing to retransmit. See DEC-020.** | finding |
 | Publish cannot reach a socket, transport or scheduler | package graph, transitively | in-package architectural test + CI gate | structural |
 | The queue is bounded, crash-safe, idempotent, encrypted at rest | unit + restart | publish queue tests | unit |
+| A stolen disk does not open the publication queue | unit, every file on the disk tried as the key | `TestAPassphraseQueueKeepsNothingOnDiskThatOpensIt` | **holds only under `Passphrase`; `UnprotectedKeyFile` writes the key beside the fragments and `TestTheUnprotectedKeyFileOpensItsOwnQueue` demonstrates it** |
 | Drain order leaks no publication timing | unit | content-derived order test | unit |
 | Uplink work and cover are indistinguishable to an observer | classifier | two independent classifiers fail against uplink | adversarial, cell level |
 | Uplink work and cover are indistinguishable to the entry operator | design + test | cover is a real committee encryption on the identical path | unit |

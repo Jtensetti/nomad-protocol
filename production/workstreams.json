@@ -700,8 +700,8 @@
     {
      "id": "H-09",
      "summary": "OS-backed key storage (Keychain), no plaintext secrets",
-     "status": "NOT_STARTED",
-     "note": "the trusted release *public* key is a build constant, which is where a public key belongs -- a trusted key an attacker can replace alongside the manifest authenticates nothing. Its private half has no documented custody and no Keychain integration exists; the browser itself holds no secrets at rest, since it only reads signed objects"
+     "status": "PARTIAL",
+     "note": "the client-side plaintext secret is closed and the OS-backed half is not. publish.Options.Key is a required KeySource with no default: Passphrase derives the queue key with Argon2id from a passphrase and a per-queue salt, leaving nothing on the disk that opens the queue, and UnprotectedKeyFile is the previous co-located key file named for what it is. Both directions are measured -- every file in a passphrase queue tried as the key opens nothing, and the unprotected key file does open a fragment -- and a wrong passphrase fails at Open rather than surfacing as an empty queue. The passphrase reaches cmd/nomad-publish on a file descriptor, not argv or the environment. EVIDENCE_INDEX F-12. Still missing: Keychain or an equivalent OS keystore, and the operator-side secrets (threshold shares, operator identity, authority key) remain plaintext files at 0600. The trusted release public key is a build constant, which is where a public key belongs; its private half still has no documented custody."
     },
     {
      "id": "H-10",

@@ -51,6 +51,7 @@ surrounding claims can be trusted.
 - [F-09: a seventh instrument, found by a cleanup pass rather than by a failure](#f-09-a-seventh-instrument-found-by-a-cleanup-pass-rather-than-by-a-failure)
 - [F-10: two copies of the strict JSON walk, one weaker than the other](#f-10-two-copies-of-the-strict-json-walk-one-weaker-than-the-other)
 - [F-11: the publisher was destroying its own work at the per-session bound](#f-11-the-publisher-was-destroying-its-own-work-at-the-per-session-bound)
+- [F-12: the publication queue's at-rest encryption kept its key beside the data](#f-12-the-publication-queues-at-rest-encryption-kept-its-key-beside-the-data)
 
 <!-- end contents -->
 
@@ -2492,3 +2493,69 @@ datagram are still undetectable losses, and DEC-024 records why the
 confirmation-driven re-submission DEC-022 sketched is rejected rather than
 built: it is an active-tagging channel for an entry operator that drops one
 session's cells and reads the next release.
+
+## F-12: the publication queue's at-rest encryption kept its key beside the data
+
+`nomad-testnet` `live/publish/keysource.go`, `live/publish/keysource_test.go`.
+
+`publish.Open` documented itself as protecting "pending publication content at
+rest so that a stolen disk does not reveal what a user was about to publish",
+and CLAIM_TEST_MATRIX carried "encrypted at rest" against it. The key was a
+random 32 bytes in `queue.key`, in the queue directory, beside the
+`.fragment` files it encrypted, at the same mode and owner. A stolen disk
+carried both. The claim was false as written; the comment's own next sentence
+said the key belonged in OS-backed storage, which is the gap being described
+rather than closed.
+
+`Options.Key` is now a required `KeySource` with no default, because what a
+stolen disk yields is the whole question and inheriting an answer to it is how
+the wrong one gets shipped:
+
+- `Passphrase` derives the key with Argon2id (64 MiB, three passes, four
+  lanes) from a passphrase and a per-queue salt. The disk holds sealed
+  fragments, a salt and a verifier, none of which is the key.
+- `UnprotectedKeyFile` is the previous behaviour, named for what it is. It
+  gives binding -- each fragment is sealed under its own identifier as
+  additional data, so none can be renamed, altered or moved between queues --
+  and nothing against a stolen disk.
+
+**The difference is measured from both sides.** Under `Passphrase`, every file
+in the queue directory of the right length is tried as the key and none opens
+a fragment. Under `UnprotectedKeyFile`, the key file is read off the disk and
+*does* open one -- the weak mode's weakness is a passing assertion rather than
+a caveat in a comment.
+
+**A wrong passphrase fails at Open**, not later. `Drain` treats every
+`Queue.Next` error as "no work" by design, so a publisher that opened a queue
+it could not decrypt would be indistinguishable from an idle one and would
+emit cover forever while its queue filled. A verifier sealed under the derived
+key settles it before that.
+
+**Four mutations, each killed by the assertion meant for it:**
+
+| mutation | caught by |
+|---|---|
+| verifier removed, so a wrong passphrase opens the queue | the wrong-passphrase test |
+| salt fixed, so one derivation covers every queue | the two-queues test |
+| truncated salt accepted | the salt test -- **only after it was tightened** |
+| empty passphrase accepted | the empty-passphrase test |
+
+The third is worth recording. The first version of that test asserted only
+that `Open` returned an error, and the mutation survived it: a truncated salt
+derives a different key, so the verifier refuses it and the test passed for
+the wrong reason. It now requires the error to name the salt, because a
+damaged salt and a wrong passphrase are different problems for whoever has to
+fix one. Same lesson as F-09: a mutation a neighbouring check absorbs proves
+nothing about the check being mutated.
+
+**The passphrase reaches `cmd/nomad-publish` on a file descriptor**
+(`--passphrase-fd`), never in argv, which `ps` shows to every user, and never
+in the environment, which is readable by the same user through `/proc` and
+inherited by every child.
+
+**Not claimed.** This is not OS-backed key storage. H-09 asks for the Keychain
+or equivalent, and a passphrase is a different control: it protects the disk
+at rest and not a running process, and it has no custody story of its own. The
+operator-side secrets -- threshold shares, operator identity keys, the
+authority key -- are still plaintext files at mode 0600 and are untouched by
+this.
