@@ -3,6 +3,63 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02b: two loss terms, both found by measuring first
+
+Both items this checkpoint covers started as a feature to build and turned out
+to be a defect to fix, which is the pattern worth noting rather than either
+result on its own.
+
+**DEC-022's re-submission became DEC-024.** The plan was confirmation-driven
+re-submission for the three losses DEC-022 left open. Measuring the terms
+before building showed the largest one needed no feedback at all: every
+in-window cell is a deposit, cover included, because the operator cannot tell
+them apart. At the deployed defaults a publisher emits roughly 1,800 cells into
+a 45-second window and the airlock accepts 8 -- and the drain kept taking work
+from the queue on every tick, unlinking fragments the airlock then refused in
+silence. Six work cells emitted for a bound of two, four destroyed. The bound
+is in the signed epoch descriptor the publisher already reads, so the fix asks
+nothing of anyone: `Emit` counts its in-window cells and declines work once the
+bound is spent, exactly as it declines outside the window.
+
+The re-submission itself is rejected, with the argument recorded because it
+generalises: an entry operator that drops one session's cells in epoch E and
+reads the release of E+1 learns which object belongs to that session, because
+retry makes an object's presence depend on its earlier absence and the operator
+controls the absence. Fixed cross-epoch redundancy fails identically. The
+property that fails in all of them is the same one, and it is worth carrying
+forward: an object's presence in a release must not depend on whether it was
+present in an earlier one.
+
+**H-09 was a false claim before it was a missing feature.** `publish.Open`
+documented itself as protecting pending content "so that a stolen disk does not
+reveal what a user was about to publish", with the key in `queue.key` beside
+the fragments it encrypted, at the same mode and owner. The claim matrix
+carried "encrypted at rest" against it. `Options.Key` is now a required
+`KeySource`: `Passphrase` (Argon2id, per-queue salt) leaves nothing on the disk
+that opens the queue, and `UnprotectedKeyFile` is the old behaviour named for
+what it is. Both directions are asserted, so the weak mode's weakness is a
+passing test rather than a caveat.
+
+**Two tests caught things review had not, and both were the F-09 lesson
+again.** The never-overwritten test called the create helper directly, so a
+rename-over mutation survived it -- it was testing the helper, not the
+behaviour. The concurrency test that kills that mutation then failed against
+the real code on its first run: `O_EXCL` gives no-clobber but not atomicity, so
+a concurrent opener could read an empty salt file. And a guard I wrote for the
+quota gate in the filling goroutine was removed rather than shipped, because
+measured with and without it changed nothing observable and no test could
+distinguish it from its absence.
+
+Also corrected before it shipped: a comment attributing the Argon2id parameters
+to a specific published recommendation they do not match. Citing a standard
+from memory is the same failure as an unmeasured number.
+
+Commits: nomad-testnet 9069372, 9df9cfa; nomad-protocol 2b24952, b4073e9,
+0ce89ce, 7a97f82. CI green on nomad-testnet 9069372 (unit and live-compose).
+
+Next priority: Workstream F's browser/materializer boundary and Workstream H's
+release engineering, both of which are mostly PARTIAL rather than blocked.
+
 ## Checkpoint 2026-09-02: a cleanup pass, and what it found
 
 Not a feature checkpoint. The instruction was to remove what a human reviewer
