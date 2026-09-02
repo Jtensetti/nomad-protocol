@@ -3,6 +3,64 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02k: a citation of my own that pointed at nothing
+
+**F-34, and it is mine.** F-21 built a gate because this index cited tests that
+do not exist. It checks names. It never checked paths -- and the F-18 entry,
+written earlier in this same session, cited a vectors directory that is
+gitignored in nomad-testnet, was never committed to any repository, and existed
+only on the container that made it. A reader following that citation would have
+found nothing, and the container is ephemeral.
+
+The vectors are in `production/reports/` now, digested like the other reports.
+The gate checks cited evidence paths against **git** rather than the
+filesystem, which is the whole point: the directory that caused this was
+present on disk and in no repository. Scoped to paths with an `evidence` or
+`reports` segment, because a first version that checked every backticked path
+produced eight false positives against one real one, and a check people learn
+to ignore is worse than none.
+
+**The shaper, measured properly for the first time.** The structural candidate
+for the timing blocker gates on median cadence only -- `grep -c KS` on its
+campaign returns zero -- and this project has already established the median is
+too weak to see this finding. So the fix has never been evaluated against the
+statistic that shows the problem, and its PASS results are on the arm that
+already passes without it.
+
+That was checkable. Retaining the timestamps its boundary test already collects
+lets the preregistered rule judge the architecture. One of four treatment pairs
+rejected, none of three controls, one control at p = 0.025. Recorded with its
+limits and as no part of any claim: one experiment, a noisy shared container,
+seven comparisons at alpha 0.01, a different harness and host from the campaign
+it invites comparison with. What it produces is an acceptance test the
+integration did not have -- before this, the shaper's own gate would have
+passed it on a statistic that cannot see the finding.
+
+**Workstream H: the Linux release process.** DEC-027 recorded that there was
+none, so the client could not be offered even if someone wanted to. There is
+one now. The mechanism was already platform-neutral -- nothing in `update/`
+mentions macOS, a disk image or a bundle -- and neutral is not the same as
+exercised: every test drove it with a `.dmg`. It is now driven by a real
+tarball, including the case that matters more on Linux than macOS, where a
+release has two artifacts and one manifest must not authorise the other.
+
+The first version of that test was vacuous. The helper built both architectures
+from identical bytes, so they shared a digest and the refusal could not happen.
+It now varies the content and asserts the two differ before asserting either is
+refused.
+
+**Nothing was promoted.** DEC-027's decision stands unchanged: nothing has been
+offered to anyone. PROD-30 records the process half as closed and the deciding
+half as open.
+
+Commits: nomad-protocol 32607da, e7b64b9; Nomad-browser 79ad4da.
+
+Evidence: F-34, the shaper distribution probe, one claim row.
+
+Next: the shaper integration now has a defined acceptance test and is the
+remaining structural candidate for the timing blocker; workstream B governance
+(EB-2 bounded); EB-10 needs the owner.
+
 ## Checkpoint 2026-09-02j: what was stranded on branches
 
 Having found this branch behind `main` twice, the obvious next question was
