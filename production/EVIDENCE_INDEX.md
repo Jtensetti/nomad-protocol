@@ -56,6 +56,7 @@ surrounding claims can be trusted.
 - [F-14: capability gates and the equivocation proof's own refusals](#f-14-capability-gates-and-the-equivocation-proofs-own-refusals)
 - [F-15: a test covering the honest half of a check, and a lock that could name the wrong repository](#f-15-a-test-covering-the-honest-half-of-a-check-and-a-lock-that-could-name-the-wrong-repository)
 - [F-16: the operator's secret-file checks had no tests at all](#f-16-the-operators-secret-file-checks-had-no-tests-at-all)
+- [F-17: the signed fetch plan had no test of any kind](#f-17-the-signed-fetch-plan-had-no-test-of-any-kind)
 
 <!-- end contents -->
 
@@ -2780,3 +2781,40 @@ descriptors for one epoch across the two roles, which is the split-brain the
 journal exists to prevent. Tightening a fail-closed mechanism is not a change
 to make from a mutation score, so DEC-025 records the analysis and leaves the
 behaviour alone.
+
+## F-17: the signed fetch plan had no test of any kind
+
+`nomad-testnet` `live/fetchplan/plan_test.go`.
+
+`live/fetchplan` verifies the signed statement that steers the fixed-rate
+partial fetcher: which stream it fetches, under which topology. Every function
+in it -- `Sign`, `Encode`, `Load`, `Verify` -- was at zero coverage across the
+repository. The signature check could have been deleted without failing
+anything, and a fetcher that accepts an unsigned plan is one an attacker
+points wherever it likes.
+
+**Five mutations, each killed by the assertion meant for it:**
+
+| mutation | caught by |
+|---|---|
+| the signature not verified | the tamper and impostor tests |
+| the topology binding not checked | the other-topology test |
+| strict base64 relaxed for the signature | the canonical-encoding test |
+| unknown JSON members accepted | the same |
+| the stream ID not validated | the malformed-stream test |
+
+**Every field is shown to be under the signature**, one at a time, because a
+field left out of the signed message is a field an attacker rewrites in
+transit. And a plan that is *genuinely signed* but names another network,
+epoch or topology digest is refused separately, since a valid signature over
+the wrong topology would steer a fetcher using a peer set that has since
+changed.
+
+**One assertion in the first draft was vacuous and the test said so.** The
+upper-case stream-ID case used `hop.StreamID{7}`, whose hex encoding is all
+digits, so `strings.ToUpper` returned it unchanged and the case check had
+nothing to reject. The fixture now uses a value whose encoding contains
+letters. Found by the test failing, not by review.
+
+**Not claimed.** This covers the plan document. It says nothing about what the
+partial fetcher does with a valid plan, which is `live/partialfetch`.
