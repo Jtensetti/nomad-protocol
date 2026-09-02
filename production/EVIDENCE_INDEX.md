@@ -53,6 +53,7 @@ surrounding claims can be trusted.
 - [F-11: the publisher was destroying its own work at the per-session bound](#f-11-the-publisher-was-destroying-its-own-work-at-the-per-session-bound)
 - [F-12: the publication queue's at-rest encryption kept its key beside the data](#f-12-the-publication-queues-at-rest-encryption-kept-its-key-beside-the-data)
 - [F-13: cache discovery on a public clock, measured across three worlds](#f-13-cache-discovery-on-a-public-clock-measured-across-three-worlds)
+- [F-14: capability gates and the equivocation proof's own refusals](#f-14-capability-gates-and-the-equivocation-proofs-own-refusals)
 
 <!-- end contents -->
 
@@ -2635,3 +2636,45 @@ and the interval quartering once the directory had objects.
 unchanged and still evidenced by a comment; F-03's runtime negative -- a
 capture showing a query produces no IPC -- remains unavailable, because there
 is no IPC to capture and no macOS run to capture it on.
+
+## F-14: capability gates and the equivocation proof's own refusals
+
+Two gaps of the same kind: a check whose absence would not have failed
+anything.
+
+**The cross-implementation checks skipped rather than failed.** A skip is
+green, so a runner image that stopped shipping python3 would have retired
+`nomad-testnet`'s `TestCellsFromTheSecondImplementationVerifyHere` and
+`TestBothImplementationsRefuseTheSameCells`, and
+`nomad-local-reconstruction`'s `TestTheSecondImplementationAgreesAboutTheLog`,
+while PROD-03 went on citing them. Both repositories now declare
+`NOMAD_REQUIRE_CAPABILITY_GATES=1` in CI -- the mechanism `Nomad-browser` and
+`nomad-semantic-basins` already use for their capture gates -- which turns the
+absence into a failure. Verified by running each package with python3 off the
+path: the tests fail rather than skip.
+
+**`VerifyEquivocationProof`'s refusals had no negative tests.**
+`nomad-local-reconstruction` `746cc01`. A proof is an accusation anyone can
+publish, and a chain that accepts one stops accepting the site's descriptors,
+so a proof format that only checks shape is an attacker-controlled kill
+switch. One genuine proof verified and two malformed ones were refused;
+nothing exercised the checks that stop a fabricated proof.
+
+| forgery | refusal | mutation killed |
+|---|---|---|
+| the same descriptor named twice | "descriptors are identical" | check removed |
+| a proof relabelled to accuse another site | genesis does not derive the claimed site | check removed |
+| a genesis-sequence proof built from another site's descriptors | branches do not share the claimed site | check removed |
+
+**Two of the remaining checks are unreachable, and now say so.**
+`VerifyDescriptor` already requires each descriptor to carry its predecessor's
+site and to sit one past its sequence, so once the prefix has verified as a
+chain, the branch sequence and ancestor-site checks cannot fire. They are kept
+as depth because the entailment lives in another file.
+
+That was found the hard way: the first test written for the sequence check
+passed against real code and survived the mutation that removed the check,
+because the forged proof was refused by the prefix chaining before it ever
+reached the check under test. The test was removed rather than kept as a
+passing assertion about something it does not exercise. Third instance in this
+session of the same lesson, after F-09 and F-12.
