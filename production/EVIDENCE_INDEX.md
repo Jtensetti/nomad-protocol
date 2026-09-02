@@ -59,6 +59,7 @@ surrounding claims can be trusted.
 - [F-17: the signed fetch plan had no test of any kind](#f-17-the-signed-fetch-plan-had-no-test-of-any-kind)
 - [F-18: a signed topology the two implementations disagreed about](#f-18-a-signed-topology-the-two-implementations-disagreed-about)
 - [F-19: the fabric's production entry point and its cover cell had no tests](#f-19-the-fabrics-production-entry-point-and-its-cover-cell-had-no-tests)
+- [F-20: the release verifier had no test, and the empty-trust-set case is the live one](#f-20-the-release-verifier-had-no-test-and-the-empty-trust-set-case-is-the-live-one)
 
 <!-- end contents -->
 
@@ -2950,3 +2951,34 @@ false green in a different costume.
 commit passed to the repin script was again this repository's own HEAD from a
 stale shell variable -- the mistake F-15 recorded and guarded a few hours
 earlier. The guard refused it and named it.
+
+## F-20: the release verifier had no test, and the empty-trust-set case is the live one
+
+`Nomad-browser` `a210e22`.
+
+`cmd/nomad-browser-verify` decides whether a release may be installed over
+what is installed now. The `update` package underneath is covered at 66-91%;
+the wrapper that chooses which keys the rule is applied against was at zero --
+`run` and `trustedKeys` both.
+
+That wrapper is where a build with no compiled-in release key must refuse
+rather than proceed with an empty trust set, and **that is this build's actual
+state**: no release key has been generated (EB-7, with EB-6 for the second
+approver). So the untested branch was the one every current build takes.
+
+**Three mutations, each verified as applied:**
+
+| mutation | caught by |
+|---|---|
+| an empty trust set returned instead of a refusal | the no-release-key test |
+| a dry run advances the watermark | the dry-run test |
+| the monotonic rule's refusal ignored | the rollback test |
+
+The rollback test is H-08's property end to end through the binary: an older
+release is refused and the watermark is left where it was. A dry run that
+advanced the watermark would mark a release installed that nobody installed,
+and the next real release would then be refused as a rollback.
+
+**Not claimed.** This exercises the mechanism against test keys. It
+establishes nothing about who approved any real release, which is EB-7 and
+EB-6, and the binary says so itself when `-release-key` is used.
