@@ -2766,3 +2766,17 @@ supplies. Fourth instance of this in the session, after F-09, F-12 and F-14.
 **Not claimed.** This is the file boundary. It says nothing about what the
 loaded material is worth -- that is `VerifySecrets` and `VerifyShare`, which
 are exercised elsewhere -- and nothing about secrets in a running process.
+
+**The same sweep found `ApproveWithJournal` untested.** `ActivateWithJournal`
+had a test for the split-brain refusal; the approval half of the same
+mechanism, documented as having "the same fail-closed journal semantics", was
+at zero coverage. It now has one, and removing the journal call from it fails.
+
+A second mutation on that path -- dropping the role from the journal key --
+survives, and is left alive and labelled at the test rather than killed by a
+contrived one. A role-less key turns out to be strictly *stronger* than the
+current one: it would also refuse one operator endorsing two distinct
+descriptors for one epoch across the two roles, which is the split-brain the
+journal exists to prevent. Tightening a fail-closed mechanism is not a change
+to make from a mutation score, so DEC-025 records the analysis and leaves the
+behaviour alone.

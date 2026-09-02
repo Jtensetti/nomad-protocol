@@ -2,6 +2,40 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-025 (2026-09-02): the signature journal's role separation is not tightened here, and why
+
+`epoch.Journal` keys each recorded signature by (network, epoch, role), where
+role is `activation` or `approval`. Writing the first test for
+`ApproveWithJournal` -- which had none, while the activation path did -- raised
+a question the tests cannot settle: dropping `role` from the key leaves every
+test green.
+
+**The role is not load-bearing in any reachable flow.** Both roles record
+`Digest(descriptor)`, so activating and approving the *same* descriptor is
+idempotent with or without the role. And in the normal flow the epoch numbers
+already differ: an approval signs a successor, whose embedded epoch is one past
+the descriptor an operator activates, so the two never collide on the key.
+
+**A role-less key would be strictly stronger.** It would additionally refuse
+the case the current key permits: one operator activating descriptor D1 for
+epoch N and approving a different descriptor D2 for the same epoch. That is
+two distinct endorsements for one epoch by one operator, which is exactly the
+split-brain `ErrConflictingSignature` exists to prevent -- and the role
+separation lets it through.
+
+**It is not tightened here.** Making a fail-closed mechanism stricter can halt
+a legitimate operation, and the flow this would have to be safe against is a
+recovery path -- re-proposing at the same epoch after a failed activation --
+that this session has not traced end to end. A wrong tightening here does not
+lose a signature; it stops an operator signing at all, during exactly the
+incident where signing matters.
+
+So the finding is recorded rather than acted on, with the mutation left alive
+and labelled at the test that cannot kill it, because a mutation that survives
+and is documented is honest where a test contrived to kill it would not be.
+Planner, implementer and evaluator were the same session again; this is the
+kind of change that needs the second reader the process asks for.
+
 ## DEC-024 (2026-09-02): the publisher applies its own deposit bound; confirmation-driven re-submission is rejected
 
 DEC-022 closed the deposit window as a loss term and named what it left open:
