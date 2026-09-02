@@ -74,6 +74,8 @@ surrounding claims can be trusted.
 - [F-31: uninstalling left every object the reader had materialised](#f-31-uninstalling-left-every-object-the-reader-had-materialised)
 - [F-32: a second-party review existed on a branch nobody merged](#f-32-a-second-party-review-existed-on-a-branch-nobody-merged)
 - [F-33: the control PROD-27 was waiting for was also on that branch](#f-33-the-control-prod-27-was-waiting-for-was-also-on-that-branch)
+- [F-34: an evidence path this index cited was never committed](#f-34-an-evidence-path-this-index-cited-was-never-committed)
+- [The shaper architecture, measured with the rule that can see the finding](#the-shaper-architecture-measured-with-the-rule-that-can-see-the-finding)
 
 <!-- end contents -->
 
@@ -2839,7 +2841,13 @@ partial fetcher does with a valid plan, which is `live/partialfetch`.
 ## F-18: a signed topology the two implementations disagreed about
 
 `nomad-testnet` `live/strictjson/base64.go`, `live/topology/canonicalb64_test.go`,
-vectors in `runtime/evidence/base64-differential/`.
+vectors in `production/reports/2026-09-02-base64-differential/`.
+
+The vectors were first written under runtime/evidence, which is gitignored in
+`nomad-testnet`, so they were never committed anywhere and
+existed only on the machine that produced them. Corrected here, and
+`scripts/check-cited-tests.py` now checks cited evidence paths against git as
+well as cited test names -- see F-34, which is this.
 
 Go's base64 decoder ignores `\r` and `\n` wherever they appear, and `Strict()`
 does not change that: it constrains the final quantum's padding bits and
@@ -3622,3 +3630,80 @@ EB-8. Integrating it is a real evaluation of a large change rather than a
 merge, and recording that it exists is the honest state -- the failure mode
 this section is about is work being lost on a branch, and a paragraph naming
 it is what stops that.
+
+## F-34: an evidence path this index cited was never committed
+
+`nomad-protocol` `production/reports/2026-09-02-base64-differential/`,
+`scripts/check-cited-tests.py`.
+
+F-21 built a gate because this index cited tests that did not exist. It checks
+names. It never checked paths, and this entry cited runtime/evidence/
+base64-differential for the vectors behind F-18 -- written without code
+formatting here, because a narrative mention of a path that is not there is not
+a pointer and the gate below is right to treat one as a claim. It was a
+directory that is gitignored in `nomad-testnet`, was never committed to any
+repository, and existed only on the container that made it. A reader following
+that citation would have found nothing, and the container it lived on is
+ephemeral.
+
+This is the same failure the gate was built for, one level over: a citation
+that reads exactly like one that resolves. It was my own, made in this session,
+and it survived every check here because the check looked at names.
+
+The vectors are now in `production/reports/`, which is tracked and digested
+like the other reports, with `SHA256SUMS`. The gate checks cited evidence paths
+against **git** rather than the filesystem -- which is the whole point, since
+the directory that caused this was present on disk and in no repository.
+
+**Scoped deliberately.** It checks paths that claim to be evidence
+locations -- those with an `evidence` or `reports` segment -- rather than every
+backticked path,
+because this index also names branches, ratios and files that deliberately live
+elsewhere. A first version checked everything and produced eight false
+positives against one real one; a check people learn to ignore is worse than no
+check. Verified both ways: it finds the real dangling citation and nothing
+else, and reverting the citation makes it fail again.
+
+## The shaper architecture, measured with the rule that can see the finding
+
+- Artifacts: `production/reports/2026-09-02-shaper-distribution-probe/`
+- Source branch: `nomad-testnet` `agent/operator-shaper-process`
+
+The dedicated shaper process is the structural candidate for the timing
+blocker, and **its own gate measures median cadence only**. `grep -c KS` on
+that branch's campaign returns zero and its `decide()` comment says so. This
+project has already established that the median is too weak here: the
+in-process gate reported "no finding" on captures the published rule rejected
+at p = 1.5e-06. So the fix has never been evaluated against the statistic that
+shows the problem it exists to solve, and its PASS results are on the arm that
+already passes without it.
+
+That is checkable, and it was. The branch's boundary test collects packet
+timestamps and reduces them to a median; retaining them in the rendered form
+`scripts/capture.py` reads lets the preregistered rule judge the shaper
+architecture by the same standard as the in-process path. Eight series and
+seven comparisons are committed with the numbers, so they can be checked rather
+than taken.
+
+**Result: one of four treatment pairs rejected (p = 0.0015 against an alpha of
+0.01), none of three controls -- though one control came in at p = 0.025,
+within 2.5x of the threshold.** The branch's own median gate passed the same
+runs at signal 0.0021 against a 0.0200 tolerance.
+
+**This is not evidence that the shaper fixes the finding**, and it is not part
+of any claim. One experiment, on a shared development container this project's
+own documentation says makes these measurements noisy, seven comparisons at
+alpha 0.01, a control arm that is not clean, and a different harness, host and
+round count from the campaign it invites comparison with. The report says all
+of this in its own text.
+
+What can be said, and only this: the in-process campaign rejects 8 of 8
+baseline treatment pairs with 0 of 8 controls rejecting, and this probe of the
+separate-process architecture rejects 1 of 4 with a dirtier control.
+
+**What it produces is an acceptance test the integration did not have.** The
+shaper through the same campaign harness as the in-process path -- same rounds,
+same stressors, same rule, dedicated runner, control arm reported alongside.
+Before this, its own gate would have passed it on a statistic that cannot see
+the finding, and that is how a structural fix gets adopted without anyone
+learning whether it worked.
