@@ -3223,6 +3223,12 @@ changes.
 passed on Windows, which is the first time `LockFileEx` has executed anywhere.
 That was the reason the job was added; the store defect was found on the way.
 
+**Confirmed fixed on Windows**, run
+[33665504511](https://github.com/Jtensetti/nomad-testnet/actions/runs/33665504511):
+58 tests pass in `live/epoch` on `windows-latest`, none fail and none skip,
+including the twenty-two store tests that failed on the first run. The fix is
+verified on the platform rather than reasoned about.
+
 **Not claimed.** Nothing here measures NTFS durability. The Windows build's
 weaker guarantee is stated, not characterised.
 
@@ -3249,7 +3255,10 @@ evidence, not in a test.
 
 `* -text` in every repository, as a blanket rule rather than a list of
 extensions -- the claim is that a checkout is the commit, so an exception is a
-file where that stops being true. `supplychain` tests both halves: that the
+file where that stops being true. `TestPublishedVectorsMatch` now passes on a
+Windows runner (run
+[33665504511](https://github.com/Jtensetti/nomad-testnet/actions/runs/33665504511)),
+which is the same comparison that failed there before the rule existed. `supplychain` tests both halves: that the
 rule is present, and that no sealed artefact contains a carriage return.
 
 **Two controls, because both scans pass by finding nothing.** The
@@ -3591,7 +3600,10 @@ core limit inside it. And a file saying so is not a container having it:
 read-only, capability and pids checks.
 
 Three mutations verified: the limit removed, the limit moved to another
-resource, and a service bypassing the anchor.
+resource, and a service bypassing the anchor. The runtime half is green on the
+composed stack: `live-compose` in run
+[33665504511](https://github.com/Jtensetti/nomad-testnet/actions/runs/33665504511)
+read `0/0` back from every service's container.
 
 **It does not close PROD-27**, and the codex branch's own registry agrees --
 it carries the same two blockers word for word, so implementing this control
