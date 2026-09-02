@@ -72,6 +72,7 @@ surrounding claims can be trusted.
 - [Fuzzing: two targets that were never fuzzed, and one that did not exist](#fuzzing-two-targets-that-were-never-fuzzed-and-one-that-did-not-exist)
 - [F-30: this branch was behind main on the fix for its own release blocker](#f-30-this-branch-was-behind-main-on-the-fix-for-its-own-release-blocker)
 - [F-31: uninstalling left every object the reader had materialised](#f-31-uninstalling-left-every-object-the-reader-had-materialised)
+- [F-32: a second-party review existed on a branch nobody merged](#f-32-a-second-party-review-existed-on-a-branch-nobody-merged)
 
 <!-- end contents -->
 
@@ -3517,3 +3518,48 @@ recognises one.
 **Not claimed.** The uninstall script still has never been run against a real
 installed bundle on macOS. This is a consistency check between the sources and
 the script, and H-10 is unchanged.
+
+## F-32: a second-party review existed on a branch nobody merged
+
+`nomad-protocol` `production/reviews/2026-08-27-internal-security-review.md`,
+taken from `codex/production-readiness-20260824`.
+
+PROD-02 and PROD-27 both carry the same blocker: a review by a party that did
+not author the thing being reviewed. One exists. A different agent, on a
+separate branch, reviewed `THREAT_MODEL.md` against `CLAIM_TEST_MATRIX.md` and
+the telemetry instrumentation on 2026-08-27, concluded PROD-02 PASS and
+PROD-27 NOT YET PASS, and corrected stale future-state wording in the threat
+model while doing it. None of it reached this branch, and the blocker text on
+both criteria read as though no such review had happened.
+
+**It does not close PROD-02, for a concrete reason rather than a judgement
+about who counts as a second party.** It reviewed the documents as they stood
+on 2026-08-27 and both have changed substantially since -- the
+endpoint-fallback row, the publisher-side target and the work-required list
+among them, several of those changes made while writing this entry. A review
+of an older version does not cover the current one. And the author of a
+document must not be the one who decides its reviewer was adequate, which is
+the same structural problem the criterion exists to prevent.
+
+**It corroborates PROD-27.** The review reached the operator-host core-dump
+boundary independently: a whole-process core file contains the address space
+and so can contain private keys whatever the telemetry schema allows, and the
+runbook's `LimitCORE=0` is a control this project cannot verify on an
+operator's host. That is the same blocker already recorded, arrived at
+separately, which is worth more than agreement arranged in advance.
+
+**Threat-model corrections taken, and one taken further.** The publisher-side
+target now says what the existing evidence covers and what it does not; the
+work-required list names release-binary egress capture per platform,
+distributed airlock experiments and bounded descriptor distribution; and the
+Firefox/Chromium note matches DEC-013. The endpoint-fallback row went the
+other way: both versions were stale in opposite directions. It said
+whole-binary egress capture was "missing", and this branch has had it for the
+Linux release binary since F-22 -- a network namespace with no interface, with
+a probe that must reach a host listener from outside and fail inside. macOS is
+denied network by entitlement and has no such capture, because no macOS runner
+runs that test. The row now says both halves.
+
+**Not claimed.** This is a second-party review by another agent, not the
+independent assessment PROD-04 and PROD-29 require, and the review says so
+itself in its own first paragraph.
