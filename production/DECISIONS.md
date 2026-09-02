@@ -2,6 +2,78 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-024 (2026-09-02): the publisher applies its own deposit bound; confirmation-driven re-submission is rejected
+
+DEC-022 closed the deposit window as a loss term and named what it left open:
+work is still lost when the epoch is full, when a per-session quota is
+exhausted, or when a datagram is dropped. It proposed re-submission as a fresh
+publication, "decided by the publisher failing to observe its own object in a
+release". Building it starts with measuring the three terms, and the second one
+turned out not to need any feedback at all.
+
+**The quota term was the large one, and it is a publisher-side bug.** Every
+in-window cell a session emits is a deposit, cover included -- the entry
+operator cannot tell them apart, so it charges both against
+`MaxDepositsPerSession`. At the deployed defaults a publisher emits roughly
+1,800 cells into a 45-second window and the airlock accepts 8 of them. The
+drain took work from the queue on every one of those ticks, and `Queue.Next`
+unlinks as it hands out, so every work fragment after the eighth was destroyed:
+silently, by the publisher itself, for a bound it could have read.
+
+The bound is public policy in the signed epoch descriptor, the same bytes the
+operator reads it from. `deposit.Drain` now counts the in-window cells it has
+emitted in the current release epoch and stops taking work once the bound is
+spent, exactly as it stops outside the window. The fragment stays on the queue
+for the next epoch instead of being unlinked and refused. Nothing about the
+emission changes: one cell per tick either way, cover in place of the work it
+declined, sealed identically, no sequence repeated.
+
+Measured before and after on the deposit path: with a bound of 2 and six
+queued fragments, the drain emitted six work cells of which the airlock
+accepted two and destroyed four; it now emits exactly two.
+
+**Confirmation-driven re-submission is rejected.** The shape DEC-022 sketched
+is an active-tagging channel against the party the two-layer construction
+exists to blind.
+
+An entry operator that drops one session's cells in epoch E, and watches the
+release of E+1, sees any object that appears there and not in E. Under retry
+that object is the one whose publisher noticed it missing -- so the operator
+has linked an object to the set of sessions it chose to drop, and to a single
+session if it dropped one. The mix hides which column is whose; a retry
+decided by the outcome hands that back, because the operator controls the
+outcome.
+
+It does not help to spread the retry over epochs, or to randomize it: the
+operator can repeat the experiment. Nor does fixed cross-epoch redundancy,
+which was the obvious invariant-safe alternative -- with each object scheduled
+into epochs E and E+1, dropping a session in E leaves exactly the objects it
+dropped appearing in E+1 alone, which is the same inference through a
+different door.
+
+The property that fails in all of these is the same: an object's presence in a
+release must not depend on whether it was present in an earlier one. Any
+mechanism that makes it depend on that is readable by whoever controls
+presence.
+
+**So the three terms are answered separately, and two are not answered.**
+
+- Per-session quota: fixed publisher-side, above. No feedback, no new
+  observable.
+- Full epoch: not fixable. The publisher cannot learn the batch occupancy, and
+  DEC-022 already records why telling it would be worse than the loss.
+- Transit loss: not fixable without an acknowledgement, and an acknowledgement
+  is the signal.
+
+Republication remains available and remains a decision made outside the
+protocol: submitting the same object again produces the same fragment IDs,
+takes fresh sequences and fresh seals, and is indistinguishable from a first
+publication. What is refused is the automatic version, where the decision is a
+function of something an adversary can set.
+
+Planner, implementer and evaluator were again the same session. The rejection
+argument above is the part most in need of a second reader, as DEC-022's was.
+
 ## DEC-023 (2026-08-31): the networkless client and a loopback model service cannot be the same build
 
 Semantic search needs an embedding model. The architecture for attaching one is

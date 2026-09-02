@@ -102,6 +102,15 @@ them keyed by a client-chosen deposit ID.
   many authenticated sessions still competes for slots — which is an
   admission question (G-05..G-09), not one this boundary can answer.
 
+  Every in-window cell counts against the bound, cover included: the operator
+  cannot tell cover from work, so it charges both. A publisher therefore
+  deposits at most `MaxDepositsPerSession` fragments per epoch however long
+  the window is, and the drain stops taking work from the queue once the bound
+  is spent. The bound is public policy in the same signed bytes the operator
+  reads it from, so applying it needs no answer from anyone; emitting past it
+  destroys the work, because `Queue.Next` has already unlinked the fragment
+  and the airlock refuses the deposit in silence. See DEC-024.
+
 ## Sealing
 
 At the scheduled instant the airlock produces a batch of exactly `BatchSize`

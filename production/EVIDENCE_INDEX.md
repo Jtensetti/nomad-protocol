@@ -50,6 +50,7 @@ surrounding claims can be trusted.
 - [F-08: the client emits nothing, measured rather than argued](#f-08-the-client-emits-nothing-measured-rather-than-argued)
 - [F-09: a seventh instrument, found by a cleanup pass rather than by a failure](#f-09-a-seventh-instrument-found-by-a-cleanup-pass-rather-than-by-a-failure)
 - [F-10: two copies of the strict JSON walk, one weaker than the other](#f-10-two-copies-of-the-strict-json-walk-one-weaker-than-the-other)
+- [F-11: the publisher was destroying its own work at the per-session bound](#f-11-the-publisher-was-destroying-its-own-work-at-the-per-session-bound)
 
 <!-- end contents -->
 
@@ -2438,3 +2439,56 @@ closing delimiter was the last thing that could have objected. It no longer
 swallows it. The descriptor decode refused such documents on the schema
 afterwards, so this is defence in depth restored rather than a hole that was
 open.
+
+## F-11: the publisher was destroying its own work at the per-session bound
+
+`nomad-testnet` `live/deposit/quota_test.go`, `live/deposit/drain.go`.
+
+Every in-window cell a session emits is a deposit, cover included: the entry
+operator cannot tell them apart, so `Airlock.Deposit` charges both against
+`MaxDepositsPerSession`. At the `cmd/nomad-publish` defaults -- a one-minute
+period, a fifteen-second cutoff, and the topology's cell interval -- a
+publisher emits roughly 1,800 cells into one window and the airlock accepts 8.
+
+`deposit.Drain` took work from the queue on every one of those ticks.
+`Queue.Next` unlinks as it hands out, so each work fragment past the bound was
+removed from durable storage, refused by the airlock in silence, and gone.
+
+**Measured on the deposit path before the fix**, with a bound of 2 and six
+queued fragments over 40 ticks:
+
+| | before | after |
+|---|---|---|
+| work cells emitted | 6 | 2 |
+| accepted by the airlock | 2 | 2 |
+| fragments unlinked and refused | 4 | 0 |
+
+The drain now counts the in-window cells it has emitted in the current release
+epoch and declines work once the bound is spent, the same way it declines
+outside the window. The bound comes from the signed epoch descriptor; nothing
+is asked of the operator, so the gate is not a feedback channel.
+
+**Four mutations, each killed by a different assertion:**
+
+| mutation | caught by |
+|---|---|
+| the quota gate removed from `Emit` | all five quota tests |
+| the epoch counter never reset | the epoch-boundary test |
+| cover not charged against the bound | the drain-past-bound and end-to-end tests |
+| no slot ever spent | all five quota tests |
+
+A fifth guard was written and then removed: the same gate in the filling
+goroutine. Measured with and without, it changed nothing observable -- the
+one-slot buffer bounds what is off-disk either way -- so no test could
+distinguish it from its absence, and a guard nothing can distinguish from its
+absence is not a guard.
+
+**The invariant is measured, not argued.** A drain past its bound and a drain
+with no queue at all emit the same number of cells with the same sequence
+prefixes over the same ticks.
+
+**Not claimed.** This closes the quota term only. A full epoch and a dropped
+datagram are still undetectable losses, and DEC-024 records why the
+confirmation-driven re-submission DEC-022 sketched is rejected rather than
+built: it is an active-tagging channel for an entry operator that drops one
+session's cells and reads the next release.
