@@ -29,7 +29,15 @@ SIBLINGS = [
     "nomad-local-reconstruction", "nomad-rlnc", "nomad-selection-firewall",
     "nomad-semantic-basins", "Nomad-browser",
 ]
-DOCUMENTS = ["production/CLAIM_TEST_MATRIX.md", "production/EVIDENCE_INDEX.md"]
+DOCUMENTS = [
+    "production/CLAIM_TEST_MATRIX.md",
+    "production/EVIDENCE_INDEX.md",
+    # A document whose value is a mapping from a requirement to the tests
+    # that evidence it is exactly the kind that must not name tests which do
+    # not exist. This one was written and not covered here until the omission
+    # was noticed the same afternoon.
+    "docs/GOVERNANCE_TRANSITIONS.md",
+]
 # The index is a historical record and may name a test that was removed, but
 # only one listed here, with a reason. The matrix may not: a claim is evidenced
 # by a test that exists or it is not evidenced.

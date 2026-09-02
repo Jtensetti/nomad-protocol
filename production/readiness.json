@@ -88,7 +88,7 @@
     "https://github.com/Jtensetti/nomad-testnet/releases/tag/nomad-live-testnet-80b9f5c83e30"
    ],
    "blockers": [
-    "at least five independently administered operators with witnessed key custody and erasure",
+    "at least five independently administered operators with witnessed key custody and erasure (EB-2). The governance transitions the goal names are implemented and now mapped to their mechanisms and tests in docs/GOVERNANCE_TRANSITIONS.md, which also records what none of it establishes: every transition is exercised on one machine, by one administrator, with identities this project generated",
     "epoch rotation and compromise recovery",
     "independent cryptographic review"
    ]
