@@ -2,6 +2,37 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-027 (2026-09-02): the Linux client is built and verified, and is not offered as a release
+
+`linux-release.yml` had never run (F-29), so the question of how a Linux
+artifact reaches anyone had never come up. Fixing the trigger makes the build
+run; it does not answer the question, and the two should not be conflated.
+
+What is true now: the Linux client is built reproducibly for amd64 and arm64
+on every push that touches it, its networkless claim is verified on every push
+by `scripts/verify-networkless.sh`, and a tarball, SBOM and provenance are
+produced as run artifacts.
+
+What is not true: `docs/RELEASE_PROCESS.md` describes a macOS release
+throughout -- `NomadBrowser-X.dmg`, notarization, the two-approval manifest
+verified by `nomad-browser-verify` -- and never mentions Linux. There is no
+tag convention for a Linux release, no manifest, and nothing that would let a
+user verify a Linux artifact the way the macOS process lets them verify a DMG.
+
+The decision: the Linux client stays a build target and a test subject, and is
+not offered as a release, until the release process covers it. The alternative
+-- publishing the tarball because the workflow now produces one -- would ship
+an artifact with no approval path and no verification story to the platform
+whose whole argument is that its claims are checkable. A build artifact
+attached to a CI run is not a release, and nothing here should let the two be
+confused.
+
+What that costs: PROD-26 and PROD-30 remain macOS-shaped, and the Linux
+client's strongest property -- the network namespace with no interface to
+refuse -- reaches nobody outside this repository. Extending the release
+process to Linux is the work that changes it, and it is a decision about what
+this project offers rather than an engineering gap.
+
 ## DEC-026 (2026-09-02): Windows keeps its build target and stays unsupported for operators
 
 The first Windows CI run showed that every mutation of the epoch chain store

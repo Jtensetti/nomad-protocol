@@ -3,6 +3,65 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02h: three gates that had never run
+
+The Windows job's payoff was not the Windows job. It was the question, which
+turns out to have several more answers here: *has this ever executed?*
+
+**The Go suite had never run on macOS.** The only thing that ran on a macOS
+runner was the DMG build; the client, the renderer decisions and the update
+path were tested on Linux and shipped to macOS. It runs there now and passes.
+The capability declaration had to change first: it was one flag meaning "every
+gate can run here", and the macOS runner has python3 and no strace, so it
+could declare neither -- and the parser-differential gate PROD-16 rests on
+would have become a silent skip on exactly the platform that ships. Named
+capabilities, with ten cases testing the declaration itself, because a typo in
+a workflow would otherwise disarm it with nothing to notice.
+
+**F-28: the timing campaign had never run, and could not be made to.** Both
+its triggers fire only from the default branch -- `schedule` is read from
+there, and the dispatch API answers 404 for a workflow that is not on it --
+and it has only ever existed on a feature branch. Its tests skip unless a
+variable is set, so the wire two-world campaign, the hostile-peer flood, the
+capacity measurement, the cross-process publication capture and the airlock
+sealing measurements had no automated runner at all.
+
+Its first run reported the finding this project already records -- the
+inter-arrival distribution distinguishes idle from active, KS 1.0000 against a
+0.9900 tolerance, reproduced across both attempts -- which is the first time
+that verdict has come from an automated run. It also exposed a defect in the
+gate: `cpu-starvation` stops the node, which is the designed behaviour, so
+that arm produced too few cells to score, and the rule exited before comparing
+`disk-pressure` at all. One unmeasurable arm hid every verdict after it.
+Counted and carried on now; still fails, and now says what it found.
+
+Worth recording alongside the finding: the control spread on that statistic is
+0.73-0.82 of its range. A control that noisy limits what the KS arm can
+resolve. Calibrating it is open work, and saying so is not the same as
+explaining the finding away.
+
+**F-29: the Linux release build had never produced anything.** Its tag pattern
+was `v*` and this project tags `nomad-browser-macos-v<version>`, and its
+dispatch was 404 for the same default-branch reason. So no Linux tarball, SBOM
+or provenance had ever existed. DEC-027 records what that turned up rather
+than papering over it: there is no release process for Linux at all, so the
+client stays a build target and is not published because a workflow now
+produces a tarball.
+
+**The shape.** Fourteen findings now, F-14 through F-29. The first eleven came
+from "if this check were deleted, what would fail?" The last three came from
+"has this ever run?", and the answer was no three times in a row -- once for a
+platform, twice for a workflow that no trigger could reach.
+
+Commits: Nomad-browser 5404939, ee0aeef; nomad-testnet bc6419b, 71f426d;
+nomad-protocol d2d4487.
+
+Evidence: F-28, F-29, DEC-027.
+
+Next: workstream B governance protocol (EB-2 bounded), workstream F
+browser/materializer boundary, workstream H release engineering -- where the
+Linux release path is now a named gap rather than an unnoticed one.
+
 ## Checkpoint 2026-09-02g: the first Windows run
 
 PROD-16 recorded that Windows was "built but not tested: no Windows runner

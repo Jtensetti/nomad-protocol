@@ -606,7 +606,7 @@
     "rollback plan in Nomad-browser docs/RELEASE_PROCESS.md: roll-forward only, because an updater that can move a user backwards is one an attacker can move backwards. It also records what cannot be solved -- a user already on a bad release cannot be reached, since the browser fetches nothing, and a compromised approver key has no revocation channel, so a build trusting exactly two keys cannot survive losing one"
    ],
    "blockers": [
-    "no monitored multi-operator beta: nothing has been given to users at all, which is the substance of this criterion and needs people (EB-4)",
+    "no monitored multi-operator beta: nothing has been given to users at all, which is the substance of this criterion and needs people (EB-4). The Linux client is further from release than the macOS one: its release workflow had never run at all (F-29), and the release process document describes a macOS release throughout and does not mention Linux -- so there is no approval path or verification story for a Linux artifact. DEC-027 records that it stays a build target rather than being published because a workflow now produces a tarball",
     "no release red team. An internal adversarial exercise is not one, and a subagent review is QA rather than independence",
     "no second approver and no release keys: the mechanism is ready and exercised only against test keys, which the tool says out loud every time it is used that way (EB-6, EB-7)",
     "two keys held by one person satisfy every check the code makes. Key custody is what makes this a two-person process and it is an operational property, not a cryptographic one"

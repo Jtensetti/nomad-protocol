@@ -67,6 +67,8 @@ surrounding claims can be trusted.
 - [F-25: the module-graph controls did not run the scan, and could skip](#f-25-the-module-graph-controls-did-not-run-the-scan-and-could-skip)
 - [F-26: the epoch store had never worked on Windows, and nine copies of one flush hid it](#f-26-the-epoch-store-had-never-worked-on-windows-and-nine-copies-of-one-flush-hid-it)
 - [F-27: a Windows checkout was not the commit](#f-27-a-windows-checkout-was-not-the-commit)
+- [F-28: the timing campaign had never run, and could not be made to](#f-28-the-timing-campaign-had-never-run-and-could-not-be-made-to)
+- [F-29: the Linux release build had never produced anything](#f-29-the-linux-release-build-had-never-produced-anything)
 
 <!-- end contents -->
 
@@ -3252,3 +3254,81 @@ judges to be text, using the presence of a NUL byte -- must also be an
 exemption rather than a hole, so a file with a NUL byte must be reported as
 skipped rather than as clean. The first version of the scan had no exemption
 and failed on Python bytecode that git ignores and never committed.
+
+## F-28: the timing campaign had never run, and could not be made to
+
+`nomad-testnet` `bc6419b`, `71f426d`. First run:
+[33659578753](https://github.com/Jtensetti/nomad-testnet/actions/runs/33659578753).
+
+`.github/workflows/timing-campaign.yml` is cited in this index as the gate for
+the wall-clock measurements. It had executed zero times since it was written --
+not rarely, zero, by any means.
+
+Both of its triggers fire only from the repository's default branch: GitHub
+reads `schedule` from there, and the dispatch API answers 404 for a workflow
+that is not on it. This file has only ever existed on a feature branch. The
+tests it runs skip unless `NOMAD_TIMING_CAMPAIGN=1`, so the wire two-world
+campaign, the hostile-peer flood, the capacity measurement, the cross-process
+publication capture and the airlock sealing measurements had no automated
+runner at all: they ran when somebody set a variable by hand, and the record
+of that is whatever was written down afterwards.
+
+A `push` trigger, filtered to the packages these measurements are about, is
+what fires from the branch the code is on. The schedule stays for when this
+reaches the default branch, and now says that is what it is waiting for.
+
+**What the first run reported.** Two things, and they are different.
+
+`TestWireTimingIsIndependentOfPrivateActivityUnderStress` failed on the
+finding this index already records: the inter-arrival distribution
+distinguishes an idle node from an active one. On a dedicated runner the
+baseline arm gives an idle-vs-active KS of 1.0000 against a 0.9900 tolerance,
+and the median cadence difference (0.0186) stays inside its 0.0200 tolerance --
+so it is the distribution and not the median. The finding reproduced across
+both attempts, which is what the test requires before reporting one. This is
+the first time that verdict has come from an automated run rather than a
+hand-set variable.
+
+The control spread on the same statistic is 0.73-0.82, which is most of the
+range the statistic has. That is recorded here rather than argued away: a
+control that noisy limits what the KS arm can resolve, and calibrating it is
+open work.
+
+**A second finding, in the gate rather than the code.** The `cpu-starvation`
+arm produced 1 and 2 cells against a 20-cell minimum, because the stressor
+stops the node -- which is the designed behaviour under the core invariant,
+losing work rather than emitting a private-dependent signal. The rule
+correctly refused to score it either way, and then exited, so the
+`disk-pressure` comparisons were never made. One unmeasurable arm hid every
+verdict after it. Inconclusive arms are now counted and the loop continues;
+the run still fails, and it fails reporting how many arms could not be
+evaluated and how many were rejected, which are different facts.
+
+**Not claimed.** Nothing here is softened. Inconclusive fails, a finding
+fails, and the finding is still a release blocker.
+
+## F-29: the Linux release build had never produced anything
+
+`Nomad-browser` `ee0aeef`.
+
+`linux-release.yml` builds the Linux client reproducibly for amd64 and arm64,
+assembles the tarball, and generates the SBOM and provenance. It had run zero
+times, for two reasons that both had to be wrong at once: its tag pattern was
+`v*` and this project tags releases `nomad-browser-macos-v<version>`, so no
+matching tag has ever existed; and `workflow_dispatch` answers 404 for a
+workflow that is not on the default branch.
+
+So no Linux tarball, SBOM or provenance had ever been produced by anything.
+The networkless check is the part that was already covered -- `ci.yml` runs
+`scripts/verify-networkless.sh` on every push -- which is why F-22's claim
+about the client writing nothing stands unaffected.
+
+A push trigger filtered to what goes into the tarball, plus the corrected tag
+pattern. The workflow publishes nothing; it uploads to the run.
+
+**Open, and not guessed at.** `docs/RELEASE_PROCESS.md` describes a macOS
+release throughout and never mentions the Linux client, so there is still no
+documented path by which a Linux artifact reaches anyone. Whether the Linux
+client ships, and through what channel, is a decision about the product rather
+than a broken trigger, and it is recorded here rather than settled by whoever
+happened to be editing the workflow.
