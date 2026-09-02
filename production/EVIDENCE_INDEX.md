@@ -60,6 +60,7 @@ surrounding claims can be trusted.
 - [F-18: a signed topology the two implementations disagreed about](#f-18-a-signed-topology-the-two-implementations-disagreed-about)
 - [F-19: the fabric's production entry point and its cover cell had no tests](#f-19-the-fabrics-production-entry-point-and-its-cover-cell-had-no-tests)
 - [F-20: the release verifier had no test, and the empty-trust-set case is the live one](#f-20-the-release-verifier-had-no-test-and-the-empty-trust-set-case-is-the-live-one)
+- [F-21: the claim matrix cited tests that do not exist](#f-21-the-claim-matrix-cited-tests-that-do-not-exist)
 
 <!-- end contents -->
 
@@ -1524,8 +1525,8 @@ closed-socket test closed the node's socket and called `Send`, expecting to
 exercise the fatal branch. It passed, and mutating that branch away left it
 green: `SetWriteDeadline` fails on a closed socket before `WriteToUDP` is ever
 reached, so the branch under test never ran. The classification now lives in
-one function, `sendFailureIsFatal`, that every failure site routes through,
-and `TestOnlyAClosedSocketEndsTheSchedule` tables the real error values
+one function, `sendFailureIsTransient`, that every failure site routes through,
+and `TestOnlyKnownTransientConditionsCostACell` tables the real error values
 against it. Mutation testing is what found this; reading the test did not.
 
 **Boundary.** Loopback, single host, sub-second windows. It establishes size,
@@ -2982,3 +2983,51 @@ and the next real release would then be refused as a rollback.
 **Not claimed.** This exercises the mechanism against test keys. It
 establishes nothing about who approved any real release, which is EB-7 and
 EB-6, and the binary says so itself when `-release-key` is used.
+
+## F-21: the claim matrix cited tests that do not exist
+
+`nomad-protocol` `scripts/check-cited-tests.py`.
+
+A matrix row is a claim plus the test that evidences it. A row naming a test
+that does not exist evidences nothing and reads exactly like a row that does --
+the failure the matrix was written to prevent, occurring inside the matrix.
+
+Three citations had gone stale, all through renames nobody propagated:
+
+| document | cited | what it is now |
+|---|---|---|
+| CLAIM_TEST_MATRIX | `TestARelayedCellCarriesItsStreamIDOnwardInTheClear` | `TestARelayedCellDoesNotCarryItsStreamIDOnward` |
+| CLAIM_TEST_MATRIX | `TestASendFailureCostsOneCellAndNotTheNode` | `TestATransientSendFailureCostsOneCellAndNotTheNode` |
+| EVIDENCE_INDEX | `TestOnlyAClosedSocketEndsTheSchedule` | `TestOnlyKnownTransientConditionsCostACell` |
+
+**The first was worse than a rename.** That row read *"not claimed, and
+measured false"*: a relayed cell carried its ingress stream ID unchanged in the
+cleartext hop header, so ingress and egress linked by reading sixteen bytes.
+Version 2 encrypts the whole cell under the pairwise link key, the test was
+renamed to assert the opposite -- and the matrix went on recording the
+property as broken. The registry that decides what this system claims was
+understating it, in the direction of a privacy property being worse than it is.
+
+The row now records what the test establishes and what it does not: the
+identifier is absent from everything a running node emits, measured at a real
+socket, with `TestTheMarkedStreamIsFoundWhenItIsPresent` as the positive
+control -- the same search over version 1's cleartext layout must find the
+mark, so finding nothing is not looking nowhere. Unlinkability against timing,
+volume or ordering correlation is a different claim and is not made.
+
+**The gate.** `scripts/check-cited-tests.py` requires every backticked
+`Test*`/`Fuzz*` name in the matrix and the evidence index to exist in one of
+the eight code repositories. The index may name a test that was removed, since
+it is a historical record, but only one listed in `production/removed-tests.txt`
+with a reason; the matrix may not, because a claim is evidenced by a test that
+exists or it is not evidenced. The docs workflow clones the eight repositories
+and runs it with `NOMAD_REQUIRE_SIBLING_REPOS=1`, so a repository that fails to
+clone fails the run rather than being reported as nothing to check.
+
+Both controls verified: a citation pointed at a nonexistent name fails, and a
+name on the removed list still fails when it appears in the matrix.
+
+**The gate caught this entry.** The table above names the three retired
+identifiers, so writing it made the check fail until each was listed in
+`removed-tests.txt` with its reason -- which is the mechanism doing what it is
+for, on its first use, against its own author.

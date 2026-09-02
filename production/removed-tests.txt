@@ -1,0 +1,24 @@
+# Tests the evidence index names that no longer exist.
+#
+# The index is a historical record, so an entry describing a test that was
+# removed has to name it. Every such name is listed here with why, so that a
+# citation going stale by accident still fails scripts/check-cited-tests.py.
+# The claim matrix is not allowed entries here: a claim is only evidenced by a
+# test that exists.
+
+TestWireRoundTripIsExactly1200BytesPerCell
+  F-09. Removed as part of the finding: its headline assertion compared a
+  compile-time constant to itself, and three tests that measure the wire tail
+  replaced it.
+
+TestARelayedCellCarriesItsStreamIDOnwardInTheClear
+  F-21. Renamed to TestARelayedCellDoesNotCarryItsStreamIDOnward when version 2
+  encrypted the whole cell. Named in F-21 because the matrix row citing it
+  recorded the property as measured false long after it was fixed.
+
+TestASendFailureCostsOneCellAndNotTheNode
+  F-21. Renamed to TestATransientSendFailureCostsOneCellAndNotTheNode.
+
+TestOnlyAClosedSocketEndsTheSchedule
+  F-21. Renamed to TestOnlyKnownTransientConditionsCostACell when the
+  classification helper changed polarity.
