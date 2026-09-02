@@ -48,6 +48,8 @@ surrounding claims can be trusted.
 - [The fair-queue flake: the A/B that cleared it had removed the cause](#the-fair-queue-flake-the-ab-that-cleared-it-had-removed-the-cause)
 - [A mutation campaign over the verification boundaries, and the two it found](#a-mutation-campaign-over-the-verification-boundaries-and-the-two-it-found)
 - [F-08: the client emits nothing, measured rather than argued](#f-08-the-client-emits-nothing-measured-rather-than-argued)
+- [F-09: a seventh instrument, found by a cleanup pass rather than by a failure](#f-09-a-seventh-instrument-found-by-a-cleanup-pass-rather-than-by-a-failure)
+- [F-10: two copies of the strict JSON walk, one weaker than the other](#f-10-two-copies-of-the-strict-json-walk-one-weaker-than-the-other)
 
 <!-- end contents -->
 
@@ -2373,3 +2375,66 @@ the namespace gate's claim; this one is that it does not even try.
 stderr as packet lines. It was not a false green there only because it guards
 `lines == 0` and so failed loudly; on CI it had always run as real root through
 the sudo mechanism, where the privilege drop does not bite.
+
+## F-09: a seventh instrument, found by a cleanup pass rather than by a failure
+
+`nomad-anytrust-mix-sim` `f381273`.
+
+`TestWireRoundTripIsExactly1200BytesPerCell` asserted
+`len(wire[i]) == WireCellSize`. A `WireCell` is `[WireCellSize]byte`, so that
+length is a compile-time constant compared against itself: the test's headline
+claim could not fail. What remained round-tripped through `ParseWire` and
+`Decrypt`, both of which read only the first `cipherSize` bytes, so no
+assertion in the test reached the 48-byte padding tail that is the cover
+traffic.
+
+**Verified rather than argued.** Deleting the padding write from
+`MarshalWireWithPadding` entirely -- so every cell shipped a tail of zeros --
+left the old test green.
+
+Three tests replace it, and each was checked against the mutation it is
+supposed to catch:
+
+| mutation | old test | new tests |
+|---|---|---|
+| padding never written, tail left zero | passes | fails: tail is not the supplied padding, and the zero-tail check |
+| ciphertext boundary off by one | passes | fails: tail does not match the padding offsets |
+| short padding source tolerated instead of refused | passes | fails: a source one byte short is accepted |
+
+The padding is also shown not to reach the decrypted batch: flipping every
+padding byte in every cell leaves `Decrypt` returning the same plaintext, so
+the tail carries no batch state.
+
+**Not claimed.** This covers the wire form's padding discipline inside the mix
+package. It says nothing about whether the fabric's emission of those cells is
+independent of private state, which is PROD-01's claim and is evidenced
+elsewhere in this file.
+
+## F-10: two copies of the strict JSON walk, one weaker than the other
+
+`nomad-local-reconstruction` `37a39c9`.
+
+The site descriptor and the transparency checkpoint each carried their own
+duplicate-key scan. The checkpoint's had no bound on members per object or
+elements per array and did not call `UseNumber`. Both documents are hashed and
+signed as bytes, so a document two conforming parsers read differently is a
+differential in the SiteID or the checkpoint digest -- the property the walk
+exists to protect.
+
+**Bounded honestly: this was latent, not exploitable.** `maxCheckpointBytes` is
+4096, and 4096 bytes cannot hold 4096 object members, so the missing element
+bound could not be reached through the checkpoint decoder. The finding is that
+one copy of a security check had been weakened and nothing said so.
+
+One walk now, in `internal/strictjson`, with the stronger bounds and depth as a
+parameter (16 for the descriptor, 8 for the checkpoint). Its own tests check
+each bound at the bound rather than far past it, since an off-by-one refuses a
+document nested far past the limit as readily as the right comparison does.
+
+**Writing those tests found a fail-open in the promoted copy.** It accepted
+truncated input such as `{"a":[1,2`: `json.Decoder.More` reports false once the
+stream breaks, so both loops exit quietly and the swallowed `io.EOF` on the
+closing delimiter was the last thing that could have objected. It no longer
+swallows it. The descriptor decode refused such documents on the schema
+afterwards, so this is defence in depth restored rather than a hole that was
+open.

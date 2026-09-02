@@ -3,6 +3,74 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02: a cleanup pass, and what it found
+
+Not a feature checkpoint. The instruction was to remove what a human reviewer
+would stop at, and the interesting part is that two of the finds were defects
+rather than untidiness.
+
+**Two copies of the strict JSON walk had drifted.** The site descriptor and the
+transparency checkpoint each carried their own duplicate-key scan. The
+checkpoint's had no bound on members per object or elements per array and did
+not call UseNumber. Both documents are hashed and signed as bytes, so a
+document two parsers read differently is a differential in the SiteID or the
+checkpoint digest -- the exact property the walk exists to protect. The
+checkpoint's own 4096-byte cap meant the missing element bound was not
+reachable, so this was latent, not exploitable; it is still two chances to
+weaken one copy and not notice. One walk now, in
+`nomad-local-reconstruction/internal/strictjson`, with the stronger bounds and
+depth as a parameter.
+
+**Writing its tests found a fail-open in the promoted copy.** It accepted
+truncated input: `json.Decoder.More` reports false once the stream breaks, so
+both loops exit quietly, and the swallowed `io.EOF` on the closing delimiter
+was the last thing that could have objected. The descriptor decode caught such
+documents on the schema afterwards, so this was depth rather than an open hole
+-- but the walk itself was not doing what its name says.
+
+**A test whose headline claim could not fail.** `mix`'s
+TestWireRoundTripIsExactly1200BytesPerCell asserted `len(wire[i]) ==
+WireCellSize` on a `[WireCellSize]byte`: a compile-time constant compared to
+itself. The rest of it round-tripped through ParseWire and Decrypt, which read
+only the first `cipherSize` bytes, so nothing in the test looked at the padding
+at all. Deleting the padding write from `MarshalWireWithPadding` entirely left
+it green -- verified, not assumed. Three tests replace it, each killing a
+distinct mutation: padding never written, ciphertext offset by one, short read
+tolerated. This is the seventh instrument found reporting on something it was
+not measuring, and the same shape as the other six.
+
+**The demo publisher key was a literal in four places** -- three Go packages
+and Swift -- with nothing checking them against each other. Rotating the Swift
+anchor would have left every Go test verifying against the retired key and
+still green. `internal/demotrust` holds it once and its test reads
+`Models.swift`.
+
+The rest is untidiness with no defect behind it, and is listed here so the
+claim stays bounded: dead exported API with no caller (`HealthJSON`,
+`EncodePublication`/`DecodePublication`, `Manager.Fingerprints`, and four in
+the model package), three hand-written insertion sorts and three hand-written
+byte-order encodings where the standard library has both, compiled Python
+bytecode tracked in two repositories, and `nomad-testnet`'s repin script
+copied into `Nomad-browser` so its lock is no longer hand-maintained.
+
+**A judgement recorded because it went the other way.** Three near-identical
+ten-line `strictJSON` helpers in `nomad-testnet`, and the parallel durable
+sequence files in `live/hop` and `live/uplink`, were left alone. The first is
+ordinary Go; the second differs in width and semantics for reasons its own
+comments give. Unifying either would have been refactoring for its own sake,
+which is the same failure as the slop it would be cleaning up.
+
+Also measured before acting: comment density across the repositories is 0.42
+to 0.70 in the pre-existing code and 0.30 to 0.63 in what this session added,
+so there was nothing to trim there and the instinct to trim it was wrong.
+
+Commits: nomad-local-reconstruction 37a39c9, 8b2cb55; nomad-anytrust-mix-sim
+b086377, f381273; nomad-semantic-basins 1c08c6d; nomad-rlnc 2aaafe6;
+nomad-testnet 8a5f7a5, 0c1f82e; Nomad-browser 13d2363.
+
+Next priority: unchanged -- publication confirmation and re-submission for
+undetectable deposit loss, then the browser/materializer boundary.
+
 ## Checkpoint 2026-08-26d: capacity, and a flake that was telling the truth
 
 **PROD-28's capacity blocker is closed as far as code closes it.** The blocker
