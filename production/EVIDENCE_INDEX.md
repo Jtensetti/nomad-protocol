@@ -55,6 +55,7 @@ surrounding claims can be trusted.
 - [F-13: cache discovery on a public clock, measured across three worlds](#f-13-cache-discovery-on-a-public-clock-measured-across-three-worlds)
 - [F-14: capability gates and the equivocation proof's own refusals](#f-14-capability-gates-and-the-equivocation-proofs-own-refusals)
 - [F-15: a test covering the honest half of a check, and a lock that could name the wrong repository](#f-15-a-test-covering-the-honest-half-of-a-check-and-a-lock-that-could-name-the-wrong-repository)
+- [F-16: the operator's secret-file checks had no tests at all](#f-16-the-operators-secret-file-checks-had-no-tests-at-all)
 
 <!-- end contents -->
 
@@ -2715,3 +2716,53 @@ The repin scripts now refuse a commit equal to the repository's own HEAD,
 which is the realistic form of the mistake. **Not claimed:** this does not
 establish that a recorded commit exists upstream. That check needs both
 repositories present and does not exist.
+
+## F-16: the operator's secret-file checks had no tests at all
+
+`nomad-testnet` `live/topology/secretfile_test.go`,
+`live/committee/share_file_test.go`.
+
+The permission and file-type checks on the operator's secrets, the authority's
+private key and the threshold share are the whole of "an operator's secrets
+are not readable by anyone else" on the operator side. A coverage run across
+every package except `live/node` put five of the functions carrying them at
+**zero**: `topology.LoadSecrets`, `topology.LoadPrivateKeys`,
+`topology.LoadAuthorityKey`, `topology.LoadAuthorityPrivateKey` and
+`committee.LoadShare`. `live/committee` had no test file at all.
+
+Deleting any of those checks broke nothing.
+
+**Nine mutations, each killed by the assertion meant for it:**
+
+| mutation | caught by |
+|---|---|
+| operator secret permission check removed | the permission test |
+| that check written as `== 0600`, refusing a 0400 mounted secret | the same test's 0400 case |
+| operator regular-file check removed | the regular-file test |
+| authority private key permission check removed | the authority test |
+| the canonical-key check removed | the non-canonical test |
+| strict base64 relaxed for the authority key | the padding test |
+| share permission check removed | the share permission test |
+| that check written as `== 0600` | the same test's 0400 case |
+| share regular-file and size checks removed | the share regular-file test |
+
+**The mask matters as much as the check.** 0400 is how a mounted secret
+arrives, so a check written as an equality would refuse the one deployment
+shape it is meant to accommodate. Both masks are now asserted from both sides:
+0600 and 0400 load, and 0640, 0604 and 0602 do not.
+
+**The asymmetry between the two authority keys is asserted deliberately.**
+`LoadAuthorityKey` has no permission check and must not gain one -- a public
+key is public, and refusing a readable one only teaches operators to widen the
+mode on the private one. `LoadAuthorityPrivateKey` has one and must keep it.
+
+**The first regular-file test passed for the wrong reason.** It asserted only
+that a directory was refused, and a directory fails the read anyway, so
+removing the check under test left it green. It now requires the refusal to
+name the rule, and drives a FIFO as well -- the case the check exists for,
+since a FIFO is not a directory and a read of one returns whatever a writer
+supplies. Fourth instance of this in the session, after F-09, F-12 and F-14.
+
+**Not claimed.** This is the file boundary. It says nothing about what the
+loaded material is worth -- that is `VerifySecrets` and `VerifyShare`, which
+are exercised elsewhere -- and nothing about secrets in a running process.
