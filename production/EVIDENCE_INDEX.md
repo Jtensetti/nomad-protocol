@@ -69,6 +69,7 @@ surrounding claims can be trusted.
 - [F-27: a Windows checkout was not the commit](#f-27-a-windows-checkout-was-not-the-commit)
 - [F-28: the timing campaign had never run, and could not be made to](#f-28-the-timing-campaign-had-never-run-and-could-not-be-made-to)
 - [F-29: the Linux release build had never produced anything](#f-29-the-linux-release-build-had-never-produced-anything)
+- [Fuzzing: two targets that were never fuzzed, and one that did not exist](#fuzzing-two-targets-that-were-never-fuzzed-and-one-that-did-not-exist)
 
 <!-- end contents -->
 
@@ -3332,3 +3333,58 @@ documented path by which a Linux artifact reaches anyone. Whether the Linux
 client ships, and through what channel, is a decision about the product rather
 than a broken trigger, and it is recorded here rather than settled by whoever
 happened to be editing the workflow.
+
+## Fuzzing: two targets that were never fuzzed, and one that did not exist
+
+- Commits: `Jtensetti/nomad-rlnc@9af2a9a`, `Jtensetti/nomad-testnet@1ece05b`
+- Branch: `claude/nomad-production-ready-dxv4ql`
+- Artifacts: `.github/workflows/fuzz.yml` in both repositories,
+  `live/topology/fuzz_test.go`, `rlnc/fuzz_test.go`
+
+The project had two fuzz targets, both in `nomad-rlnc`, and no workflow
+anywhere ran `-fuzz`. `go test` replays a target's committed seed corpus, so
+they were regression tests: valuable, and not fuzzing. A target that stopped
+exploring -- an input filter that rejects everything early, a constructor that
+fails on all but the seeds -- would replay those seeds perfectly and be
+indistinguishable from one that works.
+
+**What now runs.** Both rlnc targets for four minutes each, and a new target on
+the signed topology for five, in workflows separate from the per-push job
+because fuzzing is not deterministic and a new crasher should mean the fuzzer
+found something rather than that an unrelated push is red. Any crasher Go
+writes is uploaded so it can be committed as a seed.
+
+Each job carries a control, for the same reason every scan here does: it must
+report at least one new interesting input, and fuzzer output with no coverage
+line at all fails rather than being read as zero. Both failure paths were
+checked against real fuzzer output.
+
+**The new target, and what it establishes.** The signed topology decides who
+the peers are and arrives from the network. The property is not
+byte-canonicality of the input -- the signature covers the canonical form
+rather than the transmitted bytes, deliberately, so whitespace and key order do
+not break it. It is that canonicalisation is deterministic and a fixed point:
+the same bytes twice, output that parses as a document, and canonicalising that
+giving those bytes again. A signer signs `canonicalDocument(d)`; a verifier
+checks `canonicalDocument(d')` for the `d'` it parsed, and an unstable step
+means the two disagree about what was signed while believing they agree.
+
+Checked by mutation: a key comparator made to depend on how much had been
+written fails on the seed corpus in under a second, printing both orderings.
+
+**What it cannot see, established the same way rather than assumed.** Changing
+the canonical string escaper to emit `\u0009` where Go emits `\t` survived
+ninety seconds and two million executions. The difference is internally
+consistent, so the canonical form round-trips through it perfectly and no
+self-consistency property can detect it. An escaper that disagrees with another
+implementation is caught by the conformance corpus and its Python reader. This
+target guards stability; that one guards agreement; neither substitutes for the
+other, and the test file says so where a reader will find it.
+
+**Not claimed.** Five minutes of fuzzing per push is a smoke test, not a
+campaign. No fuzzing has run long enough to speak to anything but shallow
+input handling, and there are no fuzz targets on the hop cell, the object
+manifest or the uplink frame -- the corpus and its second reader are what
+cover those today.
+
+- Supports (PARTIAL): contributes to PROD-16 and PROD-01.
