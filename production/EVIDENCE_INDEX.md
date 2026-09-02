@@ -2539,6 +2539,9 @@ key settles it before that.
 | salt fixed, so one derivation covers every queue | the two-queues test |
 | truncated salt accepted | the salt test -- **only after it was tightened** |
 | empty passphrase accepted | the empty-passphrase test |
+| key source switched under an existing queue | the source-switch test, both directions |
+| salt record renamed over rather than linked into place | the never-overwritten and concurrent-open tests |
+| derivation parameters changed under an existing queue | the parameter-mismatch test |
 
 The third is worth recording. The first version of that test asserted only
 that `Open` returned an error, and the mutation survived it: a truncated salt
@@ -2552,6 +2555,39 @@ nothing about the check being mutated.
 (`--passphrase-fd`), never in argv, which `ps` shows to every user, and never
 in the environment, which is readable by the same user through `/proc` and
 inherited by every child.
+
+**Three more ways to end up holding a queue you cannot open, all refused at
+Open rather than at Next.** Each would otherwise have produced the same
+failure as a wrong passphrase -- a publisher indistinguishable from an idle
+one, emitting cover while its queue filled:
+
+- Switching `--key-source` on an existing queue. `ErrKeySourceMismatch`, named
+  in both directions.
+- A replaced salt. The record is written to a temporary file and then linked
+  into place, which is atomic and fails rather than replacing an existing
+  name; a salt that changes leaves every fragment already queued unopenable.
+  The loser of a race re-reads instead of failing, so concurrent opens agree.
+- A build whose Argon2id parameters differ from the ones the queue was created
+  under. The salt record carries them, so this is reported as the parameter
+  mismatch it is, naming both sets -- not as a wrong passphrase, which would
+  send an operator to retype something that was never wrong.
+
+**Two of these were found by a test rather than by review, and both are the
+same lesson as F-09.** The first version of the never-overwritten test called
+the create helper directly, so replacing the exclusive create with a
+rename-over left it green: it was testing the helper, not the behaviour. A
+concurrency test -- eight goroutines opening one new queue, asserting every
+one derives the same key -- kills that mutation, and on its first run it
+failed against the real code: `O_EXCL` gives no-clobber but not atomicity, so
+a concurrent opener reading between the create and the write saw an empty file
+and refused it as malformed. The record is now written to a temporary file and
+linked into place, which is both.
+
+The three publisher-local formats are registered in
+`conformance/COMPATIBILITY.md`, so `TestCompatibilityMatrixCoversEveryWireVersion`
+holds them to the same rule as everything else the code versions. That gate
+caught them: the first version of this work shipped two unregistered domain
+constants and the matrix test failed the suite.
 
 **Not claimed.** This is not OS-backed key storage. H-09 asks for the Keychain
 or equivalent, and a passphrase is a different control: it protects the disk
