@@ -70,6 +70,8 @@ surrounding claims can be trusted.
 - [F-28: the timing campaign had never run, and could not be made to](#f-28-the-timing-campaign-had-never-run-and-could-not-be-made-to)
 - [F-29: the Linux release build had never produced anything](#f-29-the-linux-release-build-had-never-produced-anything)
 - [Fuzzing: two targets that were never fuzzed, and one that did not exist](#fuzzing-two-targets-that-were-never-fuzzed-and-one-that-did-not-exist)
+- [F-30: this branch was behind main on the fix for its own release blocker](#f-30-this-branch-was-behind-main-on-the-fix-for-its-own-release-blocker)
+- [F-31: uninstalling left every object the reader had materialised](#f-31-uninstalling-left-every-object-the-reader-had-materialised)
 
 <!-- end contents -->
 
@@ -3409,3 +3411,109 @@ manifest or the uplink frame -- the corpus and its second reader are what
 cover those today.
 
 - Supports (PARTIAL): contributes to PROD-16 and PROD-01.
+
+## F-30: this branch was behind main on the fix for its own release blocker
+
+`nomad-constant-rate-fabric` `70a5438`, `nomad-testnet` `ed87f7d`, `d41b0db`.
+
+This index records a release blocker -- private activity perturbs emission
+timing -- and names the mechanism the root-cause investigation found:
+`QueueSource.NextCell` held a mutex shared with `Enqueue` and, while holding
+it, copied every remaining 1200-byte cell one position left, making
+scheduler-path work proportional to queue depth.
+
+That was fixed on `nomad-constant-rate-fabric`'s `main` (`9bb3575`,
+`9b5c1c3`), with tests (`3b5cd9e`, `34f0b88`), and this branch never picked it
+back up. So the timing campaign had been measuring a queue whose defect was
+already known and already repaired somewhere else, and reporting the result as
+the current state of the system.
+
+A sweep of all nine repositories found two behind `main` in ways that matter:
+this one, and `Nomad-browser` by twenty-five commits (F-31). The rest were
+behind only by licence and merge commits.
+
+**A semantic conflict the merge hid.** Git merged `cell.go` without reporting a
+conflict and left `Len()` referring to fields the new type does not have. It
+had no caller anywhere and `main` had deleted it; a method whose own comment
+says nothing on the emission path may consult it is safest when it does not
+exist.
+
+**The fix's test has teeth.** `TestQueueSourceReservedProducerNeverBlocksConsumer`
+is the one that carries the security-relevant property -- the scheduler never
+waits for a producer. Making `NextCell` wait for a reserved slot, which is what
+the lock used to do, deadlocks it against a 30-second timeout.
+
+**And the campaign's path filter did not include `components/`**, so the one
+change it exists to evaluate would not have fired it. Fixed in `d41b0db`;
+the same shape as F-28 in miniature.
+
+**The finding survives the fix.** Run
+[33662640469](https://github.com/Jtensetti/nomad-testnet/actions/runs/33662640469),
+against the lock-free queue, compared with
+[33660034588](https://github.com/Jtensetti/nomad-testnet/actions/runs/33660034588)
+against the old one:
+
+| arm | idle vs active | before | after |
+|---|---|---|---|
+| baseline | findings | 8 of 8 | 8 of 8 |
+| disk-pressure | findings | 2 of 8 | 3 of 8 |
+| cpu-starvation | findings | 1, 3 unevaluable | 0, 4 unevaluable |
+| all arms | idle vs idle (control) | 0 findings | 0 findings |
+
+In-test statistics moved within host noise: baseline cadence 0.0183/0.0186
+before, 0.0197/0.0177 after, both inside the 0.0200 tolerance; the KS arm reads
+1.0000 in both. The control arm fires in neither, which is what makes the
+treatment arm mean anything.
+
+So the queue was one channel and closing it did not close the finding. That
+agrees with the root-cause document's own reading: removing a queue lock is
+not general resource isolation, and same-runtime CPU and disk contention
+remains. The structural candidate is the dedicated shaper process on
+`agent/operator-shaper-process`, which is a separate and much larger
+integration and is **not** claimed here to work -- it has still never been
+measured against this campaign.
+
+## F-31: uninstalling left every object the reader had materialised
+
+`Nomad-browser` `0d9b760`.
+
+`Nomad-browser` was twenty-five commits behind `main`, on the Team-scoped App
+Group work that Workstream F is about and on fail-closed SiteID verification
+replacing the compiled-in demo publisher. Merging it made three of this
+branch's guards fail, which is what they are for, and one of the three was
+hiding a real defect.
+
+**The defect.** The App Group work moved the object store out of the
+application's sandbox container and into
+`~/Library/Group Containers/<TeamID>.nomad.browser-cache`, so that the
+materializer can be the only thing that writes into it. `uninstall.sh` still
+removed only the sandbox container. Nothing in the repository mentioned
+`Group Containers` at all. Uninstalling therefore left every object a reader
+had materialised on disk -- which is a record of what they read, and the exact
+failure H-10 and `docs/DATA_RETENTION.md` are about.
+
+**Why the test did not say so.** `TestTheUninstallerCoversEveryDirectoryTheAppConstructs`
+scanned for directory names written as literals, and the object directory had
+moved into a constant. It found nothing -- and failed, because it refuses to
+pass on an empty comparison. Without that refusal it would have reported
+success while comparing two empty sets, and the defect would have shipped
+behind a green test. The scanner now resolves `static let` constants, and a
+second test requires the group container removal specifically, since "objects"
+appears in the script either way.
+
+Both verified by mutation: removing the group-container block fails the second
+test, and adding a directory the script does not know fails the first.
+
+**The other two guards.** The entitlements allowlist refused
+`com.apple.security.application-groups` for want of a written reason, and its
+comment claimed `app-sandbox` was the only entitlement the bundle should ever
+need -- no longer true, and corrected rather than left standing. The demo-trust
+cross-check refused to compare against a marker the client no longer has: it
+verifies a signed SiteID descriptor instead of compiling in a publisher key.
+That is the stronger property, so it is now what is asserted -- no compiled-in
+publisher key anywhere in the Swift sources, with a control proving the scan
+recognises one.
+
+**Not claimed.** The uninstall script still has never been run against a real
+installed bundle on macOS. This is a consistency check between the sources and
+the script, and H-10 is unchanged.

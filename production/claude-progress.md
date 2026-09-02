@@ -3,6 +3,60 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02i: the branch was behind main on its own blocker
+
+The question that found the last three findings -- has this ever run? -- has a
+sibling: **is this branch the code the registry describes?** It was not.
+
+**F-30.** This index records a release blocker, private activity perturbing
+emission timing, and names the mechanism: a producer mutex held across an O(n)
+copy on the scheduler path. That was fixed on nomad-constant-rate-fabric's
+main, with tests, and this branch never picked it back up. The campaign had
+been measuring a queue whose defect was already known and already repaired
+somewhere else. A sweep found two of nine repositories meaningfully behind
+main; the rest only by licence and merge commits.
+
+The merge itself hid a semantic conflict -- git resolved cell.go cleanly and
+left a method referring to fields the new type does not have -- and the
+campaign's path filter did not include components/, so the one change it
+exists to evaluate would not have fired it.
+
+**And the finding survives.** Baseline 8 of 8 idle-vs-active comparisons
+rejected before the fix and 8 of 8 after; controls fire in neither. The queue
+was one channel and closing it did not close the finding, which agrees with
+the root-cause document's own reading: removing a lock is not resource
+isolation. The structural candidate is the dedicated shaper process on
+agent/operator-shaper-process, still unmerged and still never measured against
+this campaign. Nothing here claims it works.
+
+**F-31.** Nomad-browser was twenty-five commits behind main, on the
+Team-scoped App Group work that Workstream F is about. Merging it failed three
+of this branch's guards, and one was hiding a real defect: the objects moved
+into a group container and the uninstaller only ever removed the sandbox
+container, so uninstalling left everything a reader had materialised on disk.
+
+The test did not name it. It went vacuous -- the object directory had moved
+into a constant its scanner could not see -- and failed because it refuses to
+pass on an empty comparison. Without that refusal it would have compared two
+empty sets and reported success, and the defect would have shipped behind a
+green test. That is the single clearest return this session's discipline has
+paid.
+
+**What the guards cost and returned.** Every vacuity check written earlier
+fired on this merge and every one was right: an entitlement with no written
+reason, a scanner comparing nothing, a cross-check whose marker was gone
+because the client had moved to something better.
+
+Commits: nomad-constant-rate-fabric 70a5438; nomad-testnet ed87f7d, d41b0db;
+Nomad-browser 0d9b760.
+
+Evidence: F-30, F-31, three claim rows.
+
+Risks: the timing blocker is unchanged and now better characterised. Next:
+whether to integrate the shaper process, which is the remaining structural
+candidate; workstream B governance (EB-2 bounded); workstream H, where the
+Linux release path is a named gap (DEC-027).
+
 ## Checkpoint 2026-09-02h: three gates that had never run
 
 The Windows job's payoff was not the Windows job. It was the question, which
