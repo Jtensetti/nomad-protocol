@@ -33,6 +33,19 @@ refuse -- reaches nobody outside this repository. Extending the release
 process to Linux is the work that changes it, and it is a decision about what
 this project offers rather than an engineering gap.
 
+**Amended 2026-09-02 (`Nomad-browser` `79ad4da`).** That work is done. The
+release process now has a Linux section -- tag convention, the absence of any
+notarization equivalent so the two approvals carry the whole authenticity
+story, the same verifier command, and that a release publishes both
+architectures or drops a platform -- and `update/linux_release_test.go`
+exercises the mechanism with a real tarball rather than leaving it neutral by
+construction and untested.
+
+The decision itself is unchanged: nothing has been offered to anyone, and the
+client stays a build target until someone decides to offer it. What has changed
+is that the process no longer prevents that decision, which is what this entry
+said was needed.
+
 ## DEC-026 (2026-09-02): Windows keeps its build target and stays unsupported for operators
 
 The first Windows CI run showed that every mutation of the epoch chain store
