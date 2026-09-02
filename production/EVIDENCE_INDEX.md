@@ -76,6 +76,7 @@ surrounding claims can be trusted.
 - [F-33: the control PROD-27 was waiting for was also on that branch](#f-33-the-control-prod-27-was-waiting-for-was-also-on-that-branch)
 - [F-34: an evidence path this index cited was never committed](#f-34-an-evidence-path-this-index-cited-was-never-committed)
 - [The shaper architecture, measured with the rule that can see the finding](#the-shaper-architecture-measured-with-the-rule-that-can-see-the-finding)
+- [F-35: the threshold bounds, and an onboarding package nothing checked](#f-35-the-threshold-bounds-and-an-onboarding-package-nothing-checked)
 
 <!-- end contents -->
 
@@ -3707,3 +3708,46 @@ same stressors, same rule, dedicated runner, control arm reported alongside.
 Before this, its own gate would have passed it on a statistic that cannot see
 the finding, and that is how a structural fix gets adopted without anyone
 learning whether it worked.
+
+## F-35: the threshold bounds, and an onboarding package nothing checked
+
+`nomad-testnet` `70b9036`, `b7d97d7`; `nomad-protocol`
+`docs/GOVERNANCE_TRANSITIONS.md`.
+
+The goal asks for explicit protocol transitions for seven governance events
+and for an exact external operator onboarding package. Both existed. Neither
+was checkable, and writing down what they rested on found two things.
+
+**The DKG threshold bounds were implemented and exercised by nothing.** One
+clause of `validateDocument` carries both: a threshold below two makes a single
+operator sufficient, which is the anytrust assumption deleted, and a threshold
+above the operator count names a committee that can never decrypt. Deleting the
+clause left the whole suite green.
+
+The upper bound is the governance one. Revoking operators shrinks membership,
+so the topology that follows must either lower the threshold deliberately or
+fail -- never quietly activate an epoch nobody can complete. Mutation-verified
+in both directions: disabling the clause fails all four cases, and keeping only
+the lower bound fails exactly the two upper-bound cases, which also establishes
+that nothing else in `ValidateDraft` refuses an unreachable threshold.
+
+The first version of that test used two operators and was refused by the
+three-operator floor instead -- passing, and not for the reason claimed. It now
+requires the error to name the threshold.
+
+**The onboarding package named commands, subcommands and flags, and nothing
+compared them to the binaries.** A rename would leave an external operator
+following instructions for something that is not there, discovered by them,
+during a ceremony, with key material on the table. The interface is now read
+from each command's source with `go/ast` and compared against every invocation
+the operator-facing documents show; a `nomad-`prefixed token that is not a
+command must be listed with the reason it is not one. Four mutations verified,
+including the reader itself returning nothing.
+
+**What the mapping does not establish.** Every transition is exercised on one
+machine, by one administrator, with identities this project generated. An
+unavailable operator is not distinguishable from a withheld response --
+asynchrony, not an implementation gap -- so the protocol carries the membership
+change and a human makes the diagnosis. Runtime threshold loss is degraded
+availability rather than a transition. The independent-operator DoD is EB-2,
+and the goal's own instruction is not to fake it.
