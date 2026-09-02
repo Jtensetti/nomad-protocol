@@ -3,6 +3,55 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02e: the registry was wrong about itself
+
+The coverage sweep finished the remaining repositories and then turned on the
+execution artifacts, which is where the last two findings came from.
+
+**F-20: the release verifier's untested branch is the one every build takes.**
+`cmd/nomad-browser-verify` decides whether a release may be installed over what
+is installed now, and had no test at all -- while the `update` package beneath
+it sits at 66-91%. The wrapper is where a build with no compiled-in release key
+must refuse rather than proceed with an empty trust set, and no release key has
+been generated (EB-7), so the untested branch was the live one. Anti-rollback
+and dry-run are now asserted end to end through the binary.
+
+**F-21: the claim matrix cited tests that do not exist.** Three citations had
+gone stale through renames. One was worse than a rename: the row read *"not
+claimed, and measured false"* because version 1 carried the stream ID in the
+cleartext hop header. Version 2 encrypts the whole cell and the test was
+renamed to assert the opposite -- and the matrix went on recording the property
+as broken. The registry that decides what this system claims was understating a
+privacy property, and had been for as long as the encryption work has been
+done.
+
+That is the sharpest form of the session's recurring shape. Every earlier
+finding was a check that could not fail; this was a *record* that could not
+fail, because nothing read it against the code it describes.
+`scripts/check-cited-tests.py` now does, in CI, with the eight repositories
+cloned and the capability declared so a failed clone fails the run rather than
+reporting nothing to check. It caught the evidence entry describing it, on its
+first use, against its own author.
+
+**What the whole sweep amounts to.** Eight findings, F-14 through F-21, from
+one method: for each check, delete it and see whether anything fails. Two were
+defects rather than gaps -- a cross-implementation disagreement about a signed
+topology, and a cover-cell generator returning a half-filled cell alongside its
+error. One was a stale record. The rest were checks with nothing watching them.
+
+Three guards were added because the thing they guard against happened during
+the sweep: the repin script refusing this repository's own HEAD (which fired
+again, in another repository, within hours), the mutation harness verifying
+that a mutation applied (after reporting a survivor that had never run), and
+the citation gate.
+
+Commits: Nomad-browser a210e22; nomad-testnet 2460a8d; nomad-protocol 9301917,
+d4e86c7.
+
+Next priority: Workstream H's non-blocked items, and Workstream B's, which is
+where most of the remaining PARTIAL rows that are not waiting on an external
+party live.
+
 ## Checkpoint 2026-09-02d: the sweep finds a real interoperability defect
 
 The coverage-directed sweep continued into the remaining packages, and this
