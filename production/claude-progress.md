@@ -3,6 +3,63 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-02j: what was stranded on branches
+
+Having found this branch behind `main` twice, the obvious next question was
+whether anything was stranded on branches that reached neither. A sweep of all
+nine repositories found nineteen unmerged branches. Most are experiment
+harnesses whose results are already recorded -- the Scaleway WAN runs are in
+this index with their outcomes, so the branch is the instrument, not the
+finding. Three were not.
+
+**F-32: a second-party review.** PROD-02 and PROD-27 both carry the blocker "a
+review by a party that did not author this". One existed: another agent
+reviewed the threat model, the claim matrix and the telemetry instrumentation
+on 2026-08-27, concluded PROD-02 PASS and PROD-27 NOT YET PASS, and corrected
+stale future-state wording. None of it reached here, so both blockers read as
+though no review had happened.
+
+It does not close PROD-02, for a concrete reason rather than a judgement about
+who counts as a second party: it reviewed the documents as they stood that
+day, and they have changed substantially since -- including while writing this
+entry. A review of an older version does not cover the current one.
+
+The threat-model corrections are taken. One went the other way: the
+endpoint-fallback row said whole-binary egress capture was "missing", and this
+branch has had it for the Linux release binary since F-22. Both versions were
+stale, in opposite directions.
+
+**F-33: the control PROD-27 was waiting for.** A no-core-dump Compose boundary,
+written the same day, never merged. Taken and tightened twice -- the original
+test would have passed with `soft: 0` under a different limit, and a file
+saying so is not a container having it, so the limit is now read back from each
+running container. It still does not close PROD-27, and codex's own registry
+agrees: same two blockers, word for word.
+
+**EB-10: the licence.** Two repositories adopted the Nomad Restricted Source
+License on their `main`; seven are MIT. Re-vendoring the fabric component for
+its queue fix brought the restricted licence into an MIT repository. The
+vendoring is faithful on purpose -- the manifest pins the tree by content --
+so the conflict is recorded rather than hidden inside a snapshot, and a test
+now fails on any vendored licence that differs without being written down.
+Which licence applies where is a decision with legal consequences and belongs
+to the owner.
+
+**What was left, and why.** About 8,500 lines of automatic epoch rotation sit
+on the same codex branch. Not integrated: on its own branch PROD-05 and
+PROD-08 remain PARTIAL with unchanged blockers, so it did not close its
+criteria there either, and PROD-08 is recorded worse there than here.
+Integrating it is an evaluation of a large change rather than a merge. Naming
+it is what stops it being lost a second time.
+
+Commits: nomad-testnet 0b06ca2, 1f0a866; nomad-protocol 1477e5f, e1f31b5.
+
+Evidence: F-32, F-33, EB-10.
+
+Next: the shaper process, still the remaining structural candidate for the
+timing blocker and still never measured; workstream B governance (EB-2
+bounded); workstream H, where the Linux release path is a named gap (DEC-027).
+
 ## Checkpoint 2026-09-02i: the branch was behind main on its own blocker
 
 The question that found the last three findings -- has this ever run? -- has a

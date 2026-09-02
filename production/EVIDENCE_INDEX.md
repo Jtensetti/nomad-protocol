@@ -73,6 +73,7 @@ surrounding claims can be trusted.
 - [F-30: this branch was behind main on the fix for its own release blocker](#f-30-this-branch-was-behind-main-on-the-fix-for-its-own-release-blocker)
 - [F-31: uninstalling left every object the reader had materialised](#f-31-uninstalling-left-every-object-the-reader-had-materialised)
 - [F-32: a second-party review existed on a branch nobody merged](#f-32-a-second-party-review-existed-on-a-branch-nobody-merged)
+- [F-33: the control PROD-27 was waiting for was also on that branch](#f-33-the-control-prod-27-was-waiting-for-was-also-on-that-branch)
 
 <!-- end contents -->
 
@@ -3563,3 +3564,49 @@ runs that test. The row now says both halves.
 **Not claimed.** This is a second-party review by another agent, not the
 independent assessment PROD-04 and PROD-29 require, and the review says so
 itself in its own first paragraph.
+
+## F-33: the control PROD-27 was waiting for was also on that branch
+
+`nomad-testnet` `1f0a866`, taken from `codex/production-readiness-20260824`.
+
+PROD-27's remaining blocker, and the one the second-party review reached
+independently, is the core dump: a core file is the complete process address
+space, so a telemetry allowlist and `GOTRACEBACK=none` cannot make one safe.
+The operator runbook asks for `LimitCORE=0` and this project cannot verify an
+operator's host.
+
+The control for the part this project *does* control was written on
+2026-08-27 -- `ulimits: core: {soft: 0, hard: 0}` on the Compose locked-service
+anchor, with a test -- and never merged. The blocker has read as open while the
+fix sat on a branch. That is the second thing found stranded there, after the
+review itself (F-32).
+
+**Taken, and tightened twice.** The original test looked for `ulimits:`,
+`core:`, `soft: 0` and `hard: 0` anywhere before the services section, which a
+file with `soft: 0` under a different limit satisfies while leaving core dumps
+on. It now reads the anchor's `ulimits` block by indentation and requires the
+core limit inside it. And a file saying so is not a container having it:
+`compose-e2e.sh` reads the limit back from each running container with
+`docker inspect` and fails on anything but `0/0`, next to the existing
+read-only, capability and pids checks.
+
+Three mutations verified: the limit removed, the limit moved to another
+resource, and a service bypassing the anchor.
+
+**It does not close PROD-27**, and the codex branch's own registry agrees --
+it carries the same two blockers word for word, so implementing this control
+did not let its author close the criterion either. The control holds for the
+shipping Compose deployment. An operator running the binaries some other way
+is still their own host's business.
+
+**What is left on that branch, and not taken.** About 8,500 lines of automatic
+epoch rotation: `cmd/nomad-lifecycle`, `cmd/nomad-rotation-controller`, a
+`live/rotation` package with coordinator, discard and exchange, and operator
+onboarding documentation. It is not integrated here, and the reason is not
+that it looks wrong: on its own branch PROD-05 and PROD-08 remain PARTIAL with
+unchanged blockers, so it did not close its criteria there either, and PROD-08
+is recorded *worse* there than here because of a CI failure since resolved as
+EB-8. Integrating it is a real evaluation of a large change rather than a
+merge, and recording that it exists is the honest state -- the failure mode
+this section is about is work being lost on a branch, and a paragraph naming
+it is what stops that.

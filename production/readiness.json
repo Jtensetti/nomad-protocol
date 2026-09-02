@@ -559,7 +559,7 @@
    ],
    "blockers": [
     "privacy review by a party that did not build the instrumentation. The allowlist, the scanner and the crash control are all authored here, and the criterion names a review; the implementer must not be the only judge of its own change. A second-party review (production/reviews/2026-08-27-internal-security-review.md) examined this scope and concluded NOT YET PASS, independently reaching the same operator-host core-dump boundary recorded below -- corroboration rather than closure. Does not require external independence (PROD-04 and PROD-29 are the criteria that do), only a second party.",
-    "operator host settings cannot be verified from here. The crash-data property holds for the shipped deployment; on an operator's own platform it depends on their journald and coredump configuration, which this project's evidence does not cover and does not claim to."
+    "operator host settings cannot be verified from here. The shipping Compose deployment now enforces what it can reach: every service inherits ulimits core soft/hard 0 from the locked-service anchor, deploy/compose_test.go fails on an anchor that does not, and compose-e2e.sh reads the limit back from each running container rather than trusting the file (F-33). On an operator's own platform the property still depends on their journald and coredump configuration, which this project's evidence does not cover and does not claim to."
    ]
   },
   {
