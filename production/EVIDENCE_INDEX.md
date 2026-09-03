@@ -80,6 +80,7 @@ surrounding claims can be trusted.
 - [F-36: a log can freeze one reader behind a revocation, and freshness does not stop it](#f-36-a-log-can-freeze-one-reader-behind-a-revocation-and-freshness-does-not-stop-it)
 - [F-37: the replication path had no tests, and the live stack never checked it](#f-37-the-replication-path-had-no-tests-and-the-live-stack-never-checked-it)
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
+- [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
 
 <!-- end contents -->
 
@@ -3970,3 +3971,84 @@ per world to reach alpha at all. Clock drift and process stall remain
 unexercised. Congestion does not belong in this harness, where emission is
 handed back to the caller and there is no socket to congest; it needs the WAN
 campaign and EB-3.
+
+## F-39: the DKG transcript's session binding was not checked where a third party checks it
+
+`nomad-anytrust-mix-sim` `5070b84`; `nomad-testnet` `2550ca7`, `101bc34`;
+`mix/dkg_protocol.go`, `mix/dkg_protocol_test.go`, `live/share/service_test.go`.
+
+Two gaps, found by asking which security-relevant code has never run.
+
+**The distributed Pedersen DKG had zero coverage in the repository that owns
+it.** Every function on its path -- `NewPedersenDKGConfig`,
+`MaterializePedersenDKG`, `verifyDKGPackets`, the packet accessors and
+`buildDistributedDKGTranscript` -- measured 0.0% in `nomad-anytrust-mix-sim`.
+It is covered at 70-100% from `nomad-testnet`, which vendors the module and
+drives it through `live/dkg`, so a change made in the owning repository,
+tested there and green there could break the ceremony with only the other
+repository's gate to notice. The rule that an implementer must not be the only
+judge of its own change applies to repositories: the module that owns the code
+has to be able to fail on it. It now drives Kyber's own `DistKeyGenerator`
+across a committee in-process and hands the result to `MaterializePedersenDKG`
+exactly as the runner does. The package went from 69.1% to 81.1%.
+
+**Writing that test found the gap it was meant to look for.**
+`MaterializePedersenDKG`'s comment says all packet signatures are reverified
+there even when Kyber's Protocol verified them at ingress. They were -- but
+only their signatures. A bundle's `SessionID` is inside its hash, so the
+signature covers it; it covers whatever value the bundle itself carries, and a
+bundle from a different ceremony is perfectly self-consistent. Kyber enforces
+the binding in the live protocol -- `ProcessDeals`, `ProcessResponses` and
+`ProcessJustifications` each compare the bundle's `SessionID` against the
+config nonce (dkg.go:440, 629, 800) -- and `VerifyPacketSignature`, which is
+what this reverification used, does not. Handed one ceremony's packets and
+another's nonce, materialisation accepted them and produced a committee.
+
+**Reachability, stated rather than implied.** Not reachable through the runner,
+whose packets have already passed Kyber's live protocol, which is why nothing
+in either repository failed. It matters because this function is what a third
+party checks a stored transcript with, and a transcript exists precisely so a
+ceremony can be checked after the fact. Without the binding, two ceremonies
+among the same membership are interchangeable -- which is exactly what an
+interrupted ceremony and its retry are, one of the eight properties the epoch
+review names. `verifyDKGPackets` now refuses a packet naming a different
+session before checking its signature, mutation-verified.
+
+**The share service's network half had no tests either.** `Run`, `handler`,
+`ensureOutputDirectory` and `writeOrCompare` measured 0.0% and `ProcessOnce`
+4.9% -- the worse number, because a summary reading "some coverage" hides it.
+This is the only process here that both holds a threshold secret and answers a
+socket. The endpoint now has to serve exactly its own partial and refuse
+another member's index, another stream, a query string, a POST, a HEAD, the
+collection path, a traversal and the root; what is not a partial is a 404
+rather than an empty 200, which a collector would otherwise assemble as though
+it were one. Retirement fails closed for a retired epoch, another operator's
+epoch and a nil guard, and `Run` stops rather than continuing to serve.
+
+Mutation testing corrected one claim there. Deleting `Run`'s own nil-guard
+check left every test passing, because `ProcessOnce` refuses a nil guard too
+and with the same message -- but it passed *after the socket had been bound and
+the endpoint had briefly served*, since `Run`'s check precedes
+`ensureOutputDirectory` and `ListenAndServe` and `ProcessOnce`'s follows both.
+The property is now stated as what it is: a service refused for its
+configuration leaves no output directory behind and never listens, with a
+vacuity arm so the assertion is about the refusal.
+
+**What the drand and Kyber comparison found otherwise.** Nomad already builds
+on Kyber for the pieces Kyber has: the Pedersen DKG (`share/dkg/pedersen`, the
+same construction drand uses), the Neff shuffle (`shuffle`), the proofs
+(`proof`), the group (`group/edwards`), Schnorr signatures and the blake XOF.
+Step 7's instruction to replace homemade cryptography with established
+constructions is therefore already satisfied at the primitive level, and what
+remains homemade is the binding layer -- transcript and domain separation,
+epoch/batch/round binding, replay rejection, equivocation evidence -- which is
+protocol-specific and which no library supplies. F-39 is a defect in exactly
+that layer, which is where such defects are to be expected.
+
+All eight properties the epoch review names are covered by tests in
+`live/epoch`: DKG completion before activation, membership transition
+requiring the previous committee, interrupted ceremonies via journal and halt
+markers, compromise recovery via the recovery drill and peer-quorum
+revocation, stale shares via cross-epoch rejection, key erasure with forward
+secrecy, split-brain via equivocation halting and burned epoch numbers, and
+rollback via epoch-skip and previous-digest refusal.
