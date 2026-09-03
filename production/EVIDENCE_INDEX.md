@@ -3892,13 +3892,16 @@ could be broken without touching the sweep, so it is now asserted directly, and
 that assertion does fail when `Load` is changed to return the fragments it
 found.
 
-**What this does not establish.** The live gate has not run here: this
-container has a `docker` binary and no daemon, so its verification is the
-`live-compose` job and nothing above claims otherwise. Verified locally: both
-shells parse the script, the cell-counting pipeline returns the right count for
-a populated stream and 0 rather than a shell error for an empty or missing one,
-and the Compose invariant fails on both mutations. Replication across a real
-network, rather than three containers on one bridge, remains EB-3.
+**The live gate is green.** CI run 33748910606, job 100634026331
+(`live-compose`), commit `51d1b58`: the multi-process stack came up, the seeded
+stream was found complete in both unseeded operators' caches, and the run
+produced `replication.json` alongside the packet evidence. It could not be run
+in this container, which has a `docker` binary and no daemon, so that job is
+the verification and this entry claims nothing beyond it.
+
+**What it still does not establish.** Three containers on one bridge is real
+process and interface isolation and is not a network. WAN loss, reordering and
+a network adversary remain unexercised against replication, which is EB-3.
 
 Two defects were caught before the gate was pushed, both of which would have
 failed CI for reasons unrelated to replication. The first version read the
