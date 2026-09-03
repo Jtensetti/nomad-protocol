@@ -79,6 +79,7 @@ surrounding claims can be trusted.
 - [F-35: the threshold bounds, and an onboarding package nothing checked](#f-35-the-threshold-bounds-and-an-onboarding-package-nothing-checked)
 - [F-36: a log can freeze one reader behind a revocation, and freshness does not stop it](#f-36-a-log-can-freeze-one-reader-behind-a-revocation-and-freshness-does-not-stop-it)
 - [F-37: the replication path had no tests, and the live stack never checked it](#f-37-the-replication-path-had-no-tests-and-the-live-stack-never-checked-it)
+- [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 
 <!-- end contents -->
 
@@ -3915,3 +3916,54 @@ anonymity-carrying traffic; and their capacity parameter is a consensus value
 set as deliberate over-provisioning for a target population, "never derived
 from measured demand." That is Nomad's invariant stated from the other
 direction, and it is exactly what the arrival-order test asks of the sweep.
+
+## F-38: suspend and resume, and the publisher queue's unstated boundary
+
+`nomad-testnet` `1c6e149`, `51d1b58`;
+`live/deposit/campaign_test.go`, `live/publish/architecture_test.go`,
+`.github/workflows/ci.yml`.
+
+Two gaps found by asking the plan's own questions of the airlock rather than
+by anything failing.
+
+**The campaign had no suspend/resume pair, which PROD-11 names.** It covered
+success, timeout, restart and loss. A laptop that sleeps stops emitting and
+starts again; the gap is externally observable by construction, so comparing a
+suspended publisher against a steady one measures the suspension rather than
+the publication. The pair that answers the criterion is suspend-with-work
+against suspend-without-work -- identical interruption at an identical
+position, private state the only difference -- which is the same reasoning the
+restart pair already used and the reason restart is paired at all.
+
+The property under test is resumption. A publisher that caught up on waking
+would announce both that it had slept and that it had work, and the invariant
+names catch-up traffic specifically. Unlike restart the drain is not replaced:
+a suspended process keeps its session and its sequence, and resuming under a
+new session would be a restart wearing a different name.
+
+Measured on the pair: 100 cells each, 99 inter-arrivals per flow, one
+destination, one size, an identical maximum burst of 8 on resume, KS p = 0.96,
+mean drift 4.8e-05, judged by the preregistered rule in CI alongside the other
+pairs. Mutation-verified rather than assumed: making the suspended publisher
+pause differently on resume when its queue is non-empty -- catch-up in the
+smallest form that changes nothing else -- turns the verdict into a finding.
+
+**The publisher queue's capability boundary was never stated.** `live/deposit`
+and `live/airlock` each assert theirs: no network import, no reach into peer
+selection, routing or classification. `live/publish` -- the package furthest
+from the wire and holding the API a publishing application actually calls --
+had none. It is clean, and its whole transitive graph inside this project is
+`live/durable`, but it is clean by not having been given a reason to change,
+and a separation that holds because nobody has needed to break it is not a
+separation. The regression it now refuses is concrete and reasonable-sounding:
+a "confirm the deposit landed" call on the queue, after which submitting an
+object emits a packet and the existence of a network event is a fact about
+what the user published. Both directions mutation-verified.
+
+**Not covered, stated rather than implied.** The classifier in
+`scripts/traffic-lab.py` cannot be applied to these captures: the campaign
+produces one trace per world and an exact permutation test needs at least five
+per world to reach alpha at all. Clock drift and process stall remain
+unexercised. Congestion does not belong in this harness, where emission is
+handed back to the caller and there is no socket to congest; it needs the WAN
+campaign and EB-3.
