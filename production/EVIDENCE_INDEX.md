@@ -78,6 +78,7 @@ surrounding claims can be trusted.
 - [The shaper architecture, measured with the rule that can see the finding](#the-shaper-architecture-measured-with-the-rule-that-can-see-the-finding)
 - [F-35: the threshold bounds, and an onboarding package nothing checked](#f-35-the-threshold-bounds-and-an-onboarding-package-nothing-checked)
 - [F-36: a log can freeze one reader behind a revocation, and freshness does not stop it](#f-36-a-log-can-freeze-one-reader-behind-a-revocation-and-freshness-does-not-stop-it)
+- [F-37: the replication path had no tests, and the live stack never checked it](#f-37-the-replication-path-had-no-tests-and-the-live-stack-never-checked-it)
 
 <!-- end contents -->
 
@@ -3823,3 +3824,94 @@ fails to verify is not necessarily forged -- a genuine one lifted from another
 head onto a re-dated one lands in exactly the same branch, which is what a
 freezing log produces -- so the diagnosis names both readings instead of
 reporting a key compromise that has not happened.
+
+## F-37: the replication path had no tests, and the live stack never checked it
+
+`nomad-testnet` `85f25d4`, `95468cc`;
+`live/node/replication_test.go`, `live/node/node.go`,
+`deploy/compose_test.go`, `scripts/compose-e2e.sh`.
+
+PROD-18 records that "replication is not exercised: the criterion names it and
+the campaign does not reach it." Measured, it was worse than that.
+
+**Zero coverage, not partial coverage.** The two functions that are the public
+cache replication path both measured 0.0%: `enqueueCached`, which re-offers
+complete cached streams to the relay queue on the sweep tick, and `seed`, which
+fills a joining operator's cache and relay queue from a bundle. Every node test
+in the package sets `CacheSweep` to an hour, so the sweep had never fired in
+CI. `seed` is reached by `nomad-node --seed`, which the shipping Compose
+deployment uses.
+
+**The live stack ran replication and never looked at the result.** Every
+operator has `--cache-sweep=10s` and operator-a alone has `--seed`, so
+replication has been running in the Compose gate all along. Nothing asserted
+it, so a sweep that had stopped working would have left the gate green.
+
+**What was added.** Seven unit tests taking both functions to 75% and 77%: a
+complete stream is offered in full as work; an incomplete one is not, because
+relaying part of a stream spends this operator's fixed relay share on cells
+nobody can reconstruct from; what the sweep offers and the order it offers it
+in is a function of the stream identifiers alone, verified by giving two nodes
+the same streams in opposite arrival orders and requiring byte-identical
+output; a full queue stops the sweep without failing the node; seeding fills
+both cache and queue; a seed larger than this operator's relay share fails
+startup rather than silently dropping the remainder.
+
+And a live gate: the stream identifier is read from the seed bundle operator-a
+was given, and that stream must be present cell for cell in operator-b's and
+operator-c's own cache volumes. Neither was seeded, so the only way it arrives
+is by being relayed and re-offered. Measured against the caches rather than the
+wire, because the wire is sealed per link and says nothing about which stream a
+cell carries.
+
+**Two conditions the gate rests on, checked rather than assumed.** Seeded to
+all three operators, every cache would hold the stream without a cell having
+been relayed and the gate would pass on a stack where replication is dead --
+so `TestExactlyOneOperatorIsSeededAndAllOfThemSweep` requires exactly one seed
+and a sweep on every operator, mutation-verified in both directions. And
+operator-a must hold a stream of at least two cells, or the comparison is zero
+against zero.
+
+**One latent defect fixed.** `enqueueCached` discarded the error from
+`hop.WorkMetadata` where `seed`, twenty lines above, checks the same call.
+Nothing reaches it today: `rawcache`'s `readBatchSize` refuses a stored batch
+size outside the range `hop` accepts, so `Load` cannot return a count that
+fails there. That is a bound in one package holding up another with no local
+statement of it, and the cost of it moving is silent -- a failed
+`WorkMetadata` leaves the zero `Metadata`, which is a valid *cover* header, so
+the sweep would relay work payloads labelled as cover and every receiver would
+drop them. The error is now checked and the cross-package bound asserted in the
+package that depends on it.
+
+**One test corrected by mutation rather than confirmed by it.** Deleting the
+sweep's own `if !complete` guard leaves the incomplete-stream test passing.
+What actually stops a partial stream reaching the wire is `Load`'s contract of
+returning no payloads at all; the guard is defence in depth. That contract
+could be broken without touching the sweep, so it is now asserted directly, and
+that assertion does fail when `Load` is changed to return the fragments it
+found.
+
+**What this does not establish.** The live gate has not run here: this
+container has a `docker` binary and no daemon, so its verification is the
+`live-compose` job and nothing above claims otherwise. Verified locally: both
+shells parse the script, the cell-counting pipeline returns the right count for
+a populated stream and 0 rather than a shell error for an empty or missing one,
+and the Compose invariant fails on both mutations. Replication across a real
+network, rather than three containers on one bridge, remains EB-3.
+
+Two defects were caught before the gate was pushed, both of which would have
+failed CI for reasons unrelated to replication. The first version read the
+stream's batch-size record with `od -An -tu2`, which decodes in host byte
+order: on x86 a four-cell stream reads as 1024. The second checked the
+one-seed condition by parsing YAML in the shell script, which would have been
+the only PyYAML import in any CI-run script, in a runner that installs no YAML
+library.
+
+**Studied from Katzenpost/Pigeonhole, taken as questions rather than code.**
+The fork is AGPL-3.0 and none of it is copied. Two things from the Echomix
+courier and replica design shaped the tests above: storage replicas sit outside
+the mixnet and communicate on their own schedule, so their traffic is not the
+anonymity-carrying traffic; and their capacity parameter is a consensus value
+set as deliberate over-provisioning for a target population, "never derived
+from measured demand." That is Nomad's invariant stated from the other
+direction, and it is exactly what the arrival-order test asks of the sweep.
