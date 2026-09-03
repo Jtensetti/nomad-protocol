@@ -81,6 +81,7 @@ surrounding claims can be trusted.
 - [F-37: the replication path had no tests, and the live stack never checked it](#f-37-the-replication-path-had-no-tests-and-the-live-stack-never-checked-it)
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 - [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
+- [F-40: the mix's domain separators and two accountability guards were unpinned](#f-40-the-mixs-domain-separators-and-two-accountability-guards-were-unpinned)
 
 <!-- end contents -->
 
@@ -4052,3 +4053,66 @@ markers, compromise recovery via the recovery drill and peer-quorum
 revocation, stale shares via cross-epoch rejection, key erasure with forward
 secrecy, split-brain via equivocation halting and burned epoch numbers, and
 rollback via epoch-skip and previous-digest refusal.
+
+## F-40: the mix's domain separators and two accountability guards were unpinned
+
+`nomad-anytrust-mix-sim` `7a59756`, `37f41ee`;
+`mix/binding_vectors_test.go`, `mix/accountability_test.go`,
+`mix/transcript.go`, `mix/availability.go`.
+
+Step 7 of the ordered plan asks for transcript and domain binding, epoch/batch/
+round binding, replay rejection, equivocation evidence, active-adversary
+accountability and independently verifiable proofs. The primitive half needed
+nothing: Nomad already builds on Kyber for the Pedersen DKG, the Neff shuffle,
+the proofs, the group, Schnorr and the blake XOF. The binding layer is Nomad's
+own, and two probes found it unheld in two places.
+
+**All thirteen domain separators could be changed and nothing failed.** That is
+not damning by itself -- every test in the package is a round trip, and a round
+trip cannot notice a constant the producer and the verifier both read. What
+would notice is a frozen output, and there was none: the conformance corpus in
+`nomad-testnet` covers wire vectors (hop cells, an object manifest, topologies)
+and carries nothing from the mix, because the shuffle and decryption proofs are
+randomised and a transcript is not byte-reproducible.
+
+What did catch a change, measured: `nomad-testnet`'s compatibility matrix,
+which fails when a version constant it does not document appears in the source.
+So a rename is caught -- in the other repository, by name. Nothing anywhere
+pinned what a separator produces, and the repository that defines them could
+not fail on them at all. Same shape as F-39.
+
+The preimages are deterministic even though the proofs are not, so four are now
+frozen: the round context digest, the receipt digest, the non-receipt signing
+message and the threshold proof domain. Verified against five separator
+mutations, and against a field reorder inside the round-context preimage --
+batch and round swapped, every constant untouched -- which is the class a
+name-based check structurally cannot see.
+
+**Two accountability guards could be deleted with the suite still green.** Each
+refusal in the replay, equivocation and availability paths was mutated; seven
+were held by existing tests and two were not.
+
+The receipt tracker is scoped to one committee epoch and nothing held it there.
+The equivocation slot is keyed by batch and round alone, so a tracker taking
+foreign receipts puts two unrelated committees in one slot -- two honest
+receipts from different epochs collide and a mixer is accused of equivocating
+when it did nothing, or a foreign receipt occupies a slot first and a real
+equivocation afterwards reads as a difference from something that was never
+this committee's receipt.
+
+The duplicate-observer check in an availability report is the other, and its
+own comment states the attack: counting a repeated signer twice lets one
+operator manufacture a quorum by itself. A threshold is worth something only
+if the signers are different parties, which is the same reason a witness policy
+refuses one key under two names.
+
+Five mutations verified against the new tests, all caught, and two nearby
+guards asserted rather than assumed as a side effect: an observer outside the
+certified committee does not count, and the accused cannot sign a statement
+about its own absence, which is refused at signing rather than at the report.
+
+**What needed nothing.** `cmd/nomad-mix-verify` -- the tool that makes
+"individually verifiable" something a third party can act on -- already refuses
+a tampered proof, a stranger's key, too few keys, no keys, no transcript and a
+missing file, each with a non-zero exit and no verdict printed, and its own
+test requires it to state that a pass does not establish unlinkability.
