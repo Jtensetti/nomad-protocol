@@ -3358,6 +3358,27 @@ belongs to the in-test statistic, not to this table.
 **Not claimed.** Nothing here is softened. Inconclusive fails, a finding
 fails, and the finding is still a release blocker.
 
+**Standing state as of 2026-09-03, recorded so the gate's existence is not
+read as a pass.** This workflow has failed every run since it became runnable:
+eight completed runs, runs 1 through 8, none green. The most recent
+([33781464306](https://github.com/Jtensetti/nomad-testnet/actions/runs/33781464306),
+on `fd18b55`) reports `compared 40 pair(s)`, `7 comparison(s) could not be
+evaluated`, and `10 preregistered comparison(s) were rejected` -- ten
+comparisons where `two-world-analysis.py` exited 1 or 3, which is a finding on
+emitted or on received traffic.
+
+Which ten, and whether each is a private-state-dependent signal or an artefact
+of the harness, is not established here and is not claimed either way. It is
+the opening of the whole-system failure campaign work and bears on PROD-10 and
+PROD-11. What is recorded now is only that the gate is red, has always been
+red, and that any reading of this index which treats the campaign as
+corroborating a measurement is wrong until this is resolved.
+
+A reporting error of my own belongs with it: earlier in this session I called
+`fd18b55` green on the strength of the `ci` and `fuzz` workflows without
+checking `timing campaign`, which was red on the same commit. Per-workflow
+greenness is not commit greenness.
+
 ## F-29: the Linux release build had never produced anything
 
 `Nomad-browser` `ee0aeef`.
