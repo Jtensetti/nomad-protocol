@@ -76,9 +76,9 @@ dedicated host), PROD-29 (BLOCKED on EB-4, cannot be self-approved), PROD-30
 |---|---|---|
 | go-tuf | fork cloned | SiteID rotation, offline recovery, revocation, expiry, rollback protection |
 | Tessera | **no fork exists in this account** | transparency, equivocation, split-view detection |
-| Katzenpost / Pigeonhole | fork in account, not cloned | publication airlock, fixed-throughput distribution, publisher non-interference |
+| Katzenpost / Pigeonhole | fork cloned, AGPL-3.0, design study only | publication airlock, fixed-throughput distribution, publisher non-interference |
 | Maybenot | fork cloned | traffic-analysis lab, two-world campaigns |
-| Nym / nymsphinx | fork in account, not cloned | packet geometry, unlinkable hop routing, padding, replay resistance |
+| Nym / nymsphinx | fork cloned, Apache-2.0 | packet geometry, unlinkable hop routing, padding, replay resistance |
 | drand | fork cloned | DKG, resharing, membership change, recovery, epoch lifecycle |
 | Kyber | fork in account, not cloned | established primitives in place of homemade construction |
 
@@ -97,3 +97,24 @@ threshold can authorise, disjoint signing and recovery sets, and a validity
 window enforced at resolution. No TUF-class gap was found in the chain.
 
 The gap was one layer out, in distribution, and it is recorded as F-36.
+
+## What the comparisons against Katzenpost and Nym found
+
+Both came back as "keep what is here", for different reasons, and both are
+recorded rather than left implicit.
+
+Katzenpost/Pigeonhole is AGPL-3.0, so it was read for design and no code was
+copied. What it contributed was two questions rather than a construction: its
+storage replicas sit outside the mixnet on their own schedule, and their
+capacity is a consensus parameter set as deliberate over-provisioning for a
+target population, never derived from measured demand. That is Nomad's
+invariant from the other direction, and asking it of the replication sweep is
+what produced F-37.
+
+Nym/nymsphinx is Apache-2.0, so licence was not the constraint; the
+construction was. Sphinx is a source-routed onion whose value is hiding the
+route from the relays, and Nomad has no route to hide -- peer selection comes
+from the signed topology's public plan because the invariant requires it to.
+Adopting it would also cost on the first property the plan names: Nym runs five
+packet sizes and Nomad runs one. Recorded as DEC-028, including why
+cross-testing against Sphinx would not mean anything.

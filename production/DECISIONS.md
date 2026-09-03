@@ -2,6 +2,74 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-028 (2026-09-03): Sphinx is not adopted for the hop envelope, and cross-test vectors against it would not mean anything
+
+The plan asks whether Nomad's hop-by-hop envelope should use, or be
+compatibility-tested against, established Sphinx constructions, naming six
+properties: fixed packet geometry, unlinkable hop routing, padding, replay
+resistance, domain separation and cover packet indistinguishability. The fork
+studied is `Jtensetti/nym-vendor` at `common/nymsphinx` (Apache-2.0, so unlike
+the Katzenpost study this one is not a licence question).
+
+The two constructions answer different questions, and that is the decision.
+
+Sphinx is a source-routed onion. The sender picks the path, layers the packet
+so each hop learns only its predecessor and successor, and per-hop
+unlinkability comes from re-randomising a group element in the header. Its
+value is hiding the route from the relays that carry it.
+
+Nomad does not have a route to hide. Peer selection comes from the signed
+topology's public plan, and the core invariant requires exactly that: peer
+selection must not depend on private state, so it is public by construction and
+identical for every cell. What Nomad's envelope does instead is encrypt the
+whole cell under a pairwise link key, with a fresh per-link sequence, so a cell
+relayed onward shares no bytes with the cell that arrived. Content privacy
+comes from the anytrust mix; traffic privacy from the fixed cadence. Neither
+depends on the relay being ignorant of the path.
+
+Adopting Sphinx would therefore import a header construction to solve a problem
+this design has arranged not to have, and it would cost on the first property
+named. Nym runs five packet sizes -- a 2 kB regular packet, an ack packet, and
+extended packets at 8, 16 and 32 kB, plus outfox variants -- and which size a
+client sends is observable and correlates with what it is doing. Nomad has one
+cell size, always, whatever a cell carries. On fixed packet geometry the
+existing design is stricter than the reference, and moving to it would be a
+regression rather than a hardening.
+
+Each of the other five properties is already implemented and tested here:
+unlinkable hop routing by `TestARelayedCellDoesNotCarryItsStreamIDOnward` and
+`TestTheSameStreamAtTwoHopsSharesNoBytes`; padding and geometry by the constant
+cell size, which every capture check asserts; replay resistance in the node's
+replay window; domain separation by the labelled key derivation
+(`nomad-hop-link-stream-v2`, `nomad-hop-cell-v2`), with
+`TestAnUnrecognisedVersionIsRefusedRatherThanDowngradedTo` refusing a version
+rather than falling back to it; and cover indistinguishability by
+`TestSealedWorkAndCoverAreIndistinguishable` and the two classifiers in
+`live/uplink/distinguisher_test.go`. The header-encryption work these last
+tests exist for was itself prompted by measuring two distinguishers that
+version 1 left open, so this is not an untested assertion of equivalence.
+
+Compatibility testing against Sphinx is rejected on the same grounds rather
+than deferred. A cross-test vector is only meaningful between two
+implementations of the same construction. Nomad's cell is not a Sphinx packet
+and is not meant to become one, so a vector shared with nymsphinx would either
+fail trivially or be constructed to pass, and neither says anything. The
+cross-implementation evidence that does mean something already exists and is a
+different thing: the conformance corpus and the second implementation, which
+share no Go code with the first and are built from the specification.
+
+The plan's own instruction -- avoid a large Rust FFI dependency where a small
+verifiable Go implementation with cross-test vectors is safer -- points the
+same way, and the size argument is secondary to the design one. The primary
+reason is that the construction does not fit; the dependency cost is why it is
+not worth doing anyway.
+
+What would change this: if Nomad ever needed sender-chosen routing, or a reply
+mechanism like a SURB, the analysis would have to be redone, because both are
+properties Sphinx has and this envelope does not. Neither is in the protocol
+today, and adding either would be a change to the invariant's peer-selection
+rule before it was a change to the packet format.
+
 ## DEC-027 (2026-09-02): the Linux client is built and verified, and is not offered as a release
 
 `linux-release.yml` had never run (F-29), so the question of how a Linux
