@@ -82,6 +82,7 @@ surrounding claims can be trusted.
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 - [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
 - [F-40: the mix's domain separators and two accountability guards were unpinned](#f-40-the-mixs-domain-separators-and-two-accountability-guards-were-unpinned)
+- [F-41: the RLNC Byzantine guards worked and nothing could fail on them](#f-41-the-rlnc-byzantine-guards-worked-and-nothing-could-fail-on-them)
 
 <!-- end contents -->
 
@@ -4116,3 +4117,66 @@ about its own absence, which is refused at signing rather than at the report.
 a tampered proof, a stranger's key, too few keys, no keys, no transcript and a
 missing file, each with a non-zero exit and no verdict printed, and its own
 test requires it to state that a pass does not establish unlinkability.
+
+## F-41: the RLNC Byzantine guards worked and nothing could fail on them
+
+`nomad-rlnc` `af0865e`; `nomad-testnet` `fd18b55`;
+`rlnc/byzantine_test.go`, `rlnc/packet.go`.
+
+PROD-12 is MET, so the question was not whether the Byzantine defences work
+but whether anything holds them. Each of fifteen refusals in the coding library
+was mutated in turn -- neutralised, suite run -- and eleven left it green.
+
+**Eleven survivors are not eleven defects, and the distinction is the finding.**
+Before a line of the tests was written, every adversarial input was fed through
+the public boundary and every one was refused: a zero coefficient vector at
+three entry points, an original size beyond the generation's capacity, packets
+from two generations combined, a corrupted magic byte, re-encoding symbols that
+span only the zero vector, and decoding from a rank-deficient basis. The
+implementation is right. What was absent was the test that fails when a guard
+is deleted, which is what stops a future edit removing a Byzantine defence
+without CI noticing.
+
+Thirteen of fifteen now fail on deletion. Every test carries a vacuity arm,
+because a fixture that never worked would satisfy each refusal for the wrong
+reason: an honest symbol is accepted, an honest packet parses, two packets of
+one generation do combine, and an honest generation reaches full rank and
+decodes under generous budgets.
+
+The five resource budgets are each driven with the other four left generous, so
+none of them passes because a different budget fired first, and each refusal
+must name itself. Deterministic failure is checked with them: a decoder that
+has exhausted a budget stays failed, refuses the next symbol and refuses to
+decode.
+
+**One case needed two corrections before it tested anything.** Dimensions that
+fit their wire fields individually but overflow the fixed cell together -- K
+and SymbolSize both inside uint16, their sum past PacketSize -- is exactly what
+the wire-field bound does not cover. The first attempt used dimensions so large
+they failed the wire-field check first; the second was refused by the
+dimension-match check because the symbol was still four wide. It now builds a
+symbol matching the dimensions being declared, so the only fault is the fit,
+and the guard fails when deleted.
+
+**Two guards are left unheld deliberately, each confirmed shadowed rather than
+assumed to be.** The incomplete-basis check in `Decode` sits behind the rank
+check: neutralising both makes the suite fail, neutralising either alone does
+not. The zero-span early exit in `ReEncode` sits in front of a 64-attempt
+fallback that refuses the same input by another route. Reaching either would
+mean corrupting internals to construct states the public API cannot produce,
+which is false assurance rather than coverage.
+
+**What is not in this package, stated rather than implied.** The plan's list
+includes that an attack must not produce private-state-dependent repair
+traffic. This library has no network and cannot emit anything; the property
+lives in the node's fixed cadence and fair relay queue, where the two-world
+campaigns measure it, and the test file says so rather than leaving the
+omission to be noticed.
+
+**A weaker mode that exists and is unreachable.** A bounded decoder built with
+nil commitments verifies nothing before admission -- documented, deliberate,
+and reached by passing Go's zero value. The only production caller is the
+materializer, which builds every decoder from a verified descriptor, and
+`live/batch` refuses a descriptor whose commitment count is not exactly K.
+That cross-package invariant was verified rather than assumed: neutralising the
+K-count check fails `live/materialize`.
