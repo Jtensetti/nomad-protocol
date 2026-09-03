@@ -82,6 +82,7 @@ surrounding claims can be trusted.
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 - [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
 - [F-40: the mix's domain separators and two accountability guards were unpinned](#f-40-the-mixs-domain-separators-and-two-accountability-guards-were-unpinned)
+- [F-42: an entry operator's session table had no tests, and an address could be taken](#f-42-an-entry-operators-session-table-had-no-tests-and-an-address-could-be-taken)
 - [F-41: the RLNC Byzantine guards worked and nothing could fail on them](#f-41-the-rlnc-byzantine-guards-worked-and-nothing-could-fail-on-them)
 
 <!-- end contents -->
@@ -4117,6 +4118,146 @@ about its own absence, which is refused at signing rather than at the report.
 a tampered proof, a stranger's key, too few keys, no keys, no transcript and a
 missing file, each with a non-zero exit and no verdict printed, and its own
 test requires it to state that a pass does not establish unlinkability.
+
+## F-42: an entry operator's session table had no tests, and an address could be taken
+
+`nomad-testnet` `ba5b657`;
+`live/entry/session_binding_test.go`, `live/entry/world_test.go`,
+`live/entry/entry.go`, `live/deposit/ingress.go`,
+`live/topology/validity_test.go`, `live/uplink/padding_test.go`,
+`live/uplink/authentication_test.go`, `live/uplink/session.go`,
+`cmd/nomad-publish/selection_test.go`, `cmd/nomad-entry/main.go`;
+`nomad-protocol` `docs/ADMISSION_AND_RATE_CONTROL.md`, `production/DECISIONS.md`
+(DEC-029).
+
+Step 9 of the ordered plan is discovery, sessions and Sybil resistance, and it
+was approached the way F-37 through F-41 were: enumerate the guards on that
+path, neutralise each one, and read the survivors as questions rather than as
+defects. Eleven guards across `live/uplink`, `live/topology`, `live/node` and
+`live/deposit` were mutated in turn. Six failed the suite. Five did not, and
+sorting those five is most of what follows.
+
+**The finding that was not a survivor at all.** `live/entry` is the process
+that composes the uplink for a real operator -- it holds the socket, the
+responder and the session table -- and it had **no test file**. The mutation
+sweep could not have found anything there because nothing there was being run.
+Reading it instead turned up the defect: a source address was bound to exactly
+one session, and a cell from a bound address was never offered to the responder
+again. A publisher that restarted behind a NAT that kept its mapping came back
+on the same address with a new ephemeral key, its handshake was tried as a data
+cell against a session it no longer held, failed to open, and was counted as a
+refused cell -- with no way back for the life of the operator process. The same
+applies on purpose to anyone who can put a datagram on the wire with a victim's
+source address before the victim's own handshake arrives.
+
+This is the cross-boundary gap of F-37 in a different shape: every guard the
+uplink library provides was tested from the library, and the composition that
+decides which of them a datagram meets was tested from nowhere.
+
+**A normative document already named the recovery the code could not perform.**
+`STATE_MACHINES.md` gives the uplink sequence space's exhaustion as fatal, with
+the response "establish a new session". A publisher doing exactly that from the
+same socket -- which is what a publisher has -- sent its new handshake from the
+address its exhausted session was bound to, and the operator tried it as a data
+cell and refused it. The specification described a transition the
+implementation could not make, and the document was written from the library's
+behaviour, where it is true.
+
+The fix is a bounded per-address session list. A cell is tried against each
+session bound to its address, and offered to the responder only if none of them
+open it -- which needed a sentinel, `deposit.ErrCellRefused`, because "this
+session did not open the cell" and "this session opened it and the airlock
+refused it" had until now been the same error, and a caller that cannot tell
+them apart must either try one session or risk depositing a cell twice. The
+list refuses when full rather than evicting: evicting the oldest would hand the
+lockout straight back to an attacker. The cap is also what keeps the
+trial-open cost bounded, which is the objection the single-session design was
+built to avoid -- a forged cell now costs at most four AEAD opens, not the
+whole table.
+
+**A configuration comment that described a different bound than the code.**
+`SessionLimit` was documented as sessions "held at once", and the flag as
+"maximum concurrent uplink sessions". The responder cannot work that way: it
+must remember every ephemeral key it has accepted, because a replayed handshake
+would otherwise establish a second session under the same key and reuse that
+key's AEAD nonces. Nothing frees a slot, so the number is a budget spent for
+the life of the process, and an operator sizing it as an occupancy would have
+sized it far too small. Both comments now say what the code does, the property
+is pinned by a test with a vacuity arm, and the exhaustion it implies is
+written into `ADMISSION_AND_RATE_CONTROL.md` as an accepted denial of service
+rather than left to be discovered: the alternative is a responder that forgets
+in order to reclaim slots, which trades a bounded availability loss for a
+key-reuse break, in the direction the invariant forbids.
+
+**Three of the five survivors were genuinely unheld and are now tested.**
+
+A signed topology with `epoch: 0` was accepted. The watermark file uses zero to
+mean "there is nothing here", so accepting one writes a record the node cannot
+read back, and an unreadable watermark is an error rather than permission to
+proceed -- a node that accepted a single epoch-0 topology could not start again
+until someone deleted the file. Both halves are now tested: the refusal, and
+the watermark behaviour that makes the refusal matter.
+
+A signed topology whose `not_before` does not parse was accepted with the zero
+time as its lower edge, which is no lower edge at all. Nothing downstream
+catches it: `epoch.Verify` compares an epoch's activation against exactly this
+field, and every instant is after the zero time.
+
+A publisher could put arbitrary bytes in the reserved padding of an uplink
+cell. **A test named for this guard already existed and did not exercise it**:
+`TestNonZeroPaddingIsRefused` sealed an ordinary cell, opened it, and asserted
+that the padding was longer than zero bytes -- reasoning, in a comment, that
+the padding sits inside the sealed plaintext and cannot be altered from outside
+without breaking the tag. True, and the wrong party. The AEAD stops everyone
+else -- a forged or altered cell never reaches the padding -- so this check
+defends against the one party that holds the session key, which is the
+publisher itself. It is what stops a publisher using
+the space the fixed cell size buys as a side channel to the entry operator it
+is supposed to be anonymous to: fifty-odd bytes per cell, at the publisher's
+choosing, delivered to the one party that also sees its source address. The
+test builds cells past `SealWork` for that reason, because a test that could
+only produce cells through the honest sealer would be asserting that the honest
+sealer is honest -- which is what the old one was doing. It is replaced rather
+than joined: a passing test whose name claims a property it does not check is
+worse than no test, because the name is what a reader and a coverage report
+both see.
+
+**Two survivors were shadowed and are recorded as such rather than papered
+over.** Neutralising the authentication failure in `Session.Open` leaves the
+cell refused by the length check behind it, because a failed AEAD open returns
+nothing to measure -- the property holds, only the error's name changes.
+Neutralising the `not_after` parse guard leaves it refused by the validity
+window when the caller passes a real clock; the one path where nothing shadows
+it is the zero clock an epoch descriptor verifies an embedded topology with,
+and that is the path the test exercises.
+
+**A second definition of cover, unused.** `uplink.IsCoverPayload` duplicated
+`airlock.IsCover` byte for byte, on the same underlying array, with no callers
+anywhere in any repository and no mention in the corpus, the specification or
+the second implementation. Two definitions of what counts as cover that could
+have drifted apart without anything failing. Removed, with the surviving one
+named where the duplicate was.
+
+**A discovery decision on the publishing side that was only ever a shape.**
+Which entry operator a publisher speaks to is a flag, resolved once against the
+signed topology. The relay side has that property as tests; the publisher side
+had it as the arrangement of the code, which lasts until someone adds a
+plausible "fail over to another entry operator". It is now a source-level test
+that fails if the choice is made more than once -- verified by adding a second
+call site and watching it fail. Failover is exactly what the invariant forbids
+here: an entry operator chosen in response to a lockout would be publication
+activity steering which of the network's addresses this host sends to, legible
+without opening a cell.
+
+**What this does not establish.** Nothing here is a red-team result. The
+lockout was found by reading a file that had no tests, and the tests that now
+hold it were written by the same party that wrote the fix. PROD-19's remaining
+blocker is an interoperability consumer written by a third party (EB-5) and
+PROD-20's are the economic analysis, a lateness measurement on constrained
+hardware, and saturation by someone else; none of them moves. The
+source-address binding stays a decision about an unauthenticated value: the cap
+stops an attacker taking an established session, and does not stop one that
+arrives first from holding an address it never had a right to.
 
 ## F-41: the RLNC Byzantine guards worked and nothing could fail on them
 

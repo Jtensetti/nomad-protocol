@@ -22,3 +22,15 @@ TestASendFailureCostsOneCellAndNotTheNode
 TestOnlyAClosedSocketEndsTheSchedule
   F-21. Renamed to TestOnlyKnownTransientConditionsCostACell when the
   classification helper changed polarity.
+
+TestNonZeroPaddingIsRefused
+  F-42. Removed rather than renamed, because it did not test what it was
+  named for. It sealed an ordinary uplink cell, opened it, and asserted that
+  the padding was longer than zero bytes -- reasoning, in its own comment,
+  that the padding sits inside the sealed plaintext and cannot be altered
+  from outside without breaking the tag. True, and the wrong party: the one
+  who can write there is the publisher holding the session key, which is the
+  party the check exists to stop. Neutralising the guard left the whole suite
+  green. The property is now held by
+  TestAPublisherCannotSmuggleBytesInTheReservedPadding, which builds cells
+  past SealWork so it can produce the case the old test could not.
