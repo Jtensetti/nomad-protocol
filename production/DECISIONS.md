@@ -2,6 +2,57 @@
 
 Engineering decisions with rationale. Newest first.
 
+## DEC-029 (2026-09-03): The uplink session budget is spent and never returned, and its exhaustion is accepted
+
+An entry operator's responder holds a `SessionLimit` and remembers every
+ephemeral key it has accepted. Nothing frees a slot, so the limit is a budget
+spent for the life of the process rather than an occupancy. That makes it a
+denial of service an attacker buys with `SessionLimit` valid handshakes, each
+costing one ephemeral key, after which the operator establishes no further
+sessions until it restarts.
+
+The decision is to accept that rather than solve it, and to write it down.
+
+Reclaiming a slot means forgetting an ephemeral key. A responder that forgets
+one it has accepted will accept a replay of that handshake, which establishes a
+second session under the same key -- and the session's AEAD nonces are derived
+from a sequence that restarts, so the second session reuses the first's nonces
+under the first's key. Captured data cells could then be replayed into it and
+deposited again. That is a key-reuse break traded for an availability gain, in
+the direction the invariant forbids: availability loses to a privacy or
+integrity property, not the other way round.
+
+The rejected alternatives, and why each fails on the same point:
+
+- **Expire sessions by time.** Expiry is forgetting with a clock in front of
+  it. The replay window narrows; it does not close.
+- **Bind the handshake to the release epoch and roll the memory with it.** This
+  works -- a replayed handshake in a later epoch derives a different key, so
+  there is no nonce reuse -- and it costs a wire-format change: the handshake
+  derivations are frozen `-v1` labels with a published compatibility matrix and
+  a second implementation reading them. The gain is availability under an
+  attack no deployment has yet run, against a freeze that exists so a second
+  implementation can be written. It stays on the table for a `-v2` uplink
+  profile and is not worth breaking the freeze for now.
+- **Rate-limit handshakes per source address.** Source addresses are free, so
+  this bounds nothing an attacker cannot buy around, and making the operator's
+  behaviour depend on a rate would give it a state an observer can drive.
+
+What bounds the damage is operational and is now normative in
+`docs/ADMISSION_AND_RATE_CONTROL.md`: size the budget for the publishers an
+epoch is expected to carry, with headroom, and restart at topology-epoch
+boundaries, which a deployment does anyway because the uplink context names one
+topology epoch. What is not established is a figure for that headroom against a
+real publisher population; that needs the same deployment parameters PROD-20's
+economic blocker needs.
+
+The related decision, taken at the same time, is that a full per-address
+session list **refuses rather than evicts**. Eviction would reintroduce the
+lockout the per-address list was added to remove -- an attacker filling a
+victim's address would push the victim's live session out -- so a full address
+is a refusal, and refusing is silent and fail-closed like every other refusal
+on this path.
+
 ## DEC-028 (2026-09-03): Sphinx is not adopted for the hop envelope, and cross-test vectors against it would not mean anything
 
 The plan asks whether Nomad's hop-by-hop envelope should use, or be

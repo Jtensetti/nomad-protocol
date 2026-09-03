@@ -27,7 +27,8 @@ and nothing here promotes anything.
 | SiteID, descriptor chain, publication resolution | nomad-local-reconstruction | `site` |
 | Transparency log, monitor, witnesses | nomad-local-reconstruction | `site/transparency` |
 | Public emission planning, capability split | nomad-selection-firewall | `firewall` |
-| Publication airlock, deposit, uplink | nomad-testnet | `live/deposit`, `cmd/nomad-entry` |
+| Publication airlock, deposit, uplink | nomad-testnet | `live/airlock`, `live/deposit`, `live/uplink` |
+| Entry operator service: socket, session table, batch seal | nomad-testnet | `live/entry`, `cmd/nomad-entry` |
 | Materialiser, cache, fetch planning | nomad-testnet | `live/materialize`, `live/rawcache` |
 | Networkless browser core, release pipeline | Nomad-browser | `egress`, `update`, `objectstore` |
 | Engine forks | firefox-nomad, chromium-nomad | integration contracts only (DEC-013) |

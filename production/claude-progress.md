@@ -3,6 +3,59 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-03: the file with the socket had no tests
+
+Step 9 of the ordered plan -- discovery, sessions and Sybil resistance,
+PROD-19 and PROD-20 -- run with the mutation probe that produced F-37 through
+F-41. Eleven guards across `live/uplink`, `live/topology`, `live/node` and
+`live/deposit` neutralised in turn; six failed the suite, five did not.
+
+**The finding was not among the survivors.** `live/entry` is the process an
+operator actually runs: it holds the socket, the responder and the session
+table. It had no test file, so the sweep could not have found anything there
+because nothing there was being run. Reading it instead turned up a real
+defect: a source address bound to exactly one session, and a cell from a bound
+address never offered to the responder again. A publisher restarting behind a
+NAT that kept its mapping came back on the same address with a new ephemeral
+key, its handshake was tried as a data cell against a session it no longer
+held, and it was locked out of that operator for the life of the process. The
+same is available on purpose to anyone who can spoof a source address.
+
+This is F-37's cross-boundary gap in a new shape, and worth stating as a
+pattern rather than an incident: **every guard the uplink library provides was
+tested from the library, and the composition that decides which of them a
+datagram meets was tested from nowhere.** Coverage by package hides this,
+because the library's numbers are excellent.
+
+**A comment that described a different bound than the code.** `SessionLimit`
+was documented as sessions held at once. The responder cannot work that way --
+it must remember every ephemeral key it has accepted, or a replayed handshake
+reuses that key's AEAD nonces -- so nothing frees a slot and the number is a
+budget spent for the life of the process. An operator sizing it as an
+occupancy would have sized it far too small. Both comments now say what the
+code does, and the exhaustion that follows is written into
+`ADMISSION_AND_RATE_CONTROL.md` as an accepted denial of service, because the
+alternative trades a bounded availability loss for a key-reuse break.
+
+**Three survivors were genuinely unheld, two were shadowed, and the difference
+is recorded rather than smoothed over.** Unheld: a signed topology with epoch
+zero (the value the watermark uses to mean absent, so accepting one writes a
+record the node cannot read back and cannot start again without), an
+unparseable `not_before` (which parses as the zero time -- a window with no
+lower edge, and the field an epoch descriptor checks its activation against),
+and arbitrary bytes in an uplink cell's reserved padding (a channel from a
+publisher to the entry operator it is anonymous to, since the AEAD stops
+everyone else from reaching it). Shadowed: the authentication failure in
+`Session.Open`, refused by the length check behind it, and the `not_after`
+parse, refused by the validity window whenever the caller passes a real clock.
+
+**A second definition of cover, with no callers.** `uplink.IsCoverPayload`
+duplicated `airlock.IsCover` byte for byte, unreferenced in any repository,
+specification or corpus. Two definitions that could have drifted apart in
+silence. Removed.
+
+Next: step 10, whole-system failure campaigns.
+
 ## Checkpoint 2026-09-02k: a citation of my own that pointed at nothing
 
 **F-34, and it is mine.** F-21 built a gate because this index cited tests that

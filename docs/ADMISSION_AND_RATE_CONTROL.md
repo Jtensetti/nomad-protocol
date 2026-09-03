@@ -21,6 +21,48 @@ quorum: `max(previous.threshold, floor(members/2)+1)` distinct previous-epoch
 operators, each signature bound to the approver's own key and to both the
 previous and new descriptor digests.
 
+## Admission on the publication uplink
+
+The rule above is about *relay* peers, which are named. The publication uplink
+is the other direction and the opposite case: an entry operator accepts
+handshakes from parties it has never heard of and must never learn who they
+are, so nothing there can be bounded per identity. Everything is bounded per
+session and per source address instead.
+
+**A session costs an ephemeral key and buys nothing but a session.** The
+handshake is one-sided: the publisher authenticates the operator from the
+`kex_key` in the signed topology and proves nothing about itself. What that
+leaves to bound is state, and there are three bounds.
+
+1. **A session budget, spent and never returned.** An operator establishes at
+   most `SessionLimit` sessions for as long as it runs. The bound cannot be an
+   occupancy: the responder has to remember every ephemeral key it has ever
+   accepted, because a replayed handshake would otherwise establish a second
+   session under the same key and therefore reuse that key's AEAD nonces. A
+   structure that forgets in order to free a slot would trade nonce reuse for
+   availability, so nothing frees a slot. An operator sizes the budget for the
+   publishers an epoch is expected to carry; a service is restarted at each
+   topology epoch, because the uplink context it was built with names one.
+2. **A per-address session list, capped, refusing rather than evicting.** A
+   data cell carries no session identifier -- one would be a linkable tag on
+   every cell a publisher sends -- so a cell is attributed to a session by its
+   source address, which is unauthenticated. A cell is tried against each
+   session bound to its address, and offered to the responder as a handshake
+   only if none of them open it. The list is capped, and a full one refuses:
+   evicting the oldest would let anyone who can put a datagram on the wire with
+   a victim's source address take that victim's session away. The cap is also
+   what keeps the trial-open cost bounded, so a forged cell costs a fixed small
+   number of AEAD opens rather than the whole table.
+3. **A per-session slot quota in the airlock**, which is the bound on what a
+   session can do once it has one, described under resource exhaustion below.
+
+**A refusal is silent and fail-closed.** An exhausted budget, a full address
+list, a cell that opens under no session: each ends in the same nothing. The
+operator's counters separate a refused cell from a refused handshake because an
+operator watching for an attack needs to tell them apart, but neither is
+reported back to whoever sent the datagram, and no refusal changes what the
+operator emits or when.
+
 ## What that buys, per threat
 
 **Eclipse.** The usual route is out-populating a victim's neighbourhood so that
@@ -122,6 +164,28 @@ them concedes nothing.
   gain if the quorum is genuinely independent. Five operators run by one
   administrator are one trust domain, and that is PROD-05 and EB-2, not
   something this document can establish.
+- **Uplink session budget exhaustion.** The session budget above is a
+  denial of service an attacker can buy cheaply: `SessionLimit` valid
+  handshakes, each costing one ephemeral key, and the operator establishes no
+  further sessions until it restarts. This is accepted rather than solved. The
+  alternative is a responder that forgets accepted ephemeral keys in order to
+  reclaim slots, and that reopens handshake replay onto a live session's
+  nonces -- trading a bounded availability loss for a key-reuse break, in the
+  direction the invariant forbids. What bounds the damage is operational: size
+  the budget with headroom, and restart at topology-epoch boundaries, which a
+  deployment does anyway. What is *not* established is a figure for that
+  headroom against a real publisher population, which is the same missing
+  deployment parameter as the bullet below.
+- **Source-address binding.** Attributing a cell to a session by its source
+  address is a decision about an unauthenticated value. The per-address cap
+  keeps that from taking an established session away, but whoever binds an
+  address first still holds it: an attacker that fills a victim's address with
+  handshakes before the victim arrives locks the victim out of that operator
+  for the epoch, silently. A publisher configured with a different entry
+  operator is unaffected, and choosing one is a configuration decision, never a
+  runtime response -- so there is no failover here and deliberately so, since
+  failover triggered by a lockout would be publication activity steering an
+  observable network event.
 - **No economic analysis.** PROD-20 asks for economic as well as operational
   analysis. The operational side is above; costing an attack in money against
   a real deployment is not written, and needs deployment parameters that do
