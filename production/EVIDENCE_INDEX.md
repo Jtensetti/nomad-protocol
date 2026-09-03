@@ -77,6 +77,7 @@ surrounding claims can be trusted.
 - [F-34: an evidence path this index cited was never committed](#f-34-an-evidence-path-this-index-cited-was-never-committed)
 - [The shaper architecture, measured with the rule that can see the finding](#the-shaper-architecture-measured-with-the-rule-that-can-see-the-finding)
 - [F-35: the threshold bounds, and an onboarding package nothing checked](#f-35-the-threshold-bounds-and-an-onboarding-package-nothing-checked)
+- [F-36: a log can freeze one reader behind a revocation, and freshness does not stop it](#f-36-a-log-can-freeze-one-reader-behind-a-revocation-and-freshness-does-not-stop-it)
 
 <!-- end contents -->
 
@@ -3751,3 +3752,74 @@ asynchrony, not an implementation gap -- so the protocol carries the membership
 change and a human makes the diagnosis. Runtime threshold loss is degraded
 availability rather than a transition. The independent-operator DoD is EB-2,
 and the goal's own instruction is not to fake it.
+
+## F-36: a log can freeze one reader behind a revocation, and freshness does not stop it
+
+`nomad-local-reconstruction` `6836400`;
+`site/transparency/witness.go`, `site/transparency/witness_test.go`,
+`site/distribution_test.go`.
+
+The descriptor log's freshness window is documented as bounding a split view:
+"too long and an attacker who can partition a reader has that long to serve it
+a private branch." The attacker does not need to partition anything, and the
+window does not bound it.
+
+**The attack.** A site's signing key is compromised. The owner publishes a
+recovery descriptor revoking it, and the log takes it. The log then serves one
+targeted reader the head from just before the recovery, re-signed with a
+current timestamp, over and over. Every check that reader can make locally
+passes: the signature is the log's own, the size does not shrink, the
+consistency proof from N to N verifies, the root matches the one it already
+holds, and the timestamp is current. Re-dating a quiet head is also precisely
+what an honest log does to keep readers fresh while nothing is being published,
+so there is no local property that separates the two.
+
+Measured at the verdict boundary, not at the mechanism: a reader held a full
+day behind the revocation, `Fresh` in every round, resolving publications
+signed by the revoked key as `PublisherVerified` twenty-four times
+(`TestACosignedReaderCannotBeFrozenBeforeARecovery`). At the mechanism, a
+hundred rounds across four days with the reader one entry behind throughout
+(`TestCosigningEndsATargetedFreezeThatFreshnessDoesNot`).
+
+This is the case `site/transparency/tree.go` already named and deferred:
+preventing it "needs more than one log, or witnesses, which is a deployment
+decision recorded in the specification." It was recorded as a deployment
+decision and was reachable in the shipped reader.
+
+**What was built.** Witness cosigning. A witness watches the log with a
+`Monitor` of its own and signs only heads that Monitor accepted, so it inherits
+every refusal already tested there: it will not sign a second root at a size it
+holds, will not go backwards, and produces a `SplitViewProof` instead of a
+signature when it catches the log. A reader constructed with
+`NewCosignedDistribution` requires a threshold of cosignatures from a key set
+it pinned in advance, and both attacks fail -- the second branch cannot be
+cosigned, and a re-dated stale head cannot be either, because the cosignature
+covers the head's time.
+
+**Why this adds no traffic.** The cosignatures travel inside the checkpoint the
+reader already fetches on a fixed cadence that does not depend on what the user
+is reading. Verification is a pure function of those bytes and keys chosen in
+advance: no lookup, no second connection, no witness contacted at read time.
+`TestNothingInThisPackageCanReachTheNetwork` refuses a `net` import in the
+package so a future change cannot turn a read into a request.
+
+**What this does not establish.** It does not make freezing impossible. A log
+that freezes a threshold of the witnesses as well as the reader still wins.
+What it removes is discrimination: the log can no longer hold one reader back
+while everyone else moves on, and holding the witnesses back means withholding
+the recovery from the parties whose heads the site owner is watching. Targeted
+and invisible becomes global and visible. No witness set is deployed -- the
+mechanism is implemented and tested, the independently administered witnesses
+it needs are EB-2, and a threshold of one against a witness this project
+generated is a test fixture and not a deployment.
+
+**Two things mutation testing corrected, not the writing of the tests.** The
+domain separating a cosignature from the log's own signature is not what stops
+a log satisfying its own threshold: the length-prefixed witness name already
+makes the two message spaces disjoint, measured directly with the domains made
+identical, and the constant is kept as defence in depth with the comment
+corrected rather than left claiming to be the mechanism. And a cosignature that
+fails to verify is not necessarily forged -- a genuine one lifted from another
+head onto a re-dated one lands in exactly the same branch, which is what a
+freezing log produces -- so the diagnosis names both readings instead of
+reporting a key compromise that has not happened.

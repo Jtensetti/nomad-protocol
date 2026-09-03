@@ -37,7 +37,22 @@ DOCUMENTS = [
     # not exist. This one was written and not covered here until the omission
     # was noticed the same afternoon.
     "docs/GOVERNANCE_TRANSITIONS.md",
+    # The map's value is that it says where each protocol function lives. A row
+    # naming a package that has been renamed or moved sends a reader somewhere
+    # empty, which is worse than not having the row at all. Its ownership table
+    # is checked against the repositories by check_ownership_table below; it is
+    # listed here so any test it comes to cite is checked too.
+    "docs/ARCHITECTURE_MAP.md",
 ]
+
+# The ownership table's rows are "| function | repository | package |". A row
+# whose package cell is prose rather than a backticked path is skipped, so a
+# row can say "integration contracts only" without inventing a directory for
+# the check to point at.
+OWNERSHIP_ROW = re.compile(
+    r"^\|[^|]+\|\s*([A-Za-z][A-Za-z0-9-]*)\s*\|\s*((?:`[^`]+`(?:,\s*)?)+)\s*\|\s*$", re.M)
+BACKTICKED = re.compile(r"`([^`]+)`")
+
 # The index is a historical record and may name a test that was removed, but
 # only one listed here, with a reason. The matrix may not: a claim is evidenced
 # by a test that exists or it is not evidenced.
@@ -99,6 +114,38 @@ def defined_tests() -> tuple[set[str], list[str]]:
     return found, missing_repos
 
 
+def check_ownership_table(problems: list) -> int:
+    """Every package the architecture map names must be a directory that exists.
+
+    The map is a navigation document, and a navigation document that points at
+    a package which has moved is worse than one that does not mention it: the
+    reader concludes the function is gone. This is the same failure the
+    onboarding check found for commands (F-35), one document over.
+    """
+    document = "docs/ARCHITECTURE_MAP.md"
+    text = (ROOT / document).read_text()
+    checked = 0
+    for match in OWNERSHIP_ROW.finditer(text):
+        repository, cells = match.group(1), match.group(2)
+        if repository in ("Repository", "---"):
+            continue
+        if repository not in SIBLINGS:
+            problems.append(f"{document}: names the repository {repository}, which is not "
+                            f"one this script knows about; add it to SIBLINGS or fix the row")
+            continue
+        for package in BACKTICKED.findall(cells):
+            checked += 1
+            # Either a package directory or a single file: some functions are
+            # one script rather than a package, and a map that could not name
+            # those would have to leave them out.
+            if not (ROOT.parent / repository / package).exists():
+                problems.append(
+                    f"{document}: says {repository} owns {package}, and there is nothing "
+                    f"there. A map that points at something which moved tells a reader the "
+                    f"function is gone")
+    return checked
+
+
 def main() -> None:
     defined, missing_repos = defined_tests()
     tracked = tracked_paths()
@@ -117,6 +164,10 @@ def main() -> None:
             removed.add(stripped)
 
     problems = []
+    owned = check_ownership_table(problems)
+    if owned == 0:
+        problems.append("docs/ARCHITECTURE_MAP.md: the ownership table read as zero packages, "
+                        "so this check proved nothing about it")
     for document in DOCUMENTS:
         text = (ROOT / document).read_text()
         for number, line in enumerate(text.splitlines(), 1):
