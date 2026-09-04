@@ -3,6 +3,51 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-03b: the campaign was right for eight runs
+
+The timing campaign had rejected on every run since it first executed, and
+the last thing I did before this was record that it was red without saying
+what it had found. It found a real leak, and it is fixed.
+
+**The cadence was perfect and that is why it hid.** Mean inter-arrival was
+exactly the configured interval in every world -- 20.010, 20.003, 19.995
+against 20. Every summary an operator would look at said the schedule was
+being met. The separation was in the shape: idle emission was bimodal with a
+hole in the middle of the distribution, and emission with private work was
+smooth across the same range. No statistics needed to see it once plotted,
+and the preregistered rule had been rejecting at p ~ 0 for a week.
+
+**A sleep does not end when it is asked to.** In twenty lines of Go with no
+Nomad code in them: a 20 ms timer woke a median 585 us late on a quiet
+process and 446 us late with one unrelated goroutine sleeping on a 2 ms
+cycle, every percentile shifted, reverting when it stopped. The wake instant
+is a function of ambient process activity, and a node with private work to do
+is not ambiently identical to one without. Sending immediately after the wake
+put that straight onto the wire.
+
+The scheduler now sleeps to just short of each deadline and spins the
+remainder, so the send instant belongs to the deadline. Idle-to-active median
+gap 348 us before and 4 us after; standard deviation down from 0.74 and 0.42
+to 0.10 and 0.045; the rule goes from 10 rejected comparisons to 0.
+
+**The first fix was wrong and the measurement is what said so.** I moved cell
+construction off the deadline path first, reasoning that building a work cell
+costs more than a cover cell. It changed nothing. Measured afterwards, the
+reasoning was quantitatively wrong by an order of magnitude: 8.4 us against
+8.8 us for NextCell, 74.0 against 75.3 for Send, against a grid that moved by
+a millisecond. Kept as defence in depth, not claimed as the fix.
+
+**Method note worth keeping.** What broke this open was reproducing the
+finding outside the system -- a standalone timer loop with and without a
+competing goroutine. The leak was not in any line of Nomad; it was in what
+Nomad inherited by sending at the moment a timer happened to fire. Nothing in
+the codebase would have pointed at it.
+
+Still red and not this: 7 of 24 comparisons are inconclusive because the
+cpu-starvation stressor stops the node. That fails the gate deliberately.
+
+Next: the inconclusive arms, then the rest of step 10.
+
 ## Checkpoint 2026-09-03: the file with the socket had no tests
 
 Step 9 of the ordered plan -- discovery, sessions and Sybil resistance,

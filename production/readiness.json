@@ -182,7 +182,9 @@
    "status": "PARTIAL",
    "evidence": [
     "https://github.com/Jtensetti/nomad-testnet/commit/80b9f5c83e30114f6f749a39b89a6d77638abe4c",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409"
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32301972409",
+    "the timing campaign's standing finding is closed (nomad-constant-rate-fabric be54654, nomad-testnet ab5bddc, F-43): emission was sent immediately after a sleeping timer woke, and a timer's wake instant is a function of what else the process is doing -- measured in isolation, 585us late on a quiet process against 446us with one unrelated 2ms sleeper, every percentile shifted and reverting when it stopped. The mean inter-arrival was exactly the configured interval in every world, so the cadence looked correct; the distribution shape carried the difference, idle bimodal with a hole between 19.98 and 20.57 and active smooth across the same range. The scheduler now sleeps to just short of each deadline and spins the remainder, so the send instant is the deadline's rather than the timer's. Idle-to-active median gap 348us before, 4us after; standard deviation 0.74/0.42 before, 0.10/0.045 after; the preregistered rule goes from 10 rejected comparisons to 0 over the same 24 pairs",
+    "what remains red in that campaign is not private-dependent: 7 of 24 comparisons are inconclusive because the cpu-starvation stressor stops the node and leaves too few cells to compare. The gate fails on them deliberately, since an unmeasurable arm is not a pass, and nothing about that is softened"
    ],
    "blockers": [
     "blind two-world WAN captures under failure and congestion",
@@ -194,7 +196,9 @@
    "status": "PARTIAL",
    "evidence": [
     "https://github.com/Jtensetti/nomad-constant-rate-fabric/commit/872686c3626fda1381b9058887e90e9a343cd367",
-    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32288962907"
+    "https://github.com/Jtensetti/nomad-testnet/actions/runs/32288962907",
+    "the timing campaign's standing finding is closed (nomad-constant-rate-fabric be54654, nomad-testnet ab5bddc, F-43): emission was sent immediately after a sleeping timer woke, and a timer's wake instant is a function of what else the process is doing -- measured in isolation, 585us late on a quiet process against 446us with one unrelated 2ms sleeper, every percentile shifted and reverting when it stopped. The mean inter-arrival was exactly the configured interval in every world, so the cadence looked correct; the distribution shape carried the difference, idle bimodal with a hole between 19.98 and 20.57 and active smooth across the same range. The scheduler now sleeps to just short of each deadline and spins the remainder, so the send instant is the deadline's rather than the timer's. Idle-to-active median gap 348us before, 4us after; standard deviation 0.74/0.42 before, 0.10/0.045 after; the preregistered rule goes from 10 rejected comparisons to 0 over the same 24 pairs",
+    "what remains red in that campaign is not private-dependent: 7 of 24 comparisons are inconclusive because the cpu-starvation stressor stops the node and leaves too few cells to compare. The gate fails on them deliberately, since an unmeasurable arm is not a pass, and nothing about that is softened"
    ],
    "blockers": [
     "72-hour supported-platform WAN captures",

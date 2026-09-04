@@ -82,6 +82,7 @@ surrounding claims can be trusted.
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 - [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
 - [F-40: the mix's domain separators and two accountability guards were unpinned](#f-40-the-mixs-domain-separators-and-two-accountability-guards-were-unpinned)
+- [F-43: the emission instant was the timer's, not the deadline's](#f-43-the-emission-instant-was-the-timers-not-the-deadlines)
 - [F-42: an entry operator's session table had no tests, and an address could be taken](#f-42-an-entry-operators-session-table-had-no-tests-and-an-address-could-be-taken)
 - [F-41: the RLNC Byzantine guards worked and nothing could fail on them](#f-41-the-rlnc-byzantine-guards-worked-and-nothing-could-fail-on-them)
 
@@ -3358,6 +3359,12 @@ belongs to the in-test statistic, not to this table.
 **Not claimed.** Nothing here is softened. Inconclusive fails, a finding
 fails, and the finding is still a release blocker.
 
+**Resolved: see F-43.** The ten rejected comparisons were a real finding, and
+it is fixed. The standing note below is left as written, because it is the
+record of the gate being red while nothing said so, and because seven
+comparisons are still inconclusive for a reason that has nothing to do with
+private activity.
+
 **Standing state as of 2026-09-03, recorded so the gate's existence is not
 read as a pass.** This workflow has failed every run since it became runnable:
 eight completed runs, runs 1 through 8, none green. The most recent
@@ -4139,6 +4146,103 @@ about its own absence, which is refused at signing rather than at the report.
 a tampered proof, a stranger's key, too few keys, no keys, no transcript and a
 missing file, each with a non-zero exit and no verdict printed, and its own
 test requires it to state that a pass does not establish unlinkability.
+
+## F-43: the emission instant was the timer's, not the deadline's
+
+`nomad-constant-rate-fabric` `be54654`; `nomad-testnet` `ab5bddc`;
+`fabric/scheduler.go`, `fabric/deadline_test.go`, `live/node/node.go`,
+`cmd/nomad-publish/main.go`, `testnet/sim.go`.
+
+The two-world timing campaign had rejected on every run since it first
+executed -- eight runs, none green, ten rejected comparisons in the last one,
+at p ~ 0 on every stressor. F-28 recorded that the gate had never run; this is
+what it found once it did.
+
+**The cadence was correct and the leak was in the shape.** Pooling four rounds
+per world, the mean inter-arrival was exactly the configured interval in all
+three worlds: 20.010, 20.003 and 19.995 ms against 20. Nothing drifted, and
+every summary an operator would look at said the schedule was being met. What
+separated the worlds was the distribution: idle emission was **bimodal**, with
+deciles bunched at 19.5-19.9 and then again at 20.57-20.71 and a hole between
+them, while the world with private work was smooth and unimodal across the
+same range. That needs no statistics to read -- the histogram has a hole in it
+or it does not.
+
+**The cause is that a sleep does not end when it is asked to.** Measured in
+isolation, in twenty lines of Go with no Nomad code in it: a timer set for
+20 ms on a quiet process woke a median 585 us late; with one unrelated
+goroutine sleeping on a 2 ms cycle, the same timer woke a median 446 us late,
+every percentile shifted, reverting to 594 us when that goroutine stopped. The
+wake instant is a function of what else the process is doing. Send immediately
+after waking and that becomes the packet's timestamp -- and a node with
+private work to do is not ambiently identical to one without.
+
+So this was the invariant's own clause, met exactly: private activity
+modulating an externally observable network event, through a channel that is
+neither the content, nor the size, nor the count, nor the destination, nor the
+cadence, but the *jitter* around a cadence that was itself perfect.
+
+**The fix is to stop letting the wake decide.** The scheduler sleeps to just
+short of each deadline and then yields in a loop until the deadline itself, so
+the return instant is a property of the deadline rather than of the timer. The
+same isolated measurement with the spin in place: 1.6 us against 0.8 us, where
+it had been 585 against 446. The window is `DeadlineSpinFor(interval)` -- 2 ms
+capped at a quarter of the interval, a function of a public number and nothing
+else, because a sender choosing its spin from load or from queue depth would
+put private state straight back into the wake.
+
+It costs a core 4% of the time at the deployed 50 ms cadence. That is paid
+deliberately and it is the invariant's own trade: the cost is unconditional,
+so it carries no information, and efficiency is what loses to a
+private-dependent signal rather than the other way round.
+
+**Measured end to end**, on this project's campaign over the same 24 pairs:
+
+| | idle median | idle sd | active median | active sd |
+|---|---|---|---|---|
+| before | 19.691 | 0.741 | 20.039 | 0.422 |
+| after | 20.003 | 0.104 | 19.999 | 0.045 |
+
+Every decile now falls inside 19.95-20.04 in all three worlds. The
+idle-to-active median gap is 4 us where it was 348 us. The preregistered rule
+goes from **10 rejected comparisons to 0**, and the campaign test passes on
+all three stressors without needing the retry it was written to require.
+
+**One fix that was not the fix, recorded because the measurement is what
+settled it.** The first attempt moved cell construction off the deadline path,
+on the theory that `NextCell` costs more when the queue has work. It tightened
+the control spread and did not touch the finding. Measured afterwards, the
+theory was quantitatively wrong: `NextCell` costs 8.4 us with work against
+8.8 us without, and `Send` 74.0 against 75.3 -- some 85 us in total, against a
+grid that moved by a millisecond. The change is kept, because a construction
+cost that depends on private state does not belong on the path that decides
+when a packet leaves, but it is defence in depth and is not what closed this.
+
+**Held by tests that run everywhere**, not only in the gated campaign:
+`TestWaitingIsBoundToTheDeadlineAndNotToTheTimer` asserts the spin binds the
+return an order of magnitude tighter than the timer alone, as a ratio rather
+than an absolute figure so a loaded runner cannot fail it for being loaded;
+the window is asserted to be a function of the public interval alone; a spin
+that would swallow its interval is refused; and cancellation is honoured
+inside the spin. Four mutations killed: the spin loop removed, the window
+forced to zero, the window taken from something other than the interval, and
+the prefetch reverted.
+
+**What is still red, and is not this.** Seven of the 24 comparisons remain
+inconclusive: the cpu-starvation arms, where the stressor stops the node and
+leaves too few cells to compare. The gate fails on those and should -- an
+unmeasurable arm is not a pass -- so the workflow stays red on a count that
+has nothing to do with private activity. That is a limitation of the harness,
+it predates this, and nothing here softens it.
+
+**What this does not establish.** Loopback, one host, userspace timestamps,
+seconds rather than days, and the same party wrote the system, the campaign
+and this entry. The measurement says the two worlds are not separable by this
+rule at this sample size on this host. It does not say they are
+indistinguishable, and the spin window is sized from wake errors measured on
+these hosts alone -- a host whose timers are coarser than a millisecond would
+need a larger one, and nothing here detects that. E-01, E-02, E-06 and E-09
+stay open, and PROD-10 and PROD-11 keep their blockers.
 
 ## F-42: an entry operator's session table had no tests, and an address could be taken
 
