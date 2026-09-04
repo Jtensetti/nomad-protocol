@@ -82,6 +82,7 @@ surrounding claims can be trusted.
 - [F-38: suspend and resume, and the publisher queue's unstated boundary](#f-38-suspend-and-resume-and-the-publisher-queues-unstated-boundary)
 - [F-39: the DKG transcript's session binding was not checked where a third party checks it](#f-39-the-dkg-transcripts-session-binding-was-not-checked-where-a-third-party-checks-it)
 - [F-40: the mix's domain separators and two accountability guards were unpinned](#f-40-the-mixs-domain-separators-and-two-accountability-guards-were-unpinned)
+- [F-44: the campaign could not go green, and a statistic was computed and discarded](#f-44-the-campaign-could-not-go-green-and-a-statistic-was-computed-and-discarded)
 - [F-43: the emission instant was the timer's, not the deadline's](#f-43-the-emission-instant-was-the-timers-not-the-deadlines)
 - [F-42: an entry operator's session table had no tests, and an address could be taken](#f-42-an-entry-operators-session-table-had-no-tests-and-an-address-could-be-taken)
 - [F-41: the RLNC Byzantine guards worked and nothing could fail on them](#f-41-the-rlnc-byzantine-guards-worked-and-nothing-could-fail-on-them)
@@ -3359,11 +3360,11 @@ belongs to the in-test statistic, not to this table.
 **Not claimed.** Nothing here is softened. Inconclusive fails, a finding
 fails, and the finding is still a release blocker.
 
-**Resolved: see F-43.** The ten rejected comparisons were a real finding, and
-it is fixed. The standing note below is left as written, because it is the
-record of the gate being red while nothing said so, and because seven
-comparisons are still inconclusive for a reason that has nothing to do with
-private activity.
+**Resolved: see F-43 and F-44.** The ten rejected comparisons were a real
+finding and are fixed; the seven inconclusive comparisons were an experiment
+run at a cadence the system does not ship, and are fixed too. The gate reports
+24 compared, 0 inconclusive, 0 findings. The standing note below is left as
+written, because it is the record of the gate being red while nothing said so.
 
 **Standing state as of 2026-09-03, recorded so the gate's existence is not
 read as a pass.** This workflow has failed every run since it became runnable:
@@ -4146,6 +4147,83 @@ about its own absence, which is refused at signing rather than at the report.
 a tampered proof, a stranger's key, too few keys, no keys, no transcript and a
 missing file, each with a non-zero exit and no verdict printed, and its own
 test requires it to state that a pass does not establish unlinkability.
+
+## F-44: the campaign could not go green, and a statistic was computed and discarded
+
+`nomad-testnet` `367d781`; `live/node/campaign_test.go`,
+`.github/workflows/timing-campaign.yml`.
+
+F-43 closed the campaign's ten rejected comparisons. Seven remained
+inconclusive, on every run since the campaign first executed, so the gate could
+not go green whatever the code did. Both causes are here, and neither is a
+softened threshold.
+
+**The campaign was being run at a cadence the system does not ship.** It used a
+20 ms interval with a 200 ms lateness budget. Under the cpu-starvation stressor
+the node did not survive a round: it missed its budget and stopped -- correctly,
+fail-closed, by design -- after anywhere between 2 and 50 cells. The
+preregistered rule needs 20 cells in a flow, so those arms reported "too few
+cells to evaluate", which is neither a pass nor a finding and which the
+workflow rightly refused to call a pass.
+
+A shorter interval has less slack per tick to absorb a stall, and the
+topology's own bound caps lateness at ten intervals, so 20 ms could not be
+given a larger budget without moving a normative limit. The deployed cadence is
+50 ms. At 50 ms, with the same ten-interval ceiling, the node survives the
+identical stressor: 39, 39, 40 and 39 cells across four rounds, where 20 ms
+gave 49, 50, 2 and 8.
+
+**Two calibrations were tried first and rejected on measurement, not on
+taste.** Reserving one processor from the burn made the node survive every
+round and made the stressor vacuous -- sd 0.1452 against a 0.1552 baseline,
+which is no bite at all, a second baseline wearing the starvation label.
+Duty-cycling the burn was non-monotonic across a 0.50/0.70/0.85/0.95 sweep on a
+host whose own baseline sd moved from 0.155 to 0.423 between two runs; tuning
+severity there would have been tuning to noise. Nothing about the stressor was
+weakened in the end: `burnCPU` still saturates every processor with unyielding
+work, and no tolerance moved.
+
+**A statistic computed on every run and never judged.** `worldGap` carries a
+`count` component -- the relative difference in how many cells each world
+emitted -- and it was printed in the log line and never passed to `decide`. The
+two decisions covered median cadence and the inter-arrival distribution. So a
+world that emitted materially fewer cells than another would have been logged
+and passed, and that is precisely the statistic that survives when a stressor
+is severe enough that there is no cadence left to compare: under a stressor
+that stops the node, how much it emitted before stopping is the observable an
+onlooker has. It is now decided against a 0.02 tolerance under the same
+control-spread rule as the others.
+
+Verified to reject rather than assumed to: forcing the signal to 0.5 fails the
+arm, naming both the tolerance and the control spread it beat. The first
+attempt at that check was ineffective and is recorded because it nearly passed
+for the wrong reason -- the injection sat before the `narrow` loop that takes
+the minimum across control pairs, so it was overwritten before it was judged.
+
+**A duplicated constant that would have failed silently.** The workflow passed
+a literal `20` to the rule as the cell interval. Moving the campaign to 50 ms
+would have left it measuring windows against an interval nothing emitted at,
+with no error. It now reads `campaignIntervalMillis` out of the campaign source
+and exits if it cannot find it, so a rename or a reformat fails loudly.
+Verified against three spellings: the current form yields 50, a renamed
+constant and a reformatted one both yield nothing and exit 1.
+
+**Measured after:** 24 compared, **0 inconclusive, 0 findings**. All three
+stressors pass. Under cpu-starvation the cadence statistic is reported
+UNDECIDABLE -- the control spread of 0.199 exceeds the 0.02 tolerance, so this
+host cannot resolve it -- while the distribution and count statistics are both
+decided. That is the decision rule working rather than being worked around: an
+arm is skipped only when *no* statistic is decidable, and here two are.
+
+**What this does not establish.** That the campaign is green says the rule
+could not separate the worlds at this sample size on this host, not that they
+are indistinguishable. The cpu-starvation arm still cannot resolve cadence
+here, and a host quiet enough to resolve it is exactly what E-03 and E-09 ask
+for. Early termination remains reported rather than gated: campaignRounds
+rounds give too few Bernoulli samples to decide whether a stop is
+private-dependent, and the aggregate count statistic added here bounds how much
+was emitted, not how often a stop happened. PROD-10 and PROD-11 keep their
+blockers.
 
 ## F-43: the emission instant was the timer's, not the deadline's
 

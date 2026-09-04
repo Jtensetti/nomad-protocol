@@ -3,6 +3,52 @@
 Newest first. Each checkpoint: completed work, commits, evidence, risks, next
 priority, blockers.
 
+## Checkpoint 2026-09-03c: the campaign is green
+
+The seven inconclusive arms are fixed, and the gate reports 24 compared, 0
+inconclusive, 0 findings. It has never done that before.
+
+**The experiment was being run at a cadence the system does not ship.** 20 ms
+with a 200 ms lateness budget. Under cpu-starvation the node missed its budget
+and stopped -- correctly, by design -- after 2 to 50 cells, and the rule needs
+20 in a flow. A shorter interval has less slack per tick, and the topology's
+own bound caps lateness at ten intervals, so 20 ms could not be given more
+without moving a normative limit. At the deployed 50 ms the node survives the
+identical stressor: 39, 39, 40, 39 cells.
+
+**Two calibrations were rejected on measurement before that.** Reserving a
+processor made the stressor vacuous -- sd 0.1452 against a 0.1552 baseline, a
+second baseline wearing the starvation label. Duty-cycling was non-monotonic
+across a sweep, on a host whose own baseline sd moved 0.155 to 0.423 between
+two runs. Tuning severity there would have been tuning to noise, and I would
+not have been able to tell.
+
+**A statistic computed on every run and never judged.** worldGap carries the
+relative difference in emitted cell counts. It was printed in the log line and
+never reached decide(): the two decisions were cadence and the inter-arrival
+distribution. So a world emitting materially fewer cells than another would
+have been logged and passed -- and that is exactly the statistic that survives
+when a stressor is severe enough that there is no cadence left to compare. It
+is judged now, and verified to reject rather than assumed to.
+
+**The check on that nearly passed for the wrong reason.** My first injection
+sat before the narrow loop that takes the minimum across control pairs, so it
+was overwritten before it was judged, and the test passed. Recorded because
+"the mutation did not fail" and "the mutation never happened" look identical
+from the exit code.
+
+**A duplicated constant that would have failed silently.** The workflow passed
+a literal 20 to the rule. Moving the campaign to 50 would have left it judging
+windows against an interval nothing emitted at, with no error. It reads the
+constant from the campaign now and exits if it cannot.
+
+What is still true: green means the rule could not separate the worlds at this
+sample size on this host. Under cpu-starvation the cadence statistic is still
+UNDECIDABLE here, and early termination is still reported rather than gated.
+Both need E-03 and E-09.
+
+Next: the rest of step 10.
+
 ## Checkpoint 2026-09-03b: the campaign was right for eight runs
 
 The timing campaign had rejected on every run since it first executed, and
